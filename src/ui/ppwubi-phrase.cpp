@@ -241,8 +241,8 @@ int WINAPI wWinMain(HINSTANCE hSelf, HINSTANCE, LPWSTR, int) {
 
     const int w = S(410), h = S(210);
     g_hwnd = CreateWindowExW(WS_EX_TOPMOST, L"PandaWubiPhraseWindow", L"自定义短语 —— Panda五笔",
-                             WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_VISIBLE,
-                             CW_USEDEFAULT, CW_USEDEFAULT, w, h,
+                             WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
+                             -32000, -32000, w, h,
                              nullptr, nullptr, hSelf, nullptr);
     if (!g_hwnd) return 1;
 

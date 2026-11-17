@@ -1,9 +1,19 @@
-﻿// wubi-settings —— 替代输入法的设置界面
-// 无参数：弹出设置窗口（先 FreeConsole，避免双击时闪黑框）
+// wubi-settings —— 替代输入法的设置界面
+// 无参数：弹出设置窗口
 // /dump        ：把当前设置打印到标准输出
 // /set k=v     ：直接改一项（供脚本/自检使用），可多次
+//
+// 编译为 GUI 子系统（/SUBSYSTEM:WINDOWS）：
+//   以前是控制台程序，被输入法 ShellExecute 时会先闪一个黑色控制台窗口——这就是"设置框后面闪过黑框"。
+//   /dump、/set 仍然可用：stdout 被重定向时直接用继承的句柄，从终端手动运行时才 AttachConsole。
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT 0x0A00
+#endif
 #include <windows.h>
 #include <commctrl.h>
+#include <shellapi.h>
 #include "../engine/wubi_config.h"
 #include <cstdio>
 #include <string>
@@ -13,6 +23,13 @@
 static const wchar_t* kTitle = L"Panda五笔 — 设置";
 static wubi::Settings g_s;
 static std::wstring    g_ini;
+
+static int    g_dpi = 96;
+static HFONT  g_font = nullptr;
+static HFONT  g_fontTitle = nullptr;
+static HBRUSH g_bg = nullptr;
+
+static int S(int v) { return MulDiv(v, g_dpi, 96); }
 
 static std::wstring ConfigPath() {
     // 允许用环境变量覆盖（自检/便携部署用）
@@ -33,22 +50,53 @@ enum {
     ID_SM_0 = 110, ID_SM_1,
     ID_PUNC = 120, ID_TRAD = 121,
     ID_CAND = 130, ID_FONT = 131, ID_BG = 132, ID_INSET = 133, ID_DICT = 134,
+    ID_VERT = 135,
     ID_SAVE = 200, ID_CANCEL = 201
 };
 
-static HWND MakeStatic(HWND p, const wchar_t* t, int x, int y, int w, int h) {
-    return CreateWindowExW(0, L"STATIC", t, WS_CHILD | WS_VISIBLE, x, y, w, h, p, nullptr, nullptr, nullptr);
+// ---------------------------------------------------------------- 控件工厂
+static HWND MakeStatic(HWND p, const wchar_t* t, int x, int y, int w, int hgt) {
+    HWND h = CreateWindowExW(0, L"STATIC", t, WS_CHILD | WS_VISIBLE | SS_LEFT,
+                             S(x), S(y), S(w), S(hgt), p, nullptr, nullptr, nullptr);
+    SendMessageW(h, WM_SETFONT, (WPARAM)g_font, TRUE);
+    return h;
 }
-static HWND MakeRadio(HWND p, const wchar_t* t, int x, int y, int w, int id, bool checked) {
-    HWND h = CreateWindowExW(0, L"BUTTON", t, WS_CHILD | WS_VISIBLE | BS_AUTORADIOBUTTON | (checked ? WS_TABSTOP : 0),
-                             x, y, w, 22, p, (HMENU)(INT_PTR)id, nullptr, nullptr);
+static HWND MakeGroup(HWND p, const wchar_t* t, int x, int y, int w, int hgt) {
+    HWND h = CreateWindowExW(0, L"BUTTON", t, WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
+                             S(x), S(y), S(w), S(hgt), p, nullptr, nullptr, nullptr);
+    SendMessageW(h, WM_SETFONT, (WPARAM)g_fontTitle, TRUE);
+    return h;
+}
+static HWND MakeRadio(HWND p, const wchar_t* t, int x, int y, int w, int id, bool checked, bool groupStart = false) {
+    HWND h = CreateWindowExW(0, L"BUTTON", t,
+                             WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_AUTORADIOBUTTON |
+                                 (groupStart ? WS_GROUP : 0),
+                             S(x), S(y), S(w), S(22), p, (HMENU)(INT_PTR)id, nullptr, nullptr);
+    SendMessageW(h, WM_SETFONT, (WPARAM)g_font, TRUE);
     if (checked) SendMessageW(h, BM_SETCHECK, BST_CHECKED, 0);
     return h;
 }
-static HWND MakeCheck(HWND p, const wchar_t* t, int x, int y, int w, int id, bool checked) {
-    HWND h = CreateWindowExW(0, L"BUTTON", t, WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
-                             x, y, w, 22, p, (HMENU)(INT_PTR)id, nullptr, nullptr);
+static HWND MakeCheck(HWND p, const wchar_t* t, int x, int y, int w, int id, bool checked, bool groupStart = false) {
+    HWND h = CreateWindowExW(0, L"BUTTON", t,
+                             WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_AUTOCHECKBOX | (groupStart ? WS_GROUP : 0),
+                             S(x), S(y), S(w), S(22), p, (HMENU)(INT_PTR)id, nullptr, nullptr);
+    SendMessageW(h, WM_SETFONT, (WPARAM)g_font, TRUE);
     if (checked) SendMessageW(h, BM_SETCHECK, BST_CHECKED, 0);
+    return h;
+}
+static HWND MakeEdit(HWND p, int x, int y, int w, int id, const wchar_t* text, int limit) {
+    HWND h = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", text,
+                             WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL | ES_NUMBER,
+                             S(x), S(y), S(w), S(24), p, (HMENU)(INT_PTR)id, nullptr, nullptr);
+    SendMessageW(h, WM_SETFONT, (WPARAM)g_font, TRUE);
+    SendMessageW(h, EM_SETLIMITTEXT, (WPARAM)limit, 0);
+    return h;
+}
+static HWND MakeButton(HWND p, const wchar_t* t, int x, int y, int w, int id, bool def) {
+    HWND h = CreateWindowExW(0, L"BUTTON", t,
+                             WS_CHILD | WS_VISIBLE | WS_TABSTOP | (def ? BS_DEFPUSHBUTTON : BS_PUSHBUTTON),
+                             S(x), S(y), S(w), S(30), p, (HMENU)(INT_PTR)id, nullptr, nullptr);
+    SendMessageW(h, WM_SETFONT, (WPARAM)g_font, TRUE);
     return h;
 }
 
@@ -58,6 +106,7 @@ static void ReadUiInto(HWND hwnd) {
     g_s.SortMode   = SendMessageW(GetDlgItem(hwnd, ID_SM_1), BM_GETCHECK, 0, 0) == BST_CHECKED ? 1 : 0;
     g_s.EnablePunction = SendMessageW(GetDlgItem(hwnd, ID_PUNC), BM_GETCHECK, 0, 0) == BST_CHECKED ? 1 : 0;
     g_s.TradChinese    = SendMessageW(GetDlgItem(hwnd, ID_TRAD), BM_GETCHECK, 0, 0) == BST_CHECKED ? 1 : 0;
+    g_s.CandVertical   = SendMessageW(GetDlgItem(hwnd, ID_VERT), BM_GETCHECK, 0, 0) == BST_CHECKED ? 1 : 0;
     wchar_t buf[16] = { 0 };
     GetWindowTextW(GetDlgItem(hwnd, ID_CAND), buf, 15);
     g_s.CandCount = _wtoi(buf);
@@ -89,104 +138,135 @@ static void ReadUiInto(HWND hwnd) {
     }
 }
 
-static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
-    switch (msg) {
-    case WM_CREATE: {
-        int y = 12;
-        MakeStatic(hwnd, L"一级简码（输入多个键时如何对待）", 16, y, 340, 20); y += 24;
-        MakeRadio(hwnd, L"不处理",                         40, y, 120, ID_L1_0, g_s.Level1Mode == 0); y += 24;
-        MakeRadio(hwnd, L"隐藏（彻底不出现在候选里）",      40, y, 300, ID_L1_1, g_s.Level1Mode == 1); y += 24;
-        MakeRadio(hwnd, L"沉底（放最后，仍可选中）",        40, y, 300, ID_L1_2, g_s.Level1Mode == 2); y += 32;
+static void BuildChildren(HWND hwnd) {
+    // 字体：优先雅黑；标题用同尺寸的粗体，靠"分组框"划分区块，避免一堆左对齐的散装控件
+    const int pt = 9;
+    g_font = CreateFontW(-S(pt * 96 / 72), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
+                         OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
+                         DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei UI");
+    if (!g_font) g_font = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
+    g_fontTitle = CreateFontW(-S(pt * 96 / 72), 0, 0, 0, FW_SEMIBOLD, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
+                              OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
+                              DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei UI");
+    if (!g_fontTitle) g_fontTitle = g_font;
 
-        MakeStatic(hwnd, L"候选排序", 16, y, 340, 20); y += 24;
-        MakeRadio(hwnd, L"码短优先（默认，与 QQ五笔 接近）", 40, y, 320, ID_SM_0, g_s.SortMode == 0); y += 24;
-        MakeRadio(hwnd, L"纯词频优先",                       40, y, 320, ID_SM_1, g_s.SortMode == 1); y += 32;
+    const int padX = 16, groupW = 428, inX = padX + 16;
+    int y = 12;
 
-        MakeStatic(hwnd, L"其他", 16, y, 340, 20); y += 24;
-        MakeCheck(hwnd, L"中文标点（Ctrl+Shift+P 可临时切换）", 40, y, 320, ID_PUNC, g_s.EnablePunction != 0); y += 26;
-        MakeCheck(hwnd, L"输出繁体（Ctrl+Shift+T 可临时切换）", 40, y, 320, ID_TRAD, g_s.TradChinese != 0); y += 30;
+    // 一级简码
+    MakeGroup(hwnd, L" 一级简码（输入多个键时如何处理）", padX, y, groupW, 108);
+    MakeRadio(hwnd, L"不处理：长码候选里照常出现",              inX, y + 26, 360, ID_L1_0, g_s.Level1Mode == 0, true);
+    MakeRadio(hwnd, L"隐藏：彻底不出现在候选里",                inX, y + 50, 360, ID_L1_1, g_s.Level1Mode == 1);
+    MakeRadio(hwnd, L"沉底：放到最后，仍可选中（默认）",        inX, y + 74, 360, ID_L1_2, g_s.Level1Mode == 2);
+    y += 108 + 10;
 
-        MakeStatic(hwnd, L"候选个数（1-9）", 16, y + 4, 130, 20);
-        HWND e = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"", WS_CHILD | WS_VISIBLE | ES_NUMBER,
-                                 150, y, 50, 24, hwnd, (HMENU)(INT_PTR)ID_CAND, nullptr, nullptr);
+    // 候选排序
+    MakeGroup(hwnd, L" 候选排序", padX, y, groupW, 82);
+    MakeRadio(hwnd, L"码短优先（默认，与 QQ五笔 接近）",        inX, y + 26, 360, ID_SM_0, g_s.SortMode == 0, true);
+    MakeRadio(hwnd, L"纯词频优先",                              inX, y + 50, 360, ID_SM_1, g_s.SortMode == 1);
+    y += 82 + 10;
+
+    // 输入选项
+    MakeGroup(hwnd, L" 输入选项", padX, y, groupW, 82);
+    MakeCheck(hwnd, L"中文标点（Ctrl+Shift+P 可临时切换）",     inX, y + 24, 360, ID_PUNC, g_s.EnablePunction != 0, true);
+    MakeCheck(hwnd, L"输出繁体（Ctrl+Shift+T 可临时切换）",     inX, y + 50, 360, ID_TRAD, g_s.TradChinese != 0);
+    y += 82 + 10;
+
+    // 候选窗外观
+    MakeGroup(hwnd, L" 候选窗外观", padX, y, groupW, 148);
+    MakeStatic(hwnd, L"候选个数", inX, y + 28, 90, 20);
+    {
         wchar_t nb[8];
         wsprintfW(nb, L"%d", g_s.CandCount);
-        SetWindowTextW(e, nb);
-        y += 34;
+        MakeEdit(hwnd, inX + 96, y + 24, 52, ID_CAND, nb, 1);
+    }
+    MakeStatic(hwnd, L"1 – 9 个", inX + 156, y + 28, 120, 20);
 
-        MakeStatic(hwnd, L"候选框字号（8-24）", 16, y + 4, 130, 20);
-        HWND fe = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"", WS_CHILD | WS_VISIBLE | ES_NUMBER,
-                                 150, y, 50, 24, hwnd, (HMENU)(INT_PTR)ID_FONT, nullptr, nullptr);
-        {
-            wchar_t fb[8];
-            wsprintfW(fb, L"%d", g_s.CandFontPt);
-            SetWindowTextW(fe, fb);
+    MakeStatic(hwnd, L"字号", inX, y + 58, 90, 20);
+    {
+        wchar_t fb[8];
+        wsprintfW(fb, L"%d", g_s.CandFontPt);
+        MakeEdit(hwnd, inX + 96, y + 54, 52, ID_FONT, fb, 2);
+    }
+    MakeStatic(hwnd, L"8 – 24 pt", inX + 156, y + 58, 120, 20);
+
+    MakeStatic(hwnd, L"背景色", inX, y + 88, 90, 20);
+    {
+        wchar_t cb[16];
+        swprintf_s(cb, L"#%06X", (unsigned)(g_s.CandBgColor & 0xFFFFFF));
+        HWND be = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", cb,
+                                  WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL,
+                                  S(inX + 96), S(y + 84), S(90), S(24), hwnd,
+                                  (HMENU)(INT_PTR)ID_BG, nullptr, nullptr);
+        SendMessageW(be, WM_SETFONT, (WPARAM)g_font, TRUE);
+        SendMessageW(be, EM_SETLIMITTEXT, (WPARAM)7, 0);
+    }
+    MakeCheck(hwnd, L"内框凹陷",                                inX, y + 114, 200, ID_INSET, g_s.CandInset != 0, true);
+    MakeCheck(hwnd, L"候选竖排",                                inX + 130, y + 114, 200, ID_VERT, g_s.CandVertical != 0);
+    y += 148 + 10;
+
+    // 词库
+    MakeGroup(hwnd, L" 词库（data 目录）", padX, y, groupW, 62);
+    {
+        HWND cb = CreateWindowExW(WS_EX_CLIENTEDGE, L"COMBOBOX", L"",
+                                  WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWNLIST,
+                                  S(inX), S(y + 26), S(300), S(220), hwnd, (HMENU)(INT_PTR)ID_DICT, nullptr, nullptr);
+        SendMessageW(cb, WM_SETFONT, (WPARAM)g_font, TRUE);
+        // 枚举 exe 同目录 data\*.tsv / *.bin
+        wchar_t self[MAX_PATH] = { 0 };
+        GetModuleFileNameW(nullptr, self, ARRAYSIZE(self));
+        std::wstring dir(self);
+        const size_t slash = dir.find_last_of(L"\\/");
+        if (slash != std::wstring::npos) dir.erase(slash);
+        const std::wstring pattern = dir + L"\\data\\*";
+        WIN32_FIND_DATAW fd;
+        HANDLE hfind = FindFirstFileW(pattern.c_str(), &fd);
+        int selIdx = -1, idx = 0;
+        if (hfind != INVALID_HANDLE_VALUE) {
+            do {
+                const std::wstring name = fd.cFileName;
+                if (name.size() > 4 &&
+                    (name.compare(name.size() - 4, 4, L".tsv") == 0 ||
+                     name.compare(name.size() - 4, 4, L".bin") == 0)) {
+                    SendMessageW(cb, CB_ADDSTRING, 0, (LPARAM)name.c_str());
+                    if (name == g_s.DictFile) selIdx = idx;
+                    ++idx;
+                }
+            } while (FindNextFileW(hfind, &fd));
+            FindClose(hfind);
         }
-        y += 32;
-
-        MakeStatic(hwnd, L"背景色（#RRGGBB）", 16, y + 4, 130, 20);
-        HWND be = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"", WS_CHILD | WS_VISIBLE,
-                                 150, y, 90, 24, hwnd, (HMENU)(INT_PTR)ID_BG, nullptr, nullptr);
         {
-            wchar_t cb[16];
-            swprintf_s(cb, L"#%06X", (unsigned)(g_s.CandBgColor & 0xFFFFFF));
-            SetWindowTextW(be, cb);
+            wchar_t cur[128];
+            wcscpy_s(cur, g_s.DictFile.c_str());
+            if (selIdx < 0) { SendMessageW(cb, CB_ADDSTRING, 0, (LPARAM)cur); selIdx = idx; }
+            SendMessageW(cb, CB_SETCURSEL, (WPARAM)selIdx, 0);
         }
-        y += 32;
+    }
+    y += 62 + 14;
 
-        MakeCheck(hwnd, L"内框凹陷效果", 40, y, 200, ID_INSET, g_s.CandInset != 0);
-        y += 32;
+    // 底部按钮（右下角对齐）
+    MakeButton(hwnd, L"保存", padX + groupW - 196, y, 90, ID_SAVE, true);
+    MakeButton(hwnd, L"取消", padX + groupW - 96,  y, 90, ID_CANCEL, false);
+}
 
-        MakeStatic(hwnd, L"词库（data 目录）", 16, y + 4, 130, 20);
-        {
-            HWND cb = CreateWindowExW(WS_EX_CLIENTEDGE, L"COMBOBOX", L"",
-                                      WS_CHILD | WS_VISIBLE | WS_VSCROLL | CBS_DROPDOWNLIST,
-                                      150, y, 220, 200, hwnd, (HMENU)(INT_PTR)ID_DICT, nullptr, nullptr);
-            // 枚举 exe 同目录 data\*.tsv / *.bin
-            wchar_t self[MAX_PATH] = { 0 };
-            GetModuleFileNameW(nullptr, self, ARRAYSIZE(self));
-            std::wstring dir(self);
-            const size_t slash = dir.find_last_of(L"\\/");
-            if (slash != std::wstring::npos) dir.erase(slash);
-            const std::wstring pattern = dir + L"\\data\\*";
-            WIN32_FIND_DATAW fd;
-            HANDLE hfind = FindFirstFileW(pattern.c_str(), &fd);
-            int selIdx = -1, idx = 0;
-            if (hfind != INVALID_HANDLE_VALUE) {
-                do {
-                    const std::wstring name = fd.cFileName;
-                    if (name.size() > 4 &&
-                        (name.compare(name.size() - 4, 4, L".tsv") == 0 ||
-                         name.compare(name.size() - 4, 4, L".bin") == 0)) {
-                        SendMessageW(cb, CB_ADDSTRING, 0, (LPARAM)name.c_str());
-                        if (name == g_s.DictFile) selIdx = idx;
-                        ++idx;
-                    }
-                } while (FindNextFileW(hfind, &fd));
-                FindClose(hfind);
-            }
-            {
-                wchar_t cur[128];
-                wcscpy_s(cur, g_s.DictFile.c_str());
-                if (selIdx < 0) { SendMessageW(cb, CB_ADDSTRING, 0, (LPARAM)cur); selIdx = idx; }
-                SendMessageW(cb, CB_SETCURSEL, (WPARAM)selIdx, 0);
-            }
-        }
-        y += 32;
-        y += 40;
-
-        CreateWindowExW(0, L"BUTTON", L"保存", WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
-                        150, y, 90, 30, hwnd, (HMENU)(INT_PTR)ID_SAVE, nullptr, nullptr);
-        CreateWindowExW(0, L"BUTTON", L"取消", WS_CHILD | WS_VISIBLE,
-                        250, y, 90, 30, hwnd, (HMENU)(INT_PTR)ID_CANCEL, nullptr, nullptr);
+static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
+    switch (msg) {
+    case WM_CREATE:
+        BuildChildren(hwnd);
         return 0;
+    case WM_CTLCOLORSTATIC: {          // 让分组框里的文字背景跟窗口一致，不留白块
+        HDC dc = (HDC)wp;
+        SetBkMode(dc, TRANSPARENT);
+        SetTextColor(dc, GetSysColor(COLOR_BTNTEXT));
+        return (LRESULT)g_bg;
     }
     case WM_COMMAND:
         if (LOWORD(wp) == ID_SAVE) {
             ReadUiInto(hwnd);
             const bool ok = wubi::SaveSettings(g_ini, g_s);
-            MessageBoxW(hwnd, ok ? L"已保存。新设置对**新启动的程序**生效；\n已打开的程序需要重启才会重新读取。"
-                                 : L"保存失败，请检查 %APPDATA%\\PandaWubi 是否可写。",
+            MessageBoxW(hwnd,
+                        ok ? L"已保存。\n\n新设置对之后启动的程序生效；已打开的程序需要重启才会重新读取。"
+                           : L"保存失败：请检查 %APPDATA%\\PandaWubi 是否可写。",
                         kTitle, MB_OK | (ok ? MB_ICONINFORMATION : MB_ICONERROR));
             DestroyWindow(hwnd);
             return 0;
@@ -203,51 +283,116 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     return DefWindowProcW(hwnd, msg, wp, lp);
 }
 
+// 窗口客户区尺寸随 DPI 缩放；控件坐标在 BuildChildren 里也按 S() 缩放
+static void MeasureClient(int& w, int& h) {
+    w = S(460);
+    h = S(12 + 108 + 10 + 82 + 10 + 82 + 10 + 148 + 10 + 62 + 14 + 30 + 16);
+}
+
 static int RunDialog() {
-    FreeConsole();   // 双击时不留黑框
     INITCOMMONCONTROLSEX icc = { sizeof(icc), ICC_STANDARD_CLASSES };
     InitCommonControlsEx(&icc);
+
+    {
+        HDC dc = GetDC(nullptr);
+        g_dpi = dc ? GetDeviceCaps(dc, LOGPIXELSY) : 96;
+        if (dc) ReleaseDC(nullptr, dc);
+        if (g_dpi <= 0) g_dpi = 96;
+    }
+    g_bg = GetSysColorBrush(COLOR_BTNFACE);
 
     WNDCLASSEXW wc = { sizeof(wc) };
     wc.lpfnWndProc = WndProc;
     wc.hInstance = GetModuleHandleW(nullptr);
     wc.hCursor = LoadCursorW(nullptr, (LPCWSTR)IDC_ARROW);
     wc.lpszClassName = L"WubiSettingsWnd";
-    wc.hbrBackground = (HBRUSH)(COLOR_BTNFACE + 1);
+    wc.hbrBackground = g_bg;
     RegisterClassExW(&wc);
 
-    RECT rc = { 0, 0, 420, 600 };   // 增加外观与词库设置
-    AdjustWindowRect(&rc, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU, FALSE);
+    int cw = 0, ch = 0;
+    MeasureClient(cw, ch);
+    RECT rc = { 0, 0, cw, ch };
+    AdjustWindowRectEx(&rc, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU, FALSE, 0);
+    const int ww = rc.right - rc.left, wh = rc.bottom - rc.top;
+
+    // 先建在屏幕外、不显示，摆好位置再 ShowWindow：避免"先闪一个位于默认位置的空窗"
     HWND hwnd = CreateWindowExW(0, L"WubiSettingsWnd", kTitle,
                                 WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
-                                CW_USEDEFAULT, CW_USEDEFAULT,
-                                rc.right - rc.left, rc.bottom - rc.top,
+                                -32000, -32000, ww, wh,
                                 nullptr, nullptr, wc.hInstance, nullptr);
     if (!hwnd) return 1;
+
+    // 标题栏用小熊猫图标（不编进 exe，和候选窗/状态栏共用 dist\panda.ico）
+    {
+        wchar_t self[MAX_PATH] = { 0 };
+        GetModuleFileNameW(nullptr, self, ARRAYSIZE(self));
+        std::wstring dir(self);
+        const size_t slash = dir.find_last_of(L"\\/");
+        if (slash != std::wstring::npos) {
+            dir.erase(slash);
+            const std::wstring icoPath = dir + L"\\panda.ico";
+            HICON hi = (HICON)LoadImageW(nullptr, icoPath.c_str(), IMAGE_ICON, 0, 0,
+                                        LR_LOADFROMFILE | LR_DEFAULTSIZE);
+            if (!hi) hi = (HICON)LoadImageW(nullptr, icoPath.c_str(), IMAGE_ICON, 32, 32, LR_LOADFROMFILE);
+            if (hi) {
+                SendMessageW(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hi);
+                SendMessageW(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hi);
+            }
+        }
+    }
+
+    // 居中到工作区
+    RECT work = { 0, 0, GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN) };
+    SystemParametersInfoW(SPI_GETWORKAREA, 0, &work, 0);
+    const int x = work.left + ((work.right - work.left) - ww) / 2;
+    const int y = work.top + ((work.bottom - work.top) - wh) / 2;
+    SetWindowPos(hwnd, HWND_TOP, x, y, ww, wh, SWP_NOACTIVATE);
     ShowWindow(hwnd, SW_SHOW);
+    SetForegroundWindow(hwnd);
     UpdateWindow(hwnd);
 
     MSG msg;
     while (GetMessageW(&msg, nullptr, 0, 0) > 0) {
         if (!IsDialogMessageW(hwnd, &msg)) { TranslateMessage(&msg); DispatchMessageW(&msg); }
     }
+    if (g_font) DeleteObject(g_font);
+    if (g_fontTitle && g_fontTitle != g_font) DeleteObject(g_fontTitle);
     return 0;
 }
 
-int wmain(int argc, wchar_t** argv) {
+// GUI 子系统下没有控制台：/dump、/set 的输出在重定向时直接用继承的句柄，
+// 从终端手动运行时接上父进程的控制台。
+static void EnsureStdIo() {
+    const HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
+    const DWORD type = h ? GetFileType(h) : FILE_TYPE_UNKNOWN;
+    if (type == FILE_TYPE_PIPE || type == FILE_TYPE_DISK) return;   // 已重定向
+    if (AttachConsole(ATTACH_PARENT_PROCESS)) {
+        FILE* f = nullptr;
+        freopen_s(&f, "CONOUT$", "w", stdout);
+        freopen_s(&f, "CONOUT$", "w", stderr);
+    }
+}
+
+int WINAPI wWinMain(HINSTANCE, HINSTANCE, LPWSTR, int) {
     g_ini = ConfigPath();
     g_s = wubi::LoadSettings(g_ini);
 
-    if (argc > 1) {
+    int argc = 0;
+    LPWSTR* argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+
+    if (argv && argc > 1) {
         const std::wstring cmd = argv[1];
         if (cmd == L"/dump") {
+            EnsureStdIo();
             std::printf("ini=%ls\n", g_ini.c_str());
             std::printf("Level1Mode=%d SortMode=%d EnablePunction=%d TradChinese=%d CandCount=%d CandVertical=%d InputMode=%d\n",
                         g_s.Level1Mode, g_s.SortMode, g_s.EnablePunction, g_s.TradChinese,
                         g_s.CandCount, g_s.CandVertical, g_s.InputMode);
+            LocalFree(argv);
             return 0;
         }
         if (cmd == L"/set") {
+            EnsureStdIo();
             bool any = false;
             for (int i = 2; i < argc; ++i) {
                 std::wstring kv = argv[i];
@@ -262,14 +407,16 @@ int wmain(int argc, wchar_t** argv) {
                 else if (k == L"CandCount")      { g_s.CandCount = iv; any = true; }
                 else if (k == L"CandVertical")   { g_s.CandVertical = iv; any = true; }
             }
-            if (!any) { std::printf("no known key\n"); return 2; }
+            if (!any) { std::printf("no known key\n"); LocalFree(argv); return 2; }
 
             const bool ok = wubi::SaveSettings(g_ini, g_s);
             std::printf("%s -> Level1Mode=%d SortMode=%d EnablePunction=%d TradChinese=%d CandCount=%d\n",
                         ok ? "saved" : "FAILED", g_s.Level1Mode, g_s.SortMode,
                         g_s.EnablePunction, g_s.TradChinese, g_s.CandCount);
+            LocalFree(argv);
             return ok ? 0 : 1;
         }
     }
+    if (argv) LocalFree(argv);
     return RunDialog();
 }
