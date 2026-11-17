@@ -1,0 +1,52 @@
+FILE: C:\Program Files (x86)\Tencent\QQWubi\2.4.629.400\QQImeUtil.dll
+machine=0x014C pe32plus=False sections=6
+EXPORTS count=28
+   ImeUtil_Init
+   Ime_CompareDictVersion
+   Ime_GetAppData
+   Ime_GetDictExample
+   Ime_GetDictInternalFileName
+   Ime_GetInstallDir
+   Ime_GetUserDataPath
+   Ime_InstallDict
+   Ime_InstallSkin
+   Ime_IsDictEngSupport
+   Ime_IsDictExist
+   Ime_IsDictFileValid
+   Ime_IsDictInUse
+   Ime_IsSkinExist
+   Ime_SetSkinToUse
+   SknEng_GetCompCandPreview
+   SknEng_GetPicFrame
+   SknEng_GetPrimaryMonitorWorkArea
+   SknEng_GetSkinAllPicFrameInfo
+   SknEng_GetSkinPreview
+   SknEng_GetStatusBarPreview
+   SknEng_GetVirtualWorkAreaContainPt
+   SknEng_IsEngSupport
+   SknEng_IsEngineLoadSkinContainPicFrame
+   SknEng_IsSkinContainPicFrame
+   SknEng_LoadSSSkinFile
+   SknEng_LoadSkinFile
+   SknEng_SetDisplayStyle
+IMPORTS
+  [KERNEL32.dll]
+     GetModuleFileNameW, FreeResource, WriteFile, SetFilePointer, GetModuleHandleW, GetCurrentThreadId, GetVersionExW, ReleaseMutex, WaitForSingleObject, MapViewOfFile, UnmapViewOfFile, CreateFileMappingW, OpenFileMappingW, LocalFree, GetCurrentProcess, GetCurrentThread, GetFileSize, ReadFile, FormatMessageW, CreateMutexW, OpenMutexW, ExpandEnvironmentStringsW, GetPrivateProfileIntW, WritePrivateProfileStringW, GetPrivateProfileSectionW, WritePrivateProfileSectionW, GetPrivateProfileSectionNamesW, GetPrivateProfileStructW, WritePrivateProfileStructW, GetFullPathNameW, MapViewOfFileEx, GetCPInfo, IsDBCSLeadByte, GlobalAlloc, GlobalFree, OutputDebugStringW, GetCurrentProcessId, ProcessIdToSessionId, CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, ReleaseSemaphore, CreateSemaphoreW, OpenSemaphoreW, GetLogicalDrives, DeviceIoControl, GetDriveTypeW, GetDiskFreeSpaceExW, Sleep, GetProcAddress, MoveFileExW, GlobalLock, GlobalUnlock, GetFileSizeEx, lstrlenW, SetEndOfFile, CreateDirectoryW, RemoveDirectoryW, GetFileType, lstrcmpW, GlobalSize, UnhandledExceptionFilter, SetUnhandledExceptionFilter, TerminateProcess, IsProcessorFeaturePresent, IsDebuggerPresent, GetStartupInfoW, QueryPerformanceCounter, GetSystemTimeAsFileTime, InitializeSListHead, RtlUnwind, InterlockedPushEntrySList, InterlockedFlushSList, SetLastError, EncodePointer, TlsAlloc, TlsGetValue, TlsSetValue, TlsFree, LoadLibraryExW, ExitProcess, GetModuleHandleExW, GetModuleFileNameA, GetACP, GetStringTypeW, GetDateFormatW, GetTimeFormatW, CompareStringW, LCMapStringW, GetLocaleInfoW, IsValidLocale, GetUserDefaultLCID, EnumSystemLocalesW, FlushFileBuffers, GetConsoleCP, GetConsoleMode, GetTimeZoneInformation, SetFilePointerEx, ReadConsoleW, FindFirstFileExA, FindFirstFileExW, FindNextFileA, IsValidCodePage, GetOEMCP, GetCommandLineA, GetCommandLineW, GetEnvironmentStringsW, FreeEnvironmentStringsW, SetEnvironmentVariableA, SetEnvironmentVariableW, SetConsoleCtrlHandler, SetStdHandle, OutputDebugStringA, WaitForSingleObjectEx, CreateThread, FreeLibrary, GetTickCount, MulDiv, WriteConsoleW, ScrollConsoleScreenBufferW, SetConsoleCursorPosition, FlushConsoleInputBuffer, GetConsoleScreenBufferInfo, FillConsoleOutputCharacterW, LoadLibraryW, GetStdHandle, LeaveCriticalSection, EnterCriticalSection, InitializeCriticalSection, InterlockedDecrement, WideCharToMultiByte, MultiByteToWideChar, FindNextFileW, DeleteFileW, GetFileAttributesW, SetFileAttributesW, CreateFileW, GetPrivateProfileStringW, SystemTimeToFileTime, GetSystemTime, CloseHandle, SetFileTime, GetFileTime, InterlockedIncrement, CopyFileW, FindFirstFileW, FindResourceExW, FindResourceW, FindClose, SizeofResource, LoadResource, DeleteCriticalSection, InitializeCriticalSectionAndSpinCount, GetLastError, RaiseException, GetProcessHeap, HeapSize, HeapFree, HeapReAlloc, HeapAlloc, HeapDestroy, LockResource, LockFile, DecodePointer
+  [USER32.dll]
+     MonitorFromRect, MonitorFromPoint, GetWindowRect, SetWindowPos, DrawTextW, FillRect, GetForegroundWindow, IsWindowVisible, ShowWindow, InvalidateRect, SendMessageW, GetMonitorInfoW, SetWindowRgn, GetDC, IsWindow, PtInRect, ReleaseDC, AttachThreadInput, GetIconInfo, IsIconic, mouse_event, SetForegroundWindow, SetCursorPos, MonitorFromWindow, EnumDisplayMonitors, SystemParametersInfoW, MoveWindow, SetRect, GetWindowLongW, GetCursorPos, UnregisterClassW, GetWindowThreadProcessId, OffsetRect, SetWindowLongW, MessageBoxW, GetSystemMetrics
+  [SHELL32.dll]
+     SHGetSpecialFolderPathW, SHCreateDirectoryExW, ShellExecuteExW, ShellExecuteW
+  [SHLWAPI.dll]
+     PathRemoveFileSpecW, PathFileExistsW
+  [WTSAPI32.dll]
+     WTSQuerySessionInformationW, WTSFreeMemory
+  [WS2_32.dll]
+     #14, #8
+  [GDI32.dll]
+     CreateBitmap, SetStretchBltMode, SetBkColor, SetDIBitsToDevice, GetDIBits, CreateDIBPatternBrushPt, SetBkMode, StretchDIBits, RealizePalette, SetTextColor, ExtCreateRegion, CombineRgn, BitBlt, ExtSelectClipRgn, SaveDC, RestoreDC, GetClipBox, CreateRectRgnIndirect, RectVisible, DeleteObject, CreatePen, CreateSolidBrush, CreateCompatibleDC, DeleteDC, StretchBlt, PatBlt, CreateCompatibleBitmap, SetBrushOrgEx, CreateRectRgn, LineTo, Rectangle, SelectObject, CreateDIBSection, GetObjectW, MoveToEx, Polygon, GetStockObject, GetDeviceCaps, CreateFontIndirectW
+  [ADVAPI32.dll]
+     GetSidIdentifierAuthority, OpenThreadToken, OpenProcessToken, IsTextUnicode, RegOpenKeyExW, RegDeleteKeyW, RegCreateKeyExW, RegCloseKey, GetSidSubAuthority, GetSidSubAuthorityCount, GetSecurityDescriptorSacl, RegQueryValueExW, SetEntriesInAclW, GetSecurityInfo, SetSecurityInfo, BuildExplicitAccessWithNameW, ConvertStringSecurityDescriptorToSecurityDescriptorW, LookupAccountSidW, LookupAccountNameW, RegDeleteValueW, RegSetValueExW, ConvertSidToStringSidW, GetTokenInformation
+  [ole32.dll]
+     CoCreateInstance, StgCreateDocfile, StringFromGUID2, CoUninitialize, StgOpenStorage, CreateILockBytesOnHGlobal, CoCreateGuid, StgOpenStorageOnILockBytes, CoTaskMemFree, CoInitialize
+  [OLEAUT32.dll]
+     #6, #2, #200, #8, #9, #12, #201, #202

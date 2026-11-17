@@ -1,0 +1,3562 @@
+0x180490538	QQPinyinMonitorMap
+0x18049056e	.629.400
+0x1804905f0	##cmd=error;file=%s;moduleid=%s;errorcode=%d;
+0x180490660	QQWBBugReport.exe
+0x180490690	open
+0x1804906a0	##cmd=dump;file="%s";moduleid="%s";
+0x1804906f8	string too long
+0x180490728	atlTraceRefcount
+0x180490750	atlTraceWindowing
+0x180490780	atlTraceControls
+0x1804907a8	atlTraceHosting
+0x1804907d0	atlTraceDBClient
+0x1804907f8	atlTraceDBProvider
+0x180490828	atlTraceSnapin
+0x180490850	atlTraceNotImpl
+0x180490878	atlTraceAllocation
+0x1804908a8	atlTraceException
+0x1804908d8	atlTraceTime
+0x1804908f8	atlTraceCache
+0x180490920	atlTraceStencil
+0x180490948	atlTraceString
+0x180490970	atlTraceMap
+0x180490990	atlTraceUtil
+0x180490a38	ForceRemove
+0x180490a68	NoRemove
+0x180490a90	atlTraceSecurity
+0x180490ab8	Delete
+0x180490ac8	atlTraceSync
+0x180490ae8	atlTraceISAPI
+0x180491ec0	de-DE
+0x180492070	sl-SI
+0x180492180	hi-IN
+0x180492220	bn-IN
+0x180492230	pa-IN
+0x180492250	ta-IN
+0x180492260	te-IN
+0x180492270	kn-IN
+0x1804922a0	sa-IN
+0x180492360	de-CH
+0x1804923e0	sr-SP-Latn
+0x180492430	se-SE
+0x1804924a0	de-AT
+0x1804924e0	sr-SP-Cyrl
+0x180492570	fr-CH
+0x1804925c0	de-LI
+0x180492600	bs-BA-Latn
+0x180492670	sr-BA-Latn
+0x180493b90	bn-in
+0x180493ba0	bs-ba-latn
+0x180493c00	de-at
+0x180493c10	de-ch
+0x180493c20	de-de
+0x180493c30	de-li
+0x180493ee0	fr-ch
+0x180493f50	hi-in
+0x180494010	kn-in
+0x180494140	pa-in
+0x1804941d0	sa-in
+0x180494200	se-se
+0x180494220	sl-si
+0x1804942c0	sr-ba-latn
+0x1804942e0	sr-sp-cyrl
+0x180494300	sr-sp-latn
+0x180494360	ta-in
+0x180494370	te-in
+0x1804945b0	OpenAcc3SN{EBA2C0DA-7E58-4f7f-B942-464F718201A0}
+0x180494640	OpenAcc3MN{35364307-3862-4ada-8AB9-848F1D747AA9}
+0x1804946b8	atlTraceGeneral
+0x1804946e0	atlTraceCOM
+0x180494700	atlTraceQI
+0x180494720	atlTraceRegistrar
+0x180494a50	kernel32.dll
+0x180494a70	CreateFileTransactedW
+0x180494b50	ManualLogout
+0x180494b70	SOFTWARE\Tencent\QQWubi
+0x180494bb0	openacc3.dat
+0x180494cf8	%s%s\*
+0x180494d08	lock.txt
+0x180494d30	invalid string position
+0x180494df0	Invalid DateTime
+0x180494e28	Invalid DateTimeSpan
+0x180494f50	QQWubiUIWnd
+0x180494f70	QQWubiCompWndII
+0x180494f98	QQWubiCandWndII
+0x180494fc0	QQWubiSyllToneTipsWndII
+0x180495000	QQWubiStatusWndII
+0x180495030	QQWBTrayBar.exe
+0x180495118	\VarFileInfo\Translation
+0x180495160	\StringFileInfo\%04x%04x\LegalCopyright
+0x1804951c0	\StringFileInfo\%04x%04x\OriginalFilename
+0x180495230	\StringFileInfo\%04x%04x\ProductName
+0x180495288	%u.%u.%u.%u
+0x1804952a8	Outlook.exe
+0x1804952c8	conime.exe
+0x1804952e8	 	\n
+0x1804952f8	BinName
+0x180495310	ProductName
+0x180495330	CheckFile
+0x180495348	WindowMode
+0x180495368	FullScreenMode
+0x180495390	true
+0x1804953a0	opengl32.dll
+0x1804954b8	Advapi32.dll
+0x1804954d8	RegOpenKeyTransactedW
+0x1804954f8	Control Panel\Desktop
+0x180495518	UserPreferencesMask
+0x180495530	ExceptionBinary.bin
+0x180495560	QQWubiConfig.exe
+0x18049558a	QWubi
+0x180495598	QQWBUserCenter.exe
+0x1804955c8	/FromIMESelect
+0x1804955f0	2021-09-27 10:35:22
+0x180495f28	map/set<T> too long
+0x180496a90	mail
+0x180496aa0	news
+0x180496ab0	blog
+0x180496ac0	http
+0x180496ad0	mailto
+0x180496af0	https
+0x180497b48	CUserInputCache
+0x180497b78	CKeyManager
+0x180497ba8	QQWBCodeQuery.exe
+0x180497bda	# Word=
+0x180497bf0	QQWBDictManager.exe
+0x180497c20	QQWubiZiGen.exe
+0x180497c48	QQWubiFace.exe
+0x1804983d8	CAbandonedDict
+0x1804983f0	## ShowMainUI=0; ActivePage = 1; PageCmd = 1; Word = %s; ShowWord = %s; Code = %s;
+0x1804984c0	## ShowMainUI=0; ActivePage = 1; PageCmd = 1;
+0x18049ac40	http://qq.pinyin.cn/wubi
+0x18049ac80	Skin\Default\about.bmp
+0x18049acc0	Arial
+0x18049ad66	 2007-2020 Sogou Inc. All Rights Reserved.
+0x18049af40	## CMD = %d;STATUSBAR=%d
+0x18049afc8	QQWB_COMMON_SHAREMEM_2_EX
+0x18049b250	CompWndProc: uMsg = %x 
+0x18049b2c8	vector<T> too long
+0x18049b668	TxImeWndClass
+0x18049c800	QQImeUtil_x64.dll
+0x18049c8d8	{vU_Q
+0x18049c948	http://skin.qq.pinyin.cn
+0x18049c988	-focuspage 21
+0x18049c9b0	10000000-0000-0000-0000-000000000001
+0x18049ca38	-focuspage 22
+0x18049ca68	-skinguid 
+0x18049ca88	##CMD=%d;
+0x18049caa0	-focuspage 61
+0x18049cad0	http://qq.pinyin.cn/help/feedback.php
+0x18049cb30	http://dict.py.qq.com
+0x18049cb68	QQWubiHelp.chm
+0x18049cb90	http://100189996.qzone.qq.com/
+0x18049cbe0	http://t.qq.com/QQWubi
+0x18049cc18	svcVersion
+0x18049cc40	Software\Microsoft\Internet Explorer
+0x18049cca8	Version
+0x18049cce0	%s?sv=%d.%d&sd=%s&v=%s&iev=%s
+0x18049cd30	https://wenwen.sogou.com/cate/tag?tagId=462493&ch=ww.fly.bq1
+0x18049cdc8	QQPYWizard.exe
+0x18049cdf0	QQWubiTypeStat.exe
+0x18049ce20	QQPYHandInput.exe
+0x18049ce50	## ShowMainUI=0; ActivePage = 1; PageCmd = 1; Word = %s; ShowWord = %s;
+0x18049cf00	## ShowMainUI=0; ActivePage = 1; PageCmd = 1; Word = %s;
+0x18049cf88	SnapShot.exe
+0x18049cfa8	&config&skin&punc&phrase
+0x18049cfe8	Module=
+0x18049d000	## CMD = %d;
+0x18049d020	rundll32.exe
+0x18049d040	Shell32.dll,Control_RunDLL 
+0x18049d088	input.dll
+0x18049d0f8	SkinlistOrder.dat
+0x18049d134	Skins
+0x18049d140	FileName
+0x18049d150	SkinName
+0x18049d160	FilePath
+0x18049d178	IsFrame
+0x18049d188	EnableUse
+0x18049d198	LastModify
+0x18049d1a8	SkinType
+0x18049d1b4	utf-8
+0x18049d1d0	version
+0x18049d1e8	IsReComm
+0x18049d200	AppSkin.xml
+0x18049d220	ProgramSkin.xml
+0x18049d248	%s\*
+0x18049d260	%s\%s
+0x18049d290	list<T> too long
+0x18049d4f8	setting
+0x18049d510	item%d
+0x18049d520	process
+0x18049d538	type
+0x18049d548	company
+0x18049d560	version
+0x18049d7f8	%.2x
+0x18049ddc0	ImeUtil_Init
+0x18049ddd0	SknEng_LoadSkinFile
+0x18049dde8	SknEng_GetStatusBarPreview
+0x18049de08	SknEng_GetCompCandPreview
+0x18049de28	SknEng_GetSkinPreview
+0x18049de48	SknEng_GetVirtualWorkAreaContainPt
+0x18049de78	SknEng_GetPrimaryMonitorWorkArea
+0x18049dea0	SknEng_SetDisplayStyle
+0x18049dec0	SknEng_IsEngSupport
+0x18049ded8	Ime_IsSkinExist
+0x18049def0	Ime_InstallSkin
+0x18049df08	Ime_SetSkinToUse
+0x18049df20	Ime_GetInstallDir
+0x18049df38	Ime_GetAppData
+0x18049df50	Ime_IsDictEngSupport
+0x18049df70	Ime_GetDictInternalFileName
+0x18049df98	Ime_IsDictExist
+0x18049dfb0	Ime_IsDictInUse
+0x18049dfc8	Ime_CompareDictVersion
+0x18049dfe8	Ime_InstallDict
+0x18049e000	Ime_GetDictExample
+0x18049e080	QQWUBI_NOTIFY_LEVEL_DLG_{7ECCD023-6F8A-4db7-B1C8-5681148C027C}
+0x18049e118	ToolbarWindow32
+0x18049e140	TrayNotifyWnd
+0x18049e168	Shell_TrayWnd
+0x18049e280	SkinViewWnd
+0x18049e308	StatusTips
+0x18049e328	(Ctrl+Shift+%s)
+0x18049e350	(Ctrl+%s)
+0x18049e368	(Shift+%s)
+0x18049e4a8	StatusWndProc: uMsg = %x
+0x18049e52c	(LShift)
+0x18049e554	(RShift)
+0x18049e660	{vU_Q
+0x18049e6d0	-status %d,%d,%d,%d -left %d -top %d -qq 0 -face %u
+0x18049e750	QQWubiLevel.exe
+0x18049e938	Tahoma
+0x18049e958	Verdana
+0x18049e970	Times New Roman
+0x18049ef48	ImeToolBoxWnd
+0x18049f018	toolbox.xml
+0x18049f300	qwb_face
+0x18049f318	qwb_changeskn
+0x18049f346	_dict
+0x18049f358	qwb_snapshot
+0x18049f378	qwb_makeword
+0x18049f39e	_DictMgr
+0x18049f3b8	qwb_Zigenbiao
+0x18049f3e0	qwb_typestat
+0x18049f400	qpy_mblog
+0x18049f418	qpy_handinput
+0x18049f440	qpy_clipboard
+0x18049f468	qpy_strokes
+0x18049f488	toolbox
+0x18049f494	%d.%d
+0x18049f4a0	item
+0x18049f5b8	SoftWare\Tencent\QQWubi
+0x18049f5f8	CheckCrash
+0x18049f618	CheckCrashRes
+0x18049f640	crashrpt.exe
+0x18049f670	ntdll.dll
+0x18049f688	imm32.dll
+0x18049f6a0	kernelbase.dll
+0x18049f6c8	shell32.dll
+0x18049f6e8	user32.dll
+0x18049f708	gdi32.dll
+0x18049f720	advapi32.dll
+0x18049f740	ziplib.dll
+0x18049f7b0	%I64u
+0x18049f7c0	%s\%s.rpt
+0x18049f7d8	%s\%s.dmp
+0x18049f7f0	//=====================================================\n
+0x18049f880	Time: %d.%02d.%02d %02d:%02d:%02d %03d\n
+0x18049f8e0	Application: %s\n
+0x18049f908	Exception code: %08X %s\n
+0x18049f950	Fault address:  %p %02X:%08X %s\n
+0x18049f9a0	\nRegisters:\n
+0x18049f9c0	RAX:%p\nRBX:%p\nRCX:%p\nRDX:%p\nRSI:%p\nRDI:%p\n
+0x18049fa28	CS:RIP:%04X:%p\n
+0x18049fa50	SS:RSP:%04X:%p  RBP:%p\n
+0x18049fa90	DS:%04X  FS:%04X  GS:%04X\n
+0x18049fad0	Flags:%08X\n
+0x18049faf0	Exception Param:
+0x18049fb28	CPU mode: AMD64\n
+0x18049fb50	Registers:
+0x18049fb70	RAX:%p RBX:%p RCX:%p RDX:%p RSI:%p RDI:%p 
+0x18049fbd8	CS:RIP:%04X:%p 
+0x18049fc00	SS:RSP:%04X:%p RBP:%p 
+0x18049fc38	DS:%04X FS:%04X GS:%04X 
+0x18049fc78	type:%d\n
+0x18049fc90	DbgHelp.dll
+0x18049fcb0	imagehlp.dll
+0x18049fcd0	StackWalk64
+0x18049fce0	SymFunctionTableAccess64
+0x18049fd00	SymGetModuleBase64
+0x18049fd18	SymInitialize
+0x18049fd30	Num Address   Frame     Logical addr  Module  Version\n
+0x18049fdc0	%p	%p	%04X:%08X	%s	%d.%d.%d.%d	(%p,%p,%p,%p)\n
+0x18049fe30	MiniDumpWriteDump
+0x18049fe48	ACCESS_VIOLATION
+0x18049fe70	DATATYPE_MISALIGNMENT
+0x18049fea8	BREAKPOINT
+0x18049fec8	SINGLE_STEP
+0x18049fee8	ARRAY_BOUNDS_EXCEEDED
+0x18049ff20	FLT_DENORMAL_OPERAND
+0x18049ff58	FLT_DIVIDE_BY_ZERO
+0x18049ff88	FLT_INEXACT_RESULT
+0x18049ffb8	FLT_INVALID_OPERATION
+0x18049fff0	FLT_OVERFLOW
+0x1804a0010	FLT_STACK_CHECK
+0x1804a0038	FLT_UNDERFLOW
+0x1804a0060	INT_DIVIDE_BY_ZERO
+0x1804a0090	INT_OVERFLOW
+0x1804a00b0	PRIV_INSTRUCTION
+0x1804a00d8	IN_PAGE_ERROR
+0x1804a0100	ILLEGAL_INSTRUCTION
+0x1804a0130	NONCONTINUABLE_EXCEPTION
+0x1804a0170	STACK_OVERFLOW
+0x1804a0198	INVALID_DISPOSITION
+0x1804a01c8	GUARD_PAGE
+0x1804a01e8	INVALID_HANDLE
+0x1804a0210	NTDLL.DLL
+0x1804a0238	\nCall stack:\n
+0x1804a0260	Address   Frame     Logical addr  Module  Version\n
+0x1804a02e0	%p %04X:%08X %s %d.%d.%d.%d\n
+0x1804a0330	//-------------------------------------\n
+0x1804a0398	too long comp\n
+0x1804a03c0	comp: %s\n
+0x1804a04c8	ToolTipsWndEx
+0x1804a0508	IDB_SOFT_CHAR
+0x1804a0530	IDB_SOFT_CHAR_DOWN
+0x1804a0560	IDB_SOFT_TAB
+0x1804a0580	IDB_SOFT_SHIFT
+0x1804a05a8	IDB_SOFT_INSERT
+0x1804a05d0	IDB_SOFT_ESCAPE
+0x1804a05f8	IDB_SOFT_RETURN
+0x1804a0620	IDB_SOFT_DELETE
+0x1804a0648	IDB_SOFT_CAPITAL
+0x1804a0670	IDB_SOFT_BACK
+0x1804a0720	qqwubi_softkbd
+0x1804a0748	SoftKeyboardWnd
+0x1804a09c0	Space
+0x1804a09d0	Page Up
+0x1804a09e8	Page Down
+0x1804a0a60	Shift
+0x1804a0a72	Shift
+0x1804a0a88	explorer.exe
+0x1804a0aa8	Program Manager
+0x1804a0ad0	SHELLDLL_DefView
+0x1804a0af8	FolderView
+0x1804a0b20	QQWubi{4E58ECF1-F414-42d7-B694-ACACC94FD32A}
+0x1804a0e00	##boost=1
+0x1804a0ff2	ysDict
+0x1804a1008	WbUser
+0x1804a1018	Phrase
+0x1804a1028	DelDict
+0x1804a1042	Dict
+0x1804a1050	PyUser
+0x1804a1060	FixedOrder
+0x1804a10b8	CAddons
+0x1804a10d0	## Mode = %d; UpdateImeType = %u; UpdateDictType = %u;
+0x1804a1158	QQWBLiveUp.exe
+0x1804a1180	lastupdatetime
+0x1804a11a8	Software\Tencent\QQWubi\Liveup
+0x1804a11f8	LastDictUpdateTime
+0x1804a1228	StatTime
+0x1804a1240	Software\Tencent\QQWubi
+0x1804a1280	UpdateInterval
+0x1804a12a8	DictUpdateInterval
+0x1804a14e8	levellog.txt
+0x1804a1508	pointlog.txt
+0x1804a1548	%.4u-%.2u-%.2u %.2u:%.2u:%.2u
+0x1804a1592	--- 
+0x1804a1618	LevelPoint\
+0x1804a1638	level_%u.dat
+0x1804a168e	--------------
+0x1804a1818	## CMD = %d; -reportall
+0x1804a1880	## CMD = %d; -reportpoint
+0x1804a190e	--------------
+0x1804a1a58	RegCreateKeyTransactedW
+0x1804a1aa0	## CMD = %d;TYPE = %d
+0x1804a1ad8	TimeStamp
+0x1804a1af0	QQPYSwitchReport
+0x1804a1b20	Software\Tencent\QQWubi\RebootFlag
+0x1804a1b78	profile.ini
+0x1804a41a8	InputMode
+0x1804a41c0	CandNumber
+0x1804a41e0	AutoSort
+0x1804a41f8	ShowWordJustWholeCode
+0x1804a4230	SingleWord
+0x1804a4250	ShowCodeTips
+0x1804a4270	AutoSelectWhenUnique
+0x1804a42a8	AutoSelectWhenFifth
+0x1804a42d8	AutoCancelWhenNone
+0x1804a4308	ReturnAsCancel
+0x1804a4330	SimpleCharSet
+0x1804a4358	SelectedCharSet
+0x1804a4380	FuzzyEnable
+0x1804a43a0	ChangeLanguageKey
+0x1804a43d0	TwoThreeCandKey
+0x1804a43f8	CharInWordKey
+0x1804a4420	PageChangeKey
+0x1804a4448	DeleteWordKey
+0x1804a4470	AdjustWordKey
+0x1804a4498	SwitchKey
+0x1804a44b0	ConfigKey
+0x1804a44c8	SimpleTradKey
+0x1804a44f0	ShowHideStatusKey
+0x1804a4520	SoftKeyboardKey
+0x1804a4548	MakeWordKey
+0x1804a4568	QueryInfoKey
+0x1804a4588	WubiModeKey
+0x1804a45a8	PinyinModeKey
+0x1804a45d0	MixedModeKey
+0x1804a45f0	CandVertical
+0x1804a4610	CandVRight
+0x1804a4630	HideStatus
+0x1804a4650	SkinName
+0x1804a4668	StartChinese
+0x1804a4688	StartFullShape
+0x1804a46b0	ChieseWithEngishSymbol
+0x1804a46e8	HalfShapeWithFullShapeSpace
+0x1804a4730	CursorFollow
+0x1804a4750	AutoMakeWord
+0x1804a4770	Associate
+0x1804a4788	EnableCellDict
+0x1804a47b0	EnablePhrase
+0x1804a47d0	EnablePunction
+0x1804a47f8	EnableFixOrder
+0x1804a4820	RareWordWhenEmpty
+0x1804a4850	RareWordWhenDup
+0x1804a4878	RareWordWhenUnique
+0x1804a48a8	ChangeIMEOutput
+0x1804a48d0	ChangeLanguageOutput
+0x1804a4908	TypeStatistic
+0x1804a4930	ShowTypeDataOnComp
+0x1804a4960	QuotaForEnglish
+0x1804a4988	ZForLastInput
+0x1804a49b0	UpdateIMEType
+0x1804a49d8	SoundWhenNoneDup
+0x1804a4a00	SoundWhenType
+0x1804a4a28	Charset
+0x1804a4a40	MixedModeJianpin
+0x1804a4a68	Fuzzyset
+0x1804a4a80	SingleMode
+0x1804a4aa0	SimpleMode
+0x1804a4ac0	NumPadSelect
+0x1804a4ae0	SnapToolKey
+0x1804a4b00	SymbolToolKey
+0x1804a4b28	GBKKey
+0x1804a4b38	DictManagerKey
+0x1804a4b60	ZiGenKey
+0x1804a4b78	DefaultSkin
+0x1804a4b98	ChineseFont
+0x1804a4bb8	EnglishFont
+0x1804a4bd8	FontSize
+0x1804a4bf0	ProxySet
+0x1804a4c08	AutoSyncCfgSet
+0x1804a4c30	SyncInterval
+0x1804a4c50	SyncModules
+0x1804a4c70	UpDownModules
+0x1804a4c98	FullScreenHideStatus
+0x1804a4cd0	NumDot
+0x1804a4ce0	AutoPunc
+0x1804a4cf8	ExistWordTips
+0x1804a4d20	PinyinTipsWhenWubi
+0x1804a4d50	ReturnCancelAssociate
+0x1804a4d88	ShiftLetterDirectly
+0x1804a4db8	EnglishTipsWhenCapital
+0x1804a4df0	EnglishTipsWhenFacileMode
+0x1804a4e30	EnglishSentence
+0x1804a4e58	TempPinyinKey
+0x1804a4e80	TempRareWordKey
+0x1804a4ea8	QuickInputKey
+0x1804a4ed0	SysDictNum
+0x1804a4ef0	SysDictName
+0x1804a4f10	SysDictPhraseNum
+0x1804a4f38	EnableCellDictUpdate
+0x1804a4f70	SysCellDictNum
+0x1804a4f98	UserCellDictNum
+0x1804a4fc0	DelPhraseNum
+0x1804a4fe0	UserDictPhraseNum
+0x1804a5010	UpScreenTimes
+0x1804a5038	CharUpScreenTimes
+0x1804a5068	WubiUpScreenTimes
+0x1804a5098	PinyinUpScreenTimes
+0x1804a50c8	PySentenceUpScreenTimes
+0x1804a5108	AssociateUpScreenTimes
+0x1804a5140	NetMailUpScreenTimes
+0x1804a5178	TempPYUpScreenTimes
+0x1804a51a8	TempRWUpScreenTimes
+0x1804a51d8	FacileModeUpScreenTimes
+0x1804a5218	ZRepeatUpScreenTimes
+0x1804a5250	UpScreenCharNum
+0x1804a5278	FirstChoice
+0x1804a5298	SecondChoice
+0x1804a52b8	ThirdChoice
+0x1804a52d8	ChooseTimes
+0x1804a52f8	FirstPageChoice
+0x1804a5320	SecondPageChoice
+0x1804a5348	ThirdPageChoice
+0x1804a5370	MorePageChoice
+0x1804a5398	CustomPhraseChoice
+0x1804a53c8	OpenConfig
+0x1804a53e8	CgToolUploadCfg
+0x1804a5410	CgToolDownloadCfg
+0x1804a5440	CgToolUploadDict
+0x1804a5468	CgToolDownloadDict
+0x1804a5498	CgToolSyncDict
+0x1804a54c0	AccWndUploadCfg
+0x1804a54e8	AccWndDownloadCfg
+0x1804a5518	AccWndUploadDict
+0x1804a5540	AccWndDownloadDict
+0x1804a5570	AccWndSyncDict
+0x1804a5598	AccWndGoUserinfo
+0x1804a55c0	StatusWndChEn
+0x1804a55e8	StatusWndFullshape
+0x1804a5618	StatusWndPunc
+0x1804a5640	StatusWndSkboard
+0x1804a5668	StatusWndAccount
+0x1804a5690	StatusWndSet
+0x1804a56b0	SkbMenuSymbolTool
+0x1804a56e0	MenuQueryTool
+0x1804a5708	MenuMakewordTool
+0x1804a5730	MenuZiGen
+0x1804a5748	MenuSymbolTool
+0x1804a5770	MenuSnapTool
+0x1804a5790	MenuUserinfo
+0x1804a57b0	MenuSet
+0x1804a57c8	KeyQueryTool
+0x1804a57e8	KeyMakewordTool
+0x1804a5810	KeyZiGen
+0x1804a5828	KeySymbolTool
+0x1804a5850	KeySoftkbd
+0x1804a5870	CompWndMenu
+0x1804a5890	StatusWndMenu
+0x1804a58b8	MenuDictPlatform
+0x1804a58e0	MenuSkinPlatform
+0x1804a5908	MenuWenwen
+0x1804a5928	MenuIMEManager
+0x1804a5950	MenuDictManager
+0x1804a5978	MenuSuggest
+0x1804a5998	CgToolSuggest
+0x1804a59c0	AccWndSuggest
+0x1804a59e8	CgToolDictPlatform
+0x1804a5a18	CgToolSkinPlatform
+0x1804a5a48	KeyFanti
+0x1804a5a60	KeyDelPhrase
+0x1804a5a80	KeyFixtop
+0x1804a5a98	KeyMixedMode
+0x1804a5ab8	KeyPyMode
+0x1804a5ad0	KeyWbMode
+0x1804a5ae8	KeyCharset
+0x1804a5b08	CandWndFixtop
+0x1804a5b30	CandWndDelPhrase
+0x1804a5b58	CandWndCandLeft
+0x1804a5b80	CandWndCandRight
+0x1804a5ba8	CandWndCancelTop
+0x1804a5bd0	CandWndMouseSelect
+0x1804a5c00	BindQQ
+0x1804a5c10	FirstSupplyid
+0x1804a5c38	InstalledIME
+0x1804a5c58	IMEList
+0x1804a5c70	StatTimes
+0x1804a5c88	LastSyncTime
+0x1804a5ca8	LastSyncOkTime
+0x1804a5cd0	BtnBatchDelWord
+0x1804a5cf8	OpenMakeWordStyle
+0x1804a5d28	MWStyleGoInTool
+0x1804a5d50	MWStyleEsc
+0x1804a5d70	MWStyleEnter
+0x1804a5d90	MenuMiniBlog
+0x1804a68d0	USW[\nNO\;`!kpe
+0x1804a73b0	(u7b,{
+0x1804a73c0	SupplyID
+0x1804a7538	%d (0x%.8x)
+0x1804a7558	%u (0x%.8x)
+0x1804a7578	%I64d (0x%.16x)
+0x1804a75a0	%I64u (0x%.16x)
+0x1804a75d0	 // 
+0x1804a75e0	local.stat
+0x1804a7978	Property
+0x1804a79b8	SignatureType
+0x1804a79e0	StatLogicObj
+0x1804a7a70	Signature
+0x1804a7aa0	SignatureKey
+0x1804a7b38	Face
+0x1804a7b48	Nick
+0x1804a7ba0	Unknow system
+0x1804a7bc8	Microsoft Windows NT
+0x1804a7c00	Microsoft Windows 2000
+0x1804a7c38	Microsoft Windows XP
+0x1804a7c70	Microsoft Windows Vista
+0x1804a7cb0	Microsoft Windows 95 OSR2
+0x1804a7cf0	Microsoft Windows 95
+0x1804a7d28	Microsoft Windows 98 SE
+0x1804a7d68	Microsoft Windows 98
+0x1804a7da0	Microsoft Windows Me
+0x1804a7dd8	Microsoft Windows Me later
+0x1804a7e18	Microsoft Win32s
+0x1804a7e40	%s %s [Build %d.%d.%d]
+0x1804a7e78	stat.qq.com
+0x1804a7f18	%2hx%2hx%2hx%2hx%2hx%2hx
+0x1804a7f58	iphlpapi.dll
+0x1804a7f78	GetAdaptersInfo
+0x1804a7f90	System\CurrentControlSet\Control\Network\{4D36E972-E325-11CE-BFC1-08002BE10318}
+0x1804a7ff0	%s\Connection
+0x1804a8000	MediaSubType
+0x1804a8010	PnpInstanceID
+0x1804a8768	Unknown exception
+0x1804a87c0	bad cast
+0x1804a87d0	bad locale name
+0x1804a87e4	false
+0x1804a8970	generic
+0x1804a89c8	iostream
+0x1804a89d8	iostream stream error
+0x1804a8a30	ios_base::badbit set
+0x1804a8a50	ios_base::failbit set
+0x1804a8a70	ios_base::eofbit set
+0x1804a8c50	\Tencent\DeskUpdate
+0x1804a8c80	\Tencent\Desktop
+0x1804a8ca8	\Global.db
+0x1804a8cd0	metnsd\clsid
+0x1804a8cf0	SequenceID
+0x1804a8d10	Global.db
+0x1804a8f98	speclist.ini
+0x1804a8fb8	Main
+0x1804a8fc8	Enable
+0x1804a8fd8	ImeList
+0x1804a8ff0	HideCompWnd
+0x1804a9010	Specical
+0x1804a9028	CouplePunct
+0x1804a9048	MatchPuncType
+0x1804a9070	ParentNull
+0x1804a9090	!@#;/\
+0x1804a90a0	MatchLastPuncType
+0x1804a9130	3_&9k!I~F,@#y$^c
+0x1804a9150	http://pyhelp.qq.com/cgi-bin/pyidjump.so?
+0x1804a91b8	%sgd=%s
+0x1804a9998	CSkinInfoMgr
+0x1804a99a8	CurrentSkin.skn
+0x1804a99d0	FontZH
+0x1804a99e0	SkinInfo
+0x1804a99f8	FontEN
+0x1804a9a08	ColorCode
+0x1804a9a20	ColorOutput
+0x1804a9a40	ColorSelect
+0x1804a9a60	ColorNotSelect
+0x1804a9a88	ColorCursor
+0x1804a9aa8	StatusBarCustom
+0x1804a9ad0	StatusBarCnEn
+0x1804a9af8	StatusBarSample
+0x1804a9b20	StatusBarSharp
+0x1804a9b48	StatusBarPunc
+0x1804a9b70	StatusBarSoftKB
+0x1804a9b98	StatusBarDict
+0x1804a9bc0	StatusBarPropSet
+0x1804a9be8	StatusBarMiniAndMenu
+0x1804a9c20	ColorBK
+0x1804a9c38	FramePic\
+0x1804a9c50	FrameConfig.ini
+0x1804a9c78	photo
+0x1804a9c88	cand
+0x1804a9c98	status
+0x1804a9e8a	msctf.dll
+0x1804a9ea8	TF_CreateLangBarItemMgr
+0x1804a9ec8	TF_CreateInputProcessorProfiles
+0x1804a9ef0	TF_CreateLangBarMgr
+0x1804aa240	-------------- NumIs: %d
+0x1804aae10	ERROR : Unable to initialize critical section in CAtlBaseModule\n
+0x1804aaed0	bad allocation
+0x1804aafa8	bad function call
+0x1804aafe0	regex_error(error_collate): The expression contained an invalid collating element name.
+0x1804ab050	regex_error(error_ctype): The expression contained an invalid character class name.
+0x1804ab0c0	regex_error(error_escape): The expression contained an invalid escaped character, or a trailing escape.
+0x1804ab140	regex_error(error_backref): The expression contained an invalid back reference.
+0x1804ab1a0	regex_error(error_brack): The expression contained mismatched [ and ].
+0x1804ab200	regex_error(error_paren): The expression contained mismatched ( and ).
+0x1804ab260	regex_error(error_brace): The expression contained mismatched { and }.
+0x1804ab2c0	regex_error(error_badbrace): The expression contained an invalid range in a { expression }.
+0x1804ab330	regex_error(error_range): The expression contained an invalid character range, such as [b-a] in most encodings.
+0x1804ab3c0	regex_error(error_space): There was insufficient memory to convert the expression into a finite state machine.
+0x1804ab450	regex_error(error_badrepeat): One of *?+{ was not preceded by a valid regular expression.
+0x1804ab4c0	regex_error(error_complexity): The complexity of an attempted match against a regular expression exceeded a pre-set level.
+0x1804ab560	regex_error(error_stack): There was insufficient memory to determine whether the regular expression could match the specified character sequence.
+0x1804ab610	regex_error(error_parse)
+0x1804ab630	regex_error(error_syntax)
+0x1804ab650	regex_error
+0x1804ab944	system
+0x1804ab950	unknown error
+0x1804ac228	address family not supported
+0x1804ac250	address in use
+0x1804ac268	address not available
+0x1804ac288	already connected
+0x1804ac2a0	argument list too long
+0x1804ac2c0	argument out of domain
+0x1804ac2e0	bad address
+0x1804ac2f0	bad file descriptor
+0x1804ac308	bad message
+0x1804ac318	broken pipe
+0x1804ac328	connection aborted
+0x1804ac340	connection already in progress
+0x1804ac368	connection refused
+0x1804ac380	connection reset
+0x1804ac398	cross device link
+0x1804ac3b0	destination address required
+0x1804ac3d8	device or resource busy
+0x1804ac3f8	directory not empty
+0x1804ac410	executable format error
+0x1804ac430	file exists
+0x1804ac440	file too large
+0x1804ac458	filename too long
+0x1804ac470	function not supported
+0x1804ac490	host unreachable
+0x1804ac4a8	identifier removed
+0x1804ac4c0	illegal byte sequence
+0x1804ac4e0	inappropriate io control operation
+0x1804ac510	interrupted
+0x1804ac520	invalid argument
+0x1804ac538	invalid seek
+0x1804ac548	io error
+0x1804ac558	is a directory
+0x1804ac570	message size
+0x1804ac580	network down
+0x1804ac590	network reset
+0x1804ac5a0	network unreachable
+0x1804ac5b8	no buffer space
+0x1804ac5d0	no child process
+0x1804ac5e8	no link
+0x1804ac5f8	no lock available
+0x1804ac610	no message available
+0x1804ac630	no message
+0x1804ac640	no protocol option
+0x1804ac658	no space on device
+0x1804ac670	no stream resources
+0x1804ac688	no such device or address
+0x1804ac6a8	no such device
+0x1804ac6c0	no such file or directory
+0x1804ac6e0	no such process
+0x1804ac6f8	not a directory
+0x1804ac710	not a socket
+0x1804ac720	not a stream
+0x1804ac730	not connected
+0x1804ac740	not enough memory
+0x1804ac758	not supported
+0x1804ac768	operation canceled
+0x1804ac780	operation in progress
+0x1804ac7a0	operation not permitted
+0x1804ac7c0	operation not supported
+0x1804ac7e0	operation would block
+0x1804ac800	owner dead
+0x1804ac810	permission denied
+0x1804ac828	protocol error
+0x1804ac840	protocol not supported
+0x1804ac860	read only file system
+0x1804ac880	resource deadlock would occur
+0x1804ac8a8	resource unavailable try again
+0x1804ac8d0	result out of range
+0x1804ac8e8	state not recoverable
+0x1804ac908	stream timeout
+0x1804ac920	text file busy
+0x1804ac938	timed out
+0x1804ac948	too many files open in system
+0x1804ac970	too many files open
+0x1804ac988	too many links
+0x1804ac9a0	too many symbolic link levels
+0x1804ac9c8	value too large
+0x1804ac9e0	wrong protocol type
+0x1804aca68	FlsAlloc
+0x1804aca78	FlsFree
+0x1804aca88	FlsGetValue
+0x1804aca98	FlsSetValue
+0x1804acaa8	InitializeCriticalSectionEx
+0x1804acad0	InitOnceExecuteOnce
+0x1804acae8	CreateEventExW
+0x1804acb00	CreateSemaphoreW
+0x1804acb18	CreateSemaphoreExW
+0x1804acb30	CreateThreadpoolTimer
+0x1804acb50	SetThreadpoolTimer
+0x1804acb68	WaitForThreadpoolTimerCallbacks
+0x1804acb90	CloseThreadpoolTimer
+0x1804acbb0	CreateThreadpoolWait
+0x1804acbd0	SetThreadpoolWait
+0x1804acbe8	CloseThreadpoolWait
+0x1804acc00	FlushProcessWriteBuffers
+0x1804acc20	FreeLibraryWhenCallbackReturns
+0x1804acc48	GetCurrentProcessorNumber
+0x1804acc68	CreateSymbolicLinkW
+0x1804acc80	GetCurrentPackageId
+0x1804acc98	GetTickCount64
+0x1804accb0	GetFileInformationByHandleEx
+0x1804accd8	SetFileInformationByHandle
+0x1804accf8	GetSystemTimePreciseAsFileTime
+0x1804acd20	InitializeConditionVariable
+0x1804acd48	WakeConditionVariable
+0x1804acd68	WakeAllConditionVariable
+0x1804acd88	SleepConditionVariableCS
+0x1804acda8	InitializeSRWLock
+0x1804acdc0	AcquireSRWLockExclusive
+0x1804acde0	TryAcquireSRWLockExclusive
+0x1804ace00	ReleaseSRWLockExclusive
+0x1804ace20	SleepConditionVariableSRW
+0x1804ace40	CreateThreadpoolWork
+0x1804ace60	SubmitThreadpoolWork
+0x1804ace80	CloseThreadpoolWork
+0x1804ace98	CompareStringEx
+0x1804aceb0	GetLocaleInfoEx
+0x1804acec8	LCMapStringEx
+0x1804ad530	0123456789-+Ee
+0x1804ad548	0123456789ABCDEFabcdef-+Xx
+0x1804ad568	0123456789ABCDEFabcdef-+XxPp
+0x1804b10d0	:Sun:Sunday:Mon:Monday:Tue:Tuesday:Wed:Wednesday:Thu:Thursday:Fri:Friday:Sat:Saturday
+0x1804b1140	:Jan:January:Feb:February:Mar:March:Apr:April:May:May:Jun:June:Jul:July:Aug:August:Sep:September:Oct:October:Nov:November:Dec:December
+0x1804b11f0	:Sun:Sunday:Mon:Monday:Tue:Tuesday:Wed:Wednesday:Thu:Thursday:Fri:Friday:Sat:Saturday
+0x1804b12c0	:Jan:January:Feb:February:Mar:March:Apr:April:May:May:Jun:June:Jul:July:Aug:August:Sep:September:Oct:October:Nov:November:Dec:December
+0x1804b1fd0	%b %d %H : %M : %S %Y
+0x1804b1ff0	%m / %d / %y
+0x1804b2009	AM:am:PM:pm
+0x1804b2018	%I : %M : %S %p
+0x1804b2030	%H : %M
+0x1804b2040	%H : %M : %S
+0x1804b2050	%d / %m / %y
+0x1804b2060	0123456789-
+0x1804b2070	%.0Lf
+0x1804b2078	0123456789-
+0x1804b2088	0123456789-
+0x1804b2098	0123456789-+Ee
+0x1804b20b0	0123456789ABCDEFabcdef-+Xx
+0x1804b20d0	0123456789-
+0x1804b20e0	0123456789-+Ee
+0x1804b20f8	0123456789ABCDEFabcdef-+Xx
+0x1804b2120	0123456789ABCDEFabcdef-+XxPp
+0x1804b2148	0123456789ABCDEFabcdef-+XxPp
+0x1804b2170	+v$x+v$xv$+xv+$xv$+x+$vx+$vx$v+x+$vx$+vx+v $+v $v $+v +$v $++$ v+$ v$ v++$ v$+ v+xv$+ v$v$ +v+ $v$ ++x$v+ $v$v ++ $v$ +v
+0x1804b2208	:AM:am:PM:pm
+0x1804b2c50	0123456789-
+0x1804b2c60	0123456789-
+0x1804b2c70	0123456789abcdefghijklmnopqrstuvwxyz
+0x1804b2cd0	0123456789abcdefghijklmnopqrstuvwxyz
+0x1804b2d90	bad array new length
+0x1804b2fd0	SetCursorPos = { %d, %d } \n
+0x1804b3020	SetCompScreenPos = { %d, %d } \n
+0x1804b3080	http://dict.qq.com/
+0x1804b354a	in'yin
+0x1804b3a60	UpdateLayeredWindow
+0x1804b3b98	OpenUrlID
+0x1804b4100	skinConfig2.0.xml
+0x1804b4130	skinConfig-status-ver2.0.xml
+0x1804b4178	skinConfig-unite-ver2.0.xml
+0x1804b41c0	skinConfig-divide-ver2.0.xml
+0x1804b4268	preview.png
+0x1804b42f8	GetStdHandle failed with %d\n
+0x1804b4320	GetConsoleScreenBufferInfo failed %d\n
+0x1804b4350	ScrollConsoleScreenBuffer failed %d\n
+0x1804b4390	*************************************************************************\n
+0x1804b4448	%d-%02d-%02d %02d:%02d:%02d
+0x1804b6938	SetWindowRegion \n
+0x1804b6ae2	~~~_~^v^~_~@~^|^-^&^~~~~
+0x1804b7410	DeskTop
+0x1804b75f8	tencent skin tools
+0x1804b7618	CTRL_CHILD
+0x1804b7638	CONTROL
+0x1804b7650	class
+0x1804b7660	StatusDialog
+0x1804b7680	UniteDialog
+0x1804b76a0	DivideDialog
+0x1804b76c0	TransDialog
+0x1804b76e0	Dialog
+0x1804b76f0	CompDialog
+0x1804b7710	CandDialog
+0x1804b7730	name
+0x1804b7750	CTRL_PROPE
+0x1804b7860	%d.%d
+0x1804b7888	skininfo-ver2.0.xml
+0x1804b78c8	AUTHOR
+0x1804b78d8	guid
+0x1804b78e8	description
+0x1804b7908	style
+0x1804b7918	time
+0x1804b7928	frameskin
+0x1804b7940	author
+0x1804b7958	email
+0x1804b7968	%d-%d-%d %d:%d:%d
+0x1804b7998	ERROR
+0x1804b79b0	10000000-1000-1000-1000-100000000001
+0x1804b7a08	*g}TT
+0x1804b7d30	HOT_BUTTON
+0x1804b7d50	PY_BTN_BKGROUND
+0x1804b8a00	XML_FILE
+0x1804b8a18	STATUS_BAR
+0x1804b8a38	COMP_CAND
+0x1804b8a50	button_layout
+0x1804b8a78	comp_font
+0x1804b8a90	cand_font
+0x1804b8aa8	comp_text_margin
+0x1804b8ad0	cand_text_margin
+0x1804b8af8	cursor
+0x1804b8b08	comp_ground
+0x1804b8b28	cand_ground
+0x1804b8b48	comp_border
+0x1804b8b68	cand_border
+0x1804b8b88	segmentation_line
+0x1804b8bb8	page_button
+0x1804b8bd8	btnleftmrgin
+0x1804b8bf8	btntopmargin
+0x1804b8c18	btnbetweenMargin
+0x1804b8c40	bkleftmrgin
+0x1804b8c60	bktopmrgin
+0x1804b8c80	bkrightmargin
+0x1804b8ca8	bkbottommrgin
+0x1804b8cd0	chfont_name
+0x1804b8cf0	chfont_size
+0x1804b8d10	chfont_bold
+0x1804b8d30	enfont_name
+0x1804b8d50	enfont_size
+0x1804b8d70	enfont_bold
+0x1804b8d90	normal_color
+0x1804b8db0	halfselect_color
+0x1804b8de0	candfont_name
+0x1804b8e08	candfont_size
+0x1804b8e30	candfont_bold
+0x1804b8e58	unite_textmairgin
+0x1804b8e88	divide_textmairgin
+0x1804b8ed8	right
+0x1804b8ee8	bottom
+0x1804b8ef8	color
+0x1804b8f08	unite_pic_margin
+0x1804b8f30	divide_pic_margin
+0x1804b8f60	fillet
+0x1804b8f70	value
+0x1804b8f80	alpha
+0x1804b8f90	leftmargin
+0x1804b8fb0	topmargin
+0x1804b8fc8	rightmargin
+0x1804b8fe8	bottommargin
+0x1804b9008	lefttopfillet
+0x1804b9030	righttopfillet
+0x1804b9058	leftbottomfillet
+0x1804b9080	rightbottomfillet
+0x1804b90b0	line_pic_margin
+0x1804b90d8	right_margin
+0x1804b90f8	between_margin
+0x1804b91f8	CompFont
+0x1804b9210	CandFont
+0x1804b9228	english_color
+0x1804b9250	chinese_color
+0x1804b9278	hot_color
+0x1804b9290	Cursor
+0x1804b92a0	weight
+0x1804b9988	PY_DIALOG_BKGROUND
+0x1804b9c68	ABCabc+-=123*~
+0x1804ba078	Face\PicFace\images.cab
+0x1804ba1f0	PYCS_NORMAL
+0x1804ba210	PYCS_MOUSEOVER
+0x1804ba238	PYCS_PRESSED
+0x1804ba258	PYCS_DISABLE
+0x1804ba278	PYCS_HASFOCUS
+0x1804ba2a0	PYCS_LOSTFOCUS
+0x1804ba2c8	PYCS_HIDDEN
+0x1804ba2e8	PYCS_UNDIFINE
+0x1804ba310	CPySuEnMap::GetStatusValue
+0x1804ba378	Warning
+0x1804ba390	PCE_INIT
+0x1804ba3a8	PCE_MOUSEIN
+0x1804ba3c8	PCE_MOUSEMOVE
+0x1804ba3f0	PCE_MOUSELEAVE
+0x1804ba418	PCE_SETFOCUS
+0x1804ba438	PCE_KILLFOCUS
+0x1804ba460	PCE_BN_CLICKED
+0x1804ba488	CPySuEnMap::GetEventValue
+0x1804ba850	CTRL_TEMPLATE
+0x1804ba878	MEMBER
+0x1804ba888	ATTRIBUTE
+0x1804ba8a0	remark
+0x1804ba978	ImageBox
+0x1804ba990	Button
+0x1804ba9a0	PicFrame
+0x1804ba9c0	CPyMappingTable::CtrlClassMappedToCtrlType
+0x1804baa50	CPyMappingTable::SetCtrlPrope
+0x1804baaa6	 LABLE = %s \n
+0x1804baad0	CPyMappingTable::SetXmlCtrlPrope
+0x1804bab20	Class
+0x1804bab30	Location
+0x1804bab58	Visible
+0x1804bab80	Stretch
+0x1804bab98	Colorize
+0x1804babb0	VisibleGroup
+0x1804babd0	TextOutMargin
+0x1804babf8	ButtonCMD
+0x1804bac10	buttoncmd
+0x1804bac28	PY_IMAGEBOX_BKGROUND
+0x1804bac60	PY_PICFRAME_FRAME
+0x1804bac90	PY_PICFRAME_MASK
+0x1804bacb8	PY_PICFRAME_DEFAULTPIC
+0x1804bacf0	PageBtnRefer
+0x1804bad10	FixPageButtonPositon
+0x1804bad48	FixLampButtonPositon
+0x1804bad80	CompOffset
+0x1804bada0	DividerLine
+0x1804badc0	EventScript
+0x1804bade8	Align
+0x1804bae10	language
+0x1804bae28	jianfan
+0x1804bae40	shape
+0x1804bae50	symbol
+0x1804bae60	softkb
+0x1804bae70	accountbind
+0x1804bae90	menu
+0x1804baea0	minisize
+0x1804baeb8	changeskin
+0x1804baed8	handinput
+0x1804baef0	weibo
+0x1804baf00	snaphot
+0x1804baf18	dict
+0x1804baf28	clipboard
+0x1804baf40	speechinput
+0x1804baf60	colorsell
+0x1804baf78	0x%x
+0x1804bdf50	e:\project\qqpinyin\trunk\product\qqinput\win32\qqwubi_2_4\client\qqwubilib\utils.cpp
+0x1804bdfd8	S-%u
+0x1804bdfe8	0x%.2x%.2x%.2x%.2x%.2x%.2x
+0x1804be040	\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders
+0x1804be0e0	AppData
+0x1804be0f8	Everyone
+0x1804be110	ALL APPLICATION PACKAGES
+0x1804be150	S:(ML;;NW;;;LW)
+0x1804be1d0	mailto:
+0x1804be1e8	http:
+0x1804be1f8	ftp:
+0x1804be208	https:
+0x1804be3b8	SHGetKnownFolderPath
+0x1804be3d8	Tencent\QQWubi\
+0x1804be400	SAccount\%s\
+0x1804be420	InstallDir
+0x1804be440	wow.exe
+0x1804be458	wow-64.exe
+0x1804be478	winword.exe
+0x1804be738	RegDeleteKeyTransactedW
+0x1804be758	RegDeleteKeyExW
+0x1804be770	FramePic\QQFace\
+0x1804be798	temp\
+0x1804be7a8	upgrade\
+0x1804be7c0	dump\
+0x1804be7d0	RtlGetNtVersionNumbers
+0x1804be7f0	GetNativeSystemInfo
+0x1804bef40	CDataObject
+0x1804bef68	Config.ini
+0x1804bef88	CurCfgFile
+0x1804befa8	CandsNumber
+0x1804befc8	Config
+0x1804befd8	AutoSelectUnique
+0x1804bf000	AutoSelectFifth
+0x1804bf028	AutoCancelNone
+0x1804bf050	UseGBK
+0x1804bf060	HotKey
+0x1804bf070	SymbolInputKey
+0x1804bf098	CameraKey
+0x1804bf0b0	NumpadSelect
+0x1804bf0d0	NumKeySelect
+0x1804bf0f0	CompPosX
+0x1804bf108	CompPosY
+0x1804bf120	StatusPosX
+0x1804bf140	StatusPosY
+0x1804bf160	FixOrderTips
+0x1804bf180	StartFullshape
+0x1804bf1a8	EnglishSymbol
+0x1804bf1d0	FullShapeSpace
+0x1804bf1f8	EnableAssociate
+0x1804bf220	ShowTypeData
+0x1804bf240	PuncMarkMatch
+0x1804bf268	UpdateIME2
+0x1804bf288	Fuzzys
+0x1804bf298	PinyinConfig
+0x1804bf2b8	FuzzyCorrect
+0x1804bf2d8	ZtoZh
+0x1804bf2e8	SoftKeyBoardState
+0x1804bf318	JianPin
+0x1804bf330	SelectManualWord
+0x1804bf358	SelectAutoWord
+0x1804bf380	SelectSysWord
+0x1804bf3a8	SelectPinyin
+0x1804bf3c8	SelectMoreThan5
+0x1804bf3f0	SelectZMode
+0x1804bf410	AutoSynch
+0x1804bf428	EnglishTipsWhenQuota
+0x1804bf460	bAutoCombineQQ
+0x1804bf488	WubiTipsWhenPinyin
+0x1804bf4b8	EnableNewWordUpDateTips
+0x1804bf4f8	DetectFullScreen
+0x1804bf520	UploadModules
+0x1804bf548	OpenStatusTransparent
+0x1804bf580	QQWUBI_MUTEX_{6D6341BA-770E-4ab9-9866-A7CEACFE3D05}
+0x1804bf600	QQWUBI_SHAREMAP_{210170F0-533B-49df-A774-1E7A755C34D1}
+0x1804bf690	QQWUBI_RUNTIME_INFO_{BA0170F0-103B-48Ef-ABC4-1E7A755C3891}
+0x1804bf720	WbSysDictFileName
+0x1804bf750	WbCodeTableFileName
+0x1804bf780	ImeSyncTime
+0x1804bf7a0	ImeSyncSucTime
+0x1804bf7c8	ImeAutoSyncTime
+0x1804bf7f0	Software\Tencent\QQWubi.user
+0x1804bf838	Used
+0x1804bf848	SYSTEM
+0x1804bf918	CCommonDataObject
+0x1804bf930	QQWB_COMMON_SHAREMEM
+0x1804bfb90	CSysDictsConfig
+0x1804bfba8	,./;abcdefghijklmnopqrstuvwxyz
+0x1804bfbf8	abcdefghijklmnopqrstuvwxy
+0x1804bfc38	CODE_ERROR
+0x1804bfc58	CODE_BEGIN
+0x1804c0398	CPinyinCodeGenerator
+0x1804c03b8	pinyincode.dict
+0x1804c03e0	e2fbe37f-32f8-477a-b369-aa731d845f07
+0x1804c04e0	Sound\tip_blank.wav
+0x1804c0510	Sound\tip_dup.wav
+0x1804c0540	Sound\key_letter.wav
+0x1804c0578	Sound\key_space.wav
+0x1804c05a8	Sound\key_enter.wav
+0x1804c05d8	Sound\key_back.wav
+0x1804c0a00	CSimp2Trad
+0x1804c0a10	simp2trad.dat
+0x1804c0a38	simp2tradword.dat
+0x1804c0a98	DPIFactor:%f
+0x1804c0e62	6AF21238-DB8B-45DB-8567-7F7023AFC493}
+0x1804c0ec2	CC73A514-2F8B-4603-9965-C61181A8FCE6}
+0x1804c0f22	E7EA1398-69F8-11D7-A6EA-00065B844313}
+0x1804c11c0	CLSID
+0x1804c11d0	SYSTEM\CurrentControlSet\Control\Keyboard Layouts\
+0x1804c1250	IME File
+0x1804c1270	Control Panel\Input Method\Hot Keys\
+0x1804c12c8	Target IME
+0x1804c12e8	Key Modifiers
+0x1804c1310	Virtual Key
+0x1804c1330	Control Panel\Input Method\Hot Keys\%08d
+0x1804c1398	NUM %d
+0x1804c13aa	UM +
+0x1804c13ba	UM -
+0x1804c13ca	UM *
+0x1804c13da	UM /
+0x1804c1420	SYSTEM\CurrentControlSet\Control\Keyboard Layouts\%08X
+0x1804c14a8	00000010
+0x1804c14c0	00000011
+0x1804c14d8	00000012
+0x1804c14f2	0000070
+0x1804c150a	0000071
+0x1804c1522	0000072
+0x1804c1538	%08x
+0x1804c1550	Software\Microsoft\CTF\DirectSwitchHotkeys\
+0x1804c15c0	%s%08x
+0x1804c15d0	Modifiers
+0x1804c15e8	VirtualKey
+0x1804c1608	Profile
+0x1804c1620	00000804
+0x1804c1638	LangId
+0x1804c1648	PreservedKeyId
+0x1804c1670	Software\Microsoft\CTF\DirectSwitchHotkeys
+0x1804c1a10	Software\Tencent\QQWubi\ValidKey
+0x1804c1a60	ValidKey
+0x1804c1a78	qqwbacc.dat
+0x1804c1b2a	Dict\
+0x1804c2018	wubi.dict
+0x1804c2030	code.dict
+0x1804c2048	pendingAbandonedFile.dat
+0x1804c2088	sdictlist.ini
+0x1804c20b0	sdict%d
+0x1804c20d8	Properties
+0x1804c20fa	WubiSys
+0x1804c2112	dict
+0x1804c2120	%s_%d%s
+0x1804c2138	LSD%d
+0x1804c2148	LWubiCode
+0x1804c2160	Default Sys Dict
+0x1804c21a0	Old Custom Sys Dict
+0x1804c21e0	nickname
+0x1804c21f8	filename
+0x1804c2210	codefilename
+0x1804c2230	enable
+0x1804c26a8	CDictMgr
+0x1804c28b8	CWubiFixOrderDictionary
+0x1804c29f8	CPinyinEngineMgr
+0x1804c47b8	a([a-zA-Z0-9])
+0x1804c47e2	([ \t])
+0x1804c47f8	c([a-zA-Z])
+0x1804c4818	d([0-9])
+0x1804c4830	h([0-9a-fA-F])
+0x1804c4858	n(|(?\n))
+0x1804c4878	q("[^"]*")|('[^']*')
+0x1804c48b0	w([a-zA-Z]+)
+0x1804c48d0	z([0-9]+)
+0x1804c48e8	engcore.dat
+0x1804c5158	cdictlist.ini
+0x1804c5180	WBmergedict
+0x1804c5d20	//D 
+0x1804c5ee0	enguser.dat
+0x1804c6b98	stock.ini
+0x1804c6be2	rccos
+0x1804c6bf2	rccot
+0x1804c6c02	rcsin
+0x1804c6c10	arctan
+0x1804c6c90	floor
+0x1804c7048	deque<T> too long
+0x1804c7540	url.dat
+0x1804c7570	QQWUBI_URL_MAP:{BFB8817C-7A0B-4406-B4F7-12B479586885}_2.02.4.629.400
+0x1804c7840	WBDel.dict
+0x1804c7860	%u.%u
+0x1804c80c0	WBUser3.dict
+0x1804c80e0	WbUserDict::CDictMgr::HasWord
+0x1804c8190	WbUserDict::CDictMgr::AddWord
+0x1804c8570	WbUserDict::CUserDefineDict::AddWord
+0x1804c85e0	WbUserDict::CUserDefineDict::AddNewWord
+0x1804c8680	WbUserDict::CUserDefineDict::AddTempWord
+0x1804c8748	WbUserDict::CUserDefineDict::UpdateWordType
+0x1804c89e8	WbDynamicDict::CDictData::AddRecord
+0x1804c8a20	!Error: [%s: %d]maybe memory is full!
+0x1804c8a80	WbDynamicDict::CDictData::LoadDictData
+0x1804c8d90	WbDynamicDict::CDictFile::Open
+0x1804c8dc0	!Error: [%s: %d]file size error.
+0x1804c8e10	!Error: [%s: %d]seek pos failed.
+0x1804c8e60	!Error: [%s: %d]read file header failed.
+0x1804c8ed0	!Error: [%s: %d]check file header error.
+0x1804c8f38	WbDynamicDict::CDictFile::GetNextRecord
+0x1804c8fa0	WbDynamicDict::CDictFile::UpdateRecord
+0x1804c8fd0	!Error: [%s: %d]Check pos error!
+0x1804c9020	!Error: [%s: %d]m_oFile.Seek(pRecord->nFileOffset, FILE_BEGIN);
+0x1804c9100	WbDynamicDict::CDictFile::AddRecord
+0x1804c9130	!Error: [%s: %d]m_oFile.Seek(0, FILE_END)
+0x1804c91a0	!Error: [%s: %d]m_oFile.GetPosition(nPosition)
+0x1804c9250	WbDynamicDict::CDictFile::EnsureFileExist
+0x1804c9290	!Error: [%s: %d]Create user dict file failed!
+0x1804c9550	WbDynamicDict::CDictShareMemHandler::Lookup
+0x1804c9590	!Error: [%s: %d]nPos > m_nOffset
+0x1804c95e0	WbDynamicDict::CDictShareMemHandler::GetNextRecord
+0x1804c9620	!Error: [%s: %d]End of data.
+0x1804c9668	WbDynamicDict::CDictShareMemHandler::FindRecordWhen12
+0x1804c96a8	WbDynamicDict::CDictShareMemHandler::FindRecordWhen34
+0x1804c96e8	WbDynamicDict::CDictShareMemHandler::GetPtrOffset
+0x1804c9728	WbDynamicDict::CDictShareMemHandler::GetRecord
+0x1804c9a50	QQWUBI_MUTEX_TYPE_STAT_{f64bcd59-faef-42ff-ab43-47a31d8a984a}
+0x1804c9e90	InputAnalysis2.dat
+0x1804c9fa0	QQWUBI_TYPE_STATISTIC_SHARE_MAP_{d9b4cac8-8adf-4f1b-b81b-907e331a862d}
+0x1804ca1a0	typeStat.dat
+0x1804ca1c0	typeSate_v2.dat
+0x1804ca458	AM/PM
+0x1804ca468	CRLF
+0x1804ca488	Hour
+0x1804ca4a0	MonthS
+0x1804ca4b0	WeekCn
+0x1804ca4c0	WeekS
+0x1804ca4d8	YYYY
+0x1804ca4e8	Year
+0x1804ca4f8	YearCn
+0x1804ca508	date
+0x1804ca518	dateCn
+0x1804ca530	hour
+0x1804ca540	lunarD
+0x1804ca550	lunarHol
+0x1804ca568	lunarM
+0x1804ca578	lunarY
+0x1804ca590	minute
+0x1804ca5a8	month
+0x1804ca5b8	monthCn
+0x1804ca5d0	monthS
+0x1804ca5e0	nian
+0x1804ca5f8	second
+0x1804ca610	weekS
+0x1804ca620	xingqi
+0x1804ca630	year
+0x1804cae20	Phrase.ini
+0x1804cae58	Punc.ini
+0x1804cae70	Default
+0x1804cae88	Custom
+0x1804cae98	DefaultVersion
+0x1804caec0	//D:
+0x1804cb678	%02d%02d
+0x1804cc0e8	iogniou
+0x1804cd1e8	iang
+0x1804cd228	iong
+0x1804cd280	uang
+0x1804cdc30	pinyin.dict
+0x1804cdc68	QQWBDictMerge.exe
+0x1804cdc98	PYmergedict
+0x1804ce268	PYUser.dict
+0x1804ce288	.%u.%u
+0x1804ce340	CPinyinConfig
+0x1804cea00	chang
+0x1804cea40	cheng
+0x1804cea70	chon
+0x1804cea80	chong
+0x1804cea90	chou
+0x1804ceab0	chua
+0x1804ceac0	chuai
+0x1804cead0	chuan
+0x1804ceae0	chuang
+0x1804ceaf0	chui
+0x1804ceb00	chun
+0x1804ceb10	chuo
+0x1804ceb40	cong
+0x1804ceb78	cuan
+0x1804cebd8	dang
+0x1804cec18	deng
+0x1804cec40	dian
+0x1804cec50	diao
+0x1804cec80	ding
+0x1804cecb8	dong
+0x1804cecf0	duan
+0x1804ced40	fang
+0x1804ced78	feng
+0x1804ced98	fiao
+0x1804cede8	gang
+0x1804cee30	geng
+0x1804cee58	gong
+0x1804cee88	guai
+0x1804cee98	guan
+0x1804ceea8	guang
+0x1804cef10	hang
+0x1804cef50	heng
+0x1804cef78	hong
+0x1804cefa8	huai
+0x1804cefb8	huan
+0x1804cefc8	huang
+0x1804cf020	jian
+0x1804cf030	jiang
+0x1804cf040	jiao
+0x1804cf070	jing
+0x1804cf090	jion
+0x1804cf0a0	jiong
+0x1804cf0d8	juan
+0x1804cf128	kang
+0x1804cf170	keng
+0x1804cf190	kong
+0x1804cf1c8	kuai
+0x1804cf1d8	kuan
+0x1804cf1e8	kuang
+0x1804cf250	lang
+0x1804cf298	leng
+0x1804cf2c0	lian
+0x1804cf2d0	liang
+0x1804cf2e0	liao
+0x1804cf310	ling
+0x1804cf348	long
+0x1804cf380	luan
+0x1804cf3e8	mang
+0x1804cf430	meng
+0x1804cf458	mian
+0x1804cf468	miao
+0x1804cf488	ming
+0x1804cf4f0	nang
+0x1804cf538	neng
+0x1804cf560	niang
+0x1804cf570	niao
+0x1804cf5a0	ning
+0x1804cf5d0	nong
+0x1804cf608	nuan
+0x1804cf670	pang
+0x1804cf6b8	peng
+0x1804cf6e0	pian
+0x1804cf6f0	piao
+0x1804cf720	ping
+0x1804cf768	qian
+0x1804cf778	qiang
+0x1804cf788	qiao
+0x1804cf7b8	qing
+0x1804cf7d8	qion
+0x1804cf7e8	qiong
+0x1804cf820	quan
+0x1804cf868	rang
+0x1804cf8a0	reng
+0x1804cf8c0	rong
+0x1804cf8f0	ruan
+0x1804cf950	sang
+0x1804cf988	seng
+0x1804cf9a8	shai
+0x1804cf9b8	shan
+0x1804cf9c8	shang
+0x1804cf9d8	shao
+0x1804cf9f8	shei
+0x1804cfa08	shen
+0x1804cfa18	sheng
+0x1804cfa48	shou
+0x1804cfa68	shua
+0x1804cfa78	shuai
+0x1804cfa88	shuan
+0x1804cfa98	shuang
+0x1804cfaa8	shui
+0x1804cfab8	shun
+0x1804cfac8	shuo
+0x1804cfaf8	song
+0x1804cfb30	suan
+0x1804cfb80	tang
+0x1804cfbc0	teng
+0x1804cfbe8	tian
+0x1804cfbf8	tiao
+0x1804cfc28	ting
+0x1804cfc50	tong
+0x1804cfc88	tuan
+0x1804cfcf0	wang
+0x1804cfd28	weng
+0x1804cfd60	xian
+0x1804cfd70	xiang
+0x1804cfd80	xiao
+0x1804cfdb0	xing
+0x1804cfdd0	xion
+0x1804cfde0	xiong
+0x1804cfe18	xuan
+0x1804cfe60	yang
+0x1804cfea0	ying
+0x1804cfec8	yong
+0x1804cff00	yuan
+0x1804cff48	zang
+0x1804cff90	zeng
+0x1804cffb0	zhai
+0x1804cffc0	zhan
+0x1804cffd0	zhang
+0x1804cffe0	zhao
+0x1804d0000	zhei
+0x1804d0010	zhen
+0x1804d0020	zheng
+0x1804d0050	zhon
+0x1804d0060	zhong
+0x1804d0070	zhou
+0x1804d0090	zhua
+0x1804d00a0	zhuai
+0x1804d00b0	zhuan
+0x1804d00c0	zhuang
+0x1804d00d0	zhui
+0x1804d00e0	zhun
+0x1804d00f0	zhuo
+0x1804d0120	zong
+0x1804d0158	zuan
+0x1804d0198	a ai an ang ao
+0x1804d01c0	an ang
+0x1804d01d0	ba bai ban bang bao bei ben beng bi bian biao bie bin bing bo bu
+0x1804d0270	ba bai ban bang bao
+0x1804d02a0	ban bang
+0x1804d02b8	bei ben beng
+0x1804d02d8	ben beng
+0x1804d02f0	bi bian biao bie bin bing
+0x1804d0330	bian biao
+0x1804d0348	bin bing
+0x1804d0360	ca cai can cang cao ce cen ceng cha chai chan chang chao che chen cheng chi chong chou chu chua chuai chuan chuang chui chun chuo ci cong cou cu cuan cui cun cuo
+0x1804d04e8	ca cai can cang cao
+0x1804d0518	can cang
+0x1804d0530	ce cen ceng
+0x1804d0550	cen ceng
+0x1804d0570	cha chai chan chang chao che chen cheng chi chong chou chu chua chuai chuan chuang chui chun chuo
+0x1804d0660	cha chai chan chang chao
+0x1804d06a0	chan chang
+0x1804d06c0	che chen cheng
+0x1804d06e8	chen cheng
+0x1804d0708	chong chou
+0x1804d0730	chu chua chuai chuan chuang chui chun chuo
+0x1804d0798	chua chuai chuan chuang
+0x1804d07d8	chuan chuang
+0x1804d07f8	cong cou
+0x1804d0810	cu cuan cui cun cuo
+0x1804d0840	da dai dan dang dao de dei den deng di dia dian diao die ding diu dong dou du duan dui dun duo
+0x1804d0928	da dai dan dang dao
+0x1804d0958	dan dang
+0x1804d0970	de dei den deng
+0x1804d0998	den deng
+0x1804d09b0	di dia dian diao die ding diu
+0x1804d09f8	dia dian diao
+0x1804d0a20	dong dou
+0x1804d0a38	du duan dui dun duo
+0x1804d0a68	e ei en eng er
+0x1804d0a90	en eng
+0x1804d0aa0	fa fan fang fei fen feng fiao fo fou fu
+0x1804d0b00	fa fan fang
+0x1804d0b20	fan fang
+0x1804d0b38	fei fen feng
+0x1804d0b58	fen feng
+0x1804d0b70	fo fou
+0x1804d0b80	ga gai gan gang gao ge gei gen geng gong gou gu gua guai guan guang gui gun guo
+0x1804d0c40	ga gai gan gang gao
+0x1804d0c70	gan gang
+0x1804d0c88	ge gei gen geng
+0x1804d0cb0	gen geng
+0x1804d0cc8	gong gou
+0x1804d0ce0	gu gua guai guan guang gui gun guo
+0x1804d0d38	gua guai guan guang
+0x1804d0d68	guan guang
+0x1804d0d90	ha hai han hang hao he hei hen heng hong hou hu hua huai huan huang hui hun huo
+0x1804d0e50	ha hai han hang hao
+0x1804d0e80	han hang
+0x1804d0e98	he hei hen heng
+0x1804d0ec0	hen heng
+0x1804d0ed8	hong hou
+0x1804d0ef0	hu hua huai huan huang hui hun huo
+0x1804d0f48	hua huai huan huang
+0x1804d0f78	huan huang
+0x1804d0fa0	ji jia jian jiang jiao jie jin jing jiong jiu ju juan jue jun
+0x1804d1040	ji jia jian jiang jiao jie jin jing jiong jiu
+0x1804d10b0	jia jian jiang jiao
+0x1804d10e0	jian jiang
+0x1804d1100	jin jing
+0x1804d1118	ju juan jue jun
+0x1804d1140	ka kai kan kang kao ke kei ken keng kong kou ku kua kuai kuan kuang kui kun kuo
+0x1804d1200	ka kai kan kang kao
+0x1804d1230	kan kang
+0x1804d1248	ke kei ken keng
+0x1804d1270	ken keng
+0x1804d1288	kong kou
+0x1804d12a0	ku kua kuai kuan kuang kui kun kuo
+0x1804d12f8	kua kuai kuan kuang
+0x1804d1328	kuan kuang
+0x1804d1350	la lai lan lang lao le lei leng li lia lian liang liao lie lin ling liu lo long lou lu luan lue lun luo lv
+0x1804d1450	la lai lan lang lao
+0x1804d1480	lan lang
+0x1804d1498	le lei leng
+0x1804d14c0	li lia lian liang liao lie lin ling liu
+0x1804d1520	lia lian liang liao
+0x1804d1550	lian liang
+0x1804d1570	lin ling
+0x1804d1588	lo long lou
+0x1804d15a8	lu luan lue lun luo
+0x1804d15e0	ma mai man mang mao me mei men meng mi mian miao mie min ming miu mo mou mu
+0x1804d1698	ma mai man mang mao
+0x1804d16c8	man mang
+0x1804d16e0	me mei men meng
+0x1804d1708	men meng
+0x1804d1720	mi mian miao mie min ming miu
+0x1804d1768	mian miao
+0x1804d1780	min ming
+0x1804d1798	mo mou
+0x1804d17b0	na nai nan nang nao ne nei nen neng ni nian niang niao nie nin ning niu nong nou nu nuan nue nun nuo nv
+0x1804d18b0	na nai nan nang nao
+0x1804d18e0	nan nang
+0x1804d18f8	ne nei nen neng
+0x1804d1920	nen neng
+0x1804d1940	ni nian niang niao nie nin ning niu
+0x1804d1998	nian niang niao
+0x1804d19c0	nian niang
+0x1804d19e0	nin ning
+0x1804d19f8	nong nou
+0x1804d1a10	nu nuan nue nun nuo
+0x1804d1a40	o ou
+0x1804d1a50	pa pai pan pang pao pei pen peng pi pian piao pie pin ping po pou pu
+0x1804d1af8	pa pai pan pang pao
+0x1804d1b28	pan pang
+0x1804d1b40	pei pen peng
+0x1804d1b60	pen peng
+0x1804d1b78	pi pian piao pie pin ping
+0x1804d1bb8	pian piao
+0x1804d1bd0	pin ping
+0x1804d1be8	po pou
+0x1804d1c00	qi qia qian qiang qiao qie qin qing qiong qiu qu quan que qun
+0x1804d1ca0	qi qia qian qiang qiao qie qin qing qiong qiu
+0x1804d1d10	qia qian qiang qiao
+0x1804d1d40	qian qiang
+0x1804d1d60	qin qing
+0x1804d1d78	qu quan que qun
+0x1804d1da0	ran rang rao re ren reng ri rong rou ru ruan rui run ruo
+0x1804d1e28	ran rang rao
+0x1804d1e48	ran rang
+0x1804d1e60	re ren reng
+0x1804d1e80	ren reng
+0x1804d1e98	rong rou
+0x1804d1eb0	ru ruan rui run ruo
+0x1804d1ee0	sa sai san sang sao se sen seng sha shai shan shang shao she shei shen sheng shi shou shu shua shuai shuan shuang shui shun shuo si song sou su suan sui sun suo
+0x1804d2068	sa sai san sang sao
+0x1804d2098	san sang
+0x1804d20b0	se sen seng
+0x1804d20d0	sen seng
+0x1804d20f0	sha shai shan shang shao she shei shen sheng shi shou shu shua shuai shuan shuang shui shun shuo
+0x1804d21d8	sha shai shan shang shao
+0x1804d2218	shan shang
+0x1804d2238	she shei shen sheng
+0x1804d2268	shen sheng
+0x1804d2290	shu shua shuai shuan shuang shui shun shuo
+0x1804d22f8	shua shuai shuan shuang
+0x1804d2338	shuan shuang
+0x1804d2358	song sou
+0x1804d2370	su suan sui sun suo
+0x1804d23a0	ta tai tan tang tao te tei teng ti tian tiao tie ting tong tou tu tuan tui tun tuo
+0x1804d2468	ta tai tan tang tao
+0x1804d2498	tan tang
+0x1804d24b0	te tei teng
+0x1804d24d0	ti tian tiao tie ting
+0x1804d2508	tian tiao
+0x1804d2520	tong tou
+0x1804d2538	tu tuan tui tun tuo
+0x1804d2570	wa wai wan wang wei wen weng wo wu
+0x1804d25c8	wa wai wan wang
+0x1804d25f0	wan wang
+0x1804d2608	wei wen weng
+0x1804d2628	wen weng
+0x1804d2640	xi xia xian xiang xiao xie xin xing xiong xiu xu xuan xue xun
+0x1804d26e0	xi xia xian xiang xiao xie xin xing xiong xiu
+0x1804d2750	xia xian xiang xiao
+0x1804d2780	xian xiang
+0x1804d27a0	xin xing
+0x1804d27b8	xu xuan xue xun
+0x1804d27e0	ya yan yang yao ye yi yin ying yo yong you yu yuan yue yun
+0x1804d2870	ya yan yang yao
+0x1804d2898	yan yang
+0x1804d28b0	yi yin ying
+0x1804d28d0	yin ying
+0x1804d28e8	yo yong you
+0x1804d2908	yu yuan yue yun
+0x1804d2930	za zai zan zang zao ze zei zen zeng zha zhai zhan zhang zhao zhe zhei zhen zheng zhi zhong zhou zhu zhua zhuai zhuan zhuang zhui zhun zhuo zi zong zou zu zuan zui zun zuo
+0x1804d2ad0	za zai zan zang zao
+0x1804d2b00	zan zang
+0x1804d2b18	ze zei zen zeng
+0x1804d2b40	zen zeng
+0x1804d2b60	zha zhai zhan zhang zhao zhe zhei zhen zheng zhi zhong zhou zhu zhua zhuai zhuan zhuang zhui zhun zhuo
+0x1804d2c58	zha zhai zhan zhang zhao
+0x1804d2c98	zhan zhang
+0x1804d2cb8	zhe zhei zhen zheng
+0x1804d2ce8	zhen zheng
+0x1804d2d08	zhong zhou
+0x1804d2d30	zhu zhua zhuai zhuan zhuang zhui zhun zhuo
+0x1804d2d98	zhua zhuai zhuan zhuang
+0x1804d2dd8	zhuan zhuang
+0x1804d2df8	zong zou
+0x1804d2e10	zu zuan zui zun zuo
+0x1804d3498	%s(%s)
+0x1804d3810	CAutoMakeWordMgr
+0x1804d3830	QQWUBI_AUTO_MAKE_WORD_PINYIN_WORD_BUFFER_v1.0
+0x1804d3b10	QQPYStrokesHelper.exe
+0x1804d3b68	QQPYClipboard.exe
+0x1804d3bb0	SOFTWARE\Tencent\QQPinyin
+0x1804d40b8	CWubiDictEngine
+0x1804d41c0	CWubiCacheDictEngine
+0x1804d41e0	cache.dict
+0x1804d44e0	FO.dict
+0x1804d51e0	0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ~@$%`(){}[]_
+0x1804d56e0	$Id: md5.c,v 1.1.1.1 2004/05/17 13:23:36 rcrittenden0569 Exp $
+0x1804d5730	$MD5Version: 1.0.0 November-19-1997 $
+0x1804d5760	0123456789abcdef
+0x1804d58e0	CxImage::Create : width and height must be greater than zero
+0x1804d5930	CXIMAGE_MAX_MEMORY exceeded
+0x1804d5958	CxImage::Create can't allocate memory
+0x1804d5a38	CxImage 6.0.0
+0x1804d6580	null file handler
+0x1804d6598	null image!!!
+0x1804d65b0	the buffer must be empty
+0x1804d65d0	Encode: Unknown format
+0x1804d65f0	Multipage Encode, Unsupported operation for this format
+0x1804d6638	Unable to load resource! err=%d
+0x1804d6660	Decode: Unknown or wrong format
+0x1804d6688	invalid or empty buffer
+0x1804d6a38	DecreaseBpp: target BPP greater than source BPP
+0x1804d6a78	QIShrink can't enlarge image
+0x1804d6bf8	GetDIBits failed
+0x1804d74d8	invalid ThresholdMask
+0x1804d74f8	Saturate: wrong colorspace
+0x1804d7518	ConvertColorSpace: unknown source colorspace
+0x1804d7550	ConvertColorSpace: unknown destination colorspace
+0x1804d7590	OptimalThreshold works only on 8 bit images
+0x1804d75c8	OptimalThreshold invalid ContrastMask
+0x1804d75f8	AdaptiveThreshold invalid ContrastMask
+0x1804d79a0	CxImage::SelectionSet: wrong width or height, or image is not gray scale
+0x1804d79f8	CxImage::SelectionSet: null pointer
+0x1804d7bc8	JPEG can save only RGB or GreyScale images
+0x1804d7ca8	invalid file pointer
+0x1804d7cc8	multipage GIF, no images!
+0x1804d7ce8	Bad image pointer
+0x1804d7d00	Empty image
+0x1804d7d10	CxImageGIF::Encode cannot create animated GIFs with a true color frame. Use DecreaseBpp before
+0x1804d7d84	GIF89a
+0x1804d7d90	NETSCAPE2.0
+0x1804d7df8	Write Error in GIF file
+0x1804d7e48	Read Error
+0x1804d7e58	Write Error
+0x1804d7e68	Flush Error
+0x1804d7e79	.6.34
+0x1804d7e80	Failed to create PNG structure
+0x1804d7ea8	Failed to initialize PNG info structure
+0x1804d7ed8	unknown PNG color type
+0x1804d7ef8	Error saving PNG file
+0x1804d7f18	Not a BMP
+0x1804d7f28	Error reading BMP info
+0x1804d7f48	output dimensions returned
+0x1804d7f68	Cancelled
+0x1804d7f78	can't allocate memory
+0x1804d7f98	unknown compression
+0x1804d7fb0	compression type not supported
+0x1804d8068	multipage ICO, no images!
+0x1804d8088	Error writing ICO file header
+0x1804d80b0	Error saving ICO image header
+0x1804d80d8	Error saving ICO body
+0x1804d8850	&#x%02X;
+0x1804d8870	</%s>
+0x1804d8880	%s="%s"
+0x1804d8898	%s='%s'
+0x1804d88b0	<!--%s-->
+0x1804d88c0	<![CDATA[%s]]>\n
+0x1804d88d8	<?xml 
+0x1804d88e0	version="%s" 
+0x1804d88f0	version="
+0x1804d8900	encoding="%s" 
+0x1804d8918	encoding="
+0x1804d8928	standalone="%s" 
+0x1804d8940	standalone="
+0x1804d896a	[CDATA[
+0x1804d8984	&amp;
+0x1804d899c	&quot;
+0x1804d89a4	&apos;
+0x1804d8f90	encoding
+0x1804d8fa0	standalone
+0x1804d90b0	No error
+0x1804d90bc	Error
+0x1804d90c8	Failed to open file
+0x1804d90e0	Memory allocation failed.
+0x1804d9100	Error parsing Element.
+0x1804d9120	Failed to read Element name
+0x1804d9148	Error reading Element value.
+0x1804d9170	Error reading Attributes.
+0x1804d9190	Error: empty tag.
+0x1804d91a8	Error reading end tag.
+0x1804d91c8	Error parsing Unknown.
+0x1804d91e8	Error parsing Comment.
+0x1804d9208	Error parsing Declaration.
+0x1804d9228	Error document empty.
+0x1804d9248	Error null (0) or unexpected EOF found in input stream.
+0x1804d9290	Error parsing CDATA.
+0x1804d92b0	Error when TiXmlDocument added to document, because TiXmlDocument can only be at the root.
+0x1804d95d8	Access violation - no RTTI data!
+0x1804d9600	Attempted a typeid of nullptr pointer!
+0x1804d9630	Bad read pointer - no RTTI data!
+0x1804d9658	Bad dynamic_cast!
+0x1804d9690	bad exception
+0x1804d96c0	api-ms-win-core-fibers-l1-1-1
+0x1804d9708	api-ms-win-core-synch-l1-2-0
+0x1804d9750	kernel32
+0x1804d9768	api-ms-
+0x1804d9780	ext-ms-
+0x1804d9bd0	__based(
+0x1804d9be0	__cdecl
+0x1804d9bf0	__pascal
+0x1804d9c00	__stdcall
+0x1804d9c10	__thiscall
+0x1804d9c20	__fastcall
+0x1804d9c30	__vectorcall
+0x1804d9c40	__clrcall
+0x1804d9c58	__swift_1
+0x1804d9c68	__swift_2
+0x1804d9c7a	ptr64
+0x1804d9c88	__restrict
+0x1804d9c98	__unaligned
+0x1804d9ca8	restrict(
+0x1804d9cc0	 delete
+0x1804d9ce8	operator
+0x1804d9d60	`vftable'
+0x1804d9d70	`vbtable'
+0x1804d9d80	`vcall'
+0x1804d9d90	`typeof'
+0x1804d9da0	`local static guard'
+0x1804d9dc0	`string'
+0x1804d9dd0	`vbase destructor'
+0x1804d9de8	`vector deleting destructor'
+0x1804d9e10	`default constructor closure'
+0x1804d9e38	`scalar deleting destructor'
+0x1804d9e60	`vector constructor iterator'
+0x1804d9e88	`vector destructor iterator'
+0x1804d9eb0	`vector vbase constructor iterator'
+0x1804d9ee0	`virtual displacement map'
+0x1804d9f00	`eh vector constructor iterator'
+0x1804d9f28	`eh vector destructor iterator'
+0x1804d9f50	`eh vector vbase constructor iterator'
+0x1804d9f80	`copy constructor closure'
+0x1804d9fa0	`udt returning'
+0x1804d9fb8	`RTTI
+0x1804d9fc0	`local vftable'
+0x1804d9fd8	`local vftable constructor closure'
+0x1804da004	 new[]
+0x1804da010	 delete[]
+0x1804da020	`omni callsig'
+0x1804da038	`placement delete closure'
+0x1804da058	`placement delete[] closure'
+0x1804da080	`managed vector constructor iterator'
+0x1804da0b0	`managed vector destructor iterator'
+0x1804da0e0	`eh vector copy constructor iterator'
+0x1804da110	`eh vector vbase copy constructor iterator'
+0x1804da148	`dynamic initializer for '
+0x1804da168	`dynamic atexit destructor for '
+0x1804da190	`vector copy constructor iterator'
+0x1804da1c0	`vector vbase copy constructor iterator'
+0x1804da1f8	`managed vector copy constructor iterator'
+0x1804da230	`local static thread guard'
+0x1804da258	operator "" 
+0x1804da268	operator co_await
+0x1804da280	 Type Descriptor'
+0x1804da298	 Base Class Descriptor at (
+0x1804da2c0	 Base Class Array'
+0x1804da2d8	 Class Hierarchy Descriptor'
+0x1804da300	 Complete Object Locator'
+0x1804da360	template-parameter-
+0x1804da378	generic-type-
+0x1804da390	`anonymous namespace'
+0x1804da3b0	`non-type-template-parameter
+0x1804da3e0	`template-parameter
+0x1804da408	`template-type-parameter-
+0x1804da428	`generic-class-parameter-
+0x1804da448	`generic-method-parameter-
+0x1804da470	`vtordispex{
+0x1804da480	`vtordisp{
+0x1804da490	`adjustor{
+0x1804da4a0	`local static destructor helper'
+0x1804da4c8	`template static data member constructor helper'
+0x1804da508	`template static data member destructor helper'
+0x1804da548	static 
+0x1804da558	virtual 
+0x1804da568	private: 
+0x1804da578	protected: 
+0x1804da588	public: 
+0x1804da598	[thunk]:
+0x1804da5a8	extern "C" 
+0x1804da5bc	char 
+0x1804da5c4	short 
+0x1804da5d4	long 
+0x1804da5e0	unsigned 
+0x1804da5ec	void 
+0x1804da5f8	volatile
+0x1804da608	std::nullptr_t 
+0x1804da620	std::nullptr_t
+0x1804da638	<ellipsis>
+0x1804da650	,<ellipsis>
+0x1804da660	 noexcept
+0x1804da680	short
+0x1804da694	float
+0x1804da69c	double
+0x1804da6ac	__int8
+0x1804da6b8	__int16
+0x1804da6c8	__int32
+0x1804da6d8	__int64
+0x1804da6e8	__int128
+0x1804da6f8	<unknown>
+0x1804da708	char16_t
+0x1804da718	char32_t
+0x1804da728	wchar_t
+0x1804da734	__w64 
+0x1804da740	UNKNOWN
+0x1804da750	signed 
+0x1804da75c	const
+0x1804da768	 volatile
+0x1804da778	`unknown ecsu'
+0x1804da78c	union 
+0x1804da798	struct 
+0x1804da7a4	class 
+0x1804da7b0	coclass 
+0x1804da7c0	cointerface 
+0x1804da7d0	enum 
+0x1804da7d8	volatile 
+0x1804da7e4	const 
+0x1804da7f8	cli::array<
+0x1804da808	cli::pin_ptr<
+0x1804da81c	{flat}
+0x1804da824	{for 
+0x1804dac18	(null)
+0x1804dac28	am/pm
+0x1804dac68	SunMonTueWedThuFriSat
+0x1804dac88	JanFebMarAprMayJunJulAugSepOctNovDec
+0x1804db8a0	minkernel\crts\ucrt\inc\corecrt_internal_strtox.h
+0x1804db920	__crt_strtox::floating_point_value::as_double
+0x1804db990	_is_double
+0x1804db9b0	__crt_strtox::floating_point_value::as_float
+0x1804dba20	!_is_double
+0x1804dbad8	INITY
+0x1804dbae0	inity
+0x1804dbb00	INITY
+0x1804dbb10	inity
+0x1804dbb34	INITY
+0x1804dbb3c	inity
+0x1804dbb60	INITY
+0x1804dbb70	inity
+0x1804dbbaa	NAN)
+0x1804dbbba	nan)
+0x1804dbc02	NAN)
+0x1804dbc12	nan)
+0x1804dbc40	.exe
+0x1804dbc50	.cmd
+0x1804dbc60	.bat
+0x1804dbc70	.com
+0x1804dc674	INITY
+0x1804dc67c	inity
+0x1804dc6a0	INITY
+0x1804dc6b0	inity
+0x1804dc6ea	NAN)
+0x1804dc6fa	nan)
+0x1804deb18	mscoree.dll
+0x1804deb38	CorExitProcess
+0x1804e2530	msvcrt.dll
+0x1804e2560	NAN(SNAN)
+0x1804e2570	nan(snan)
+0x1804e2580	NAN(IND)
+0x1804e2590	nan(ind)
+0x1804e259c	e+000
+0x1804e2660	LC_ALL
+0x1804e2670	LC_COLLATE
+0x1804e2690	LC_CTYPE
+0x1804e26a8	LC_MONETARY
+0x1804e26c8	LC_NUMERIC
+0x1804e26e8	LC_TIME
+0x1804e2b38	Sunday
+0x1804e2b40	Monday
+0x1804e2b48	Tuesday
+0x1804e2b58	Wednesday
+0x1804e2b68	Thursday
+0x1804e2b74	Friday
+0x1804e2b80	Saturday
+0x1804e2bc0	January
+0x1804e2bd0	February
+0x1804e2bdc	March
+0x1804e2be4	April
+0x1804e2bfc	August
+0x1804e2c08	September
+0x1804e2c18	October
+0x1804e2c28	November
+0x1804e2c38	December
+0x1804e2c50	MM/dd/yy
+0x1804e2c60	dddd, MMMM dd, yyyy
+0x1804e2c78	HH:mm:ss
+0x1804e2cf8	Sunday
+0x1804e2d08	Monday
+0x1804e2d18	Tuesday
+0x1804e2d30	Wednesday
+0x1804e2d48	Thursday
+0x1804e2d60	Friday
+0x1804e2d70	Saturday
+0x1804e2e48	January
+0x1804e2e60	February
+0x1804e2e78	March
+0x1804e2e88	April
+0x1804e2e98	June
+0x1804e2ea8	July
+0x1804e2eb8	August
+0x1804e2ec8	September
+0x1804e2ee0	October
+0x1804e2ef8	November
+0x1804e2f10	December
+0x1804e2f38	MM/dd/yy
+0x1804e2f50	dddd, MMMM dd, yyyy
+0x1804e2f80	HH:mm:ss
+0x1804e2f98	en-US
+0x1804e3070	api-ms-win-appmodel-runtime-l1-1-1
+0x1804e30d0	api-ms-win-core-datetime-l1-1-1
+0x1804e3120	api-ms-win-core-fibers-l1-1-1
+0x1804e3168	api-ms-win-core-file-l2-1-1
+0x1804e31b0	api-ms-win-core-localization-l1-2-1
+0x1804e3210	api-ms-win-core-localization-obsolete-l1-2-0
+0x1804e3280	api-ms-win-core-processthreads-l1-1-2
+0x1804e32e0	api-ms-win-core-string-l1-1-0
+0x1804e3328	api-ms-win-core-synch-l1-2-0
+0x1804e3370	api-ms-win-core-sysinfo-l1-2-1
+0x1804e33c0	api-ms-win-core-winrt-l1-1-0
+0x1804e3408	api-ms-win-core-xstate-l2-1-0
+0x1804e3450	api-ms-win-rtcore-ntuser-window-l1-1-0
+0x1804e34b0	api-ms-win-security-systemfunctions-l1-1-0
+0x1804e3520	ext-ms-win-kernel32-package-current-l1-1-0
+0x1804e3590	ext-ms-win-ntuser-dialogbox-l1-1-0
+0x1804e35f0	ext-ms-win-ntuser-windowstation-l1-1-0
+0x1804e3650	advapi32
+0x1804e3668	kernel32
+0x1804e3680	user32
+0x1804e3698	AreFileApisANSI
+0x1804e36c0	CompareStringEx
+0x1804e36e8	EnumSystemLocalesEx
+0x1804e3710	FlsAlloc
+0x1804e3730	FlsFree
+0x1804e3750	FlsGetValue
+0x1804e3770	FlsSetValue
+0x1804e3790	GetActiveWindow
+0x1804e37b8	GetCurrentPackageId
+0x1804e37e0	GetDateFormatEx
+0x1804e3808	GetEnabledXStateFeatures
+0x1804e3838	GetFileInformationByHandleEx
+0x1804e3870	GetLastActivePopup
+0x1804e3898	GetLocaleInfoEx
+0x1804e38c0	GetProcessWindowStation
+0x1804e38e0	GetSystemTimePreciseAsFileTime
+0x1804e3918	GetTimeFormatEx
+0x1804e3940	GetUserDefaultLocaleName
+0x1804e3970	GetUserObjectInformationW
+0x1804e39a0	GetXStateFeaturesMask
+0x1804e39d0	InitializeCriticalSectionEx
+0x1804e3a08	IsValidLocaleName
+0x1804e3a30	LCMapStringEx
+0x1804e3a50	LCIDToLocaleName
+0x1804e3a78	LocaleNameToLCID
+0x1804e3aa0	LocateXStateFeature
+0x1804e3ac8	MessageBoxA
+0x1804e3ae8	MessageBoxW
+0x1804e3b00	RoInitialize
+0x1804e3b18	RoUninitialize
+0x1804e3b40	SetThreadStackGuarantee
+0x1804e3b70	SystemFunction036
+0x1804e3c0c	UTF-8
+0x1804e3c18	UTF-16LE
+0x1804e3c24	UNICODE
+0x1804e3c38	UTF-8
+0x1804e3c48	UTF-16LE
+0x1804e3c60	UNICODE
+0x1804e3ea8	log10
+0x1804e3edc	floor
+0x1804e3f04	_hypot
+0x1804e3f28	_nextafter
+0x1804e6418	ja-JP
+0x1804e6428	zh-CN
+0x1804e6438	ko-KR
+0x1804e6448	zh-TW
+0x1804e69d0	log10f
+0x1804e84b0	1#INF
+0x1804e84b8	1#QNAN
+0x1804e84c0	1#SNAN
+0x1804e84c8	1#IND
+0x1804e8b90	american
+0x1804e8ba8	american english
+0x1804e8bd0	american-english
+0x1804e8bf8	australian
+0x1804e8c18	belgian
+0x1804e8c30	canadian
+0x1804e8c68	chinese
+0x1804e8c80	chinese-hongkong
+0x1804e8ca8	chinese-simplified
+0x1804e8cd8	chinese-singapore
+0x1804e8d08	chinese-traditional
+0x1804e8d38	dutch-belgian
+0x1804e8d60	english-american
+0x1804e8d88	english-aus
+0x1804e8da8	english-belize
+0x1804e8dd0	english-can
+0x1804e8df0	english-caribbean
+0x1804e8e20	english-ire
+0x1804e8e40	english-jamaica
+0x1804e8e68	english-nz
+0x1804e8e88	english-south africa
+0x1804e8ec0	english-trinidad y tobago
+0x1804e8f00	english-uk
+0x1804e8f20	english-us
+0x1804e8f40	english-usa
+0x1804e8f60	french-belgian
+0x1804e8f88	french-canadian
+0x1804e8fb0	french-luxembourg
+0x1804e8fe0	french-swiss
+0x1804e9000	german-austrian
+0x1804e9028	german-lichtenstein
+0x1804e9058	german-luxembourg
+0x1804e9088	german-swiss
+0x1804e90a8	irish-english
+0x1804e90d0	italian-swiss
+0x1804e90f8	norwegian
+0x1804e9110	norwegian-bokmal
+0x1804e9138	norwegian-nynorsk
+0x1804e9168	portuguese-brazilian
+0x1804e91a0	spanish-argentina
+0x1804e91d0	spanish-bolivia
+0x1804e91f8	spanish-chile
+0x1804e9220	spanish-colombia
+0x1804e9248	spanish-costa rica
+0x1804e9278	spanish-dominican republic
+0x1804e92b8	spanish-ecuador
+0x1804e92e0	spanish-el salvador
+0x1804e9310	spanish-guatemala
+0x1804e9340	spanish-honduras
+0x1804e9368	spanish-mexican
+0x1804e9390	spanish-modern
+0x1804e93b8	spanish-nicaragua
+0x1804e93e8	spanish-panama
+0x1804e9410	spanish-paraguay
+0x1804e9438	spanish-peru
+0x1804e9458	spanish-puerto rico
+0x1804e9488	spanish-uruguay
+0x1804e94b0	spanish-venezuela
+0x1804e94e0	swedish-finland
+0x1804e9508	swiss
+0x1804e9538	america
+0x1804e9550	britain
+0x1804e9568	china
+0x1804e9588	england
+0x1804e95a0	great britain
+0x1804e95c8	holland
+0x1804e95e0	hong-kong
+0x1804e95f8	new-zealand
+0x1804e9620	pr china
+0x1804e9638	pr-china
+0x1804e9650	puerto-rico
+0x1804e9680	south africa
+0x1804e96a0	south korea
+0x1804e96c0	south-africa
+0x1804e96e0	south-korea
+0x1804e9700	trinidad & tobago
+0x1804e9730	united-kingdom
+0x1804e9758	united-states
+0x1804eab58	de-DE
+0x1804eacd8	sl-SI
+0x1804eade8	hi-IN
+0x1804eae88	bn-IN
+0x1804eae98	pa-IN
+0x1804eaeb8	ta-IN
+0x1804eaec8	te-IN
+0x1804eaed8	kn-IN
+0x1804eaf08	sa-IN
+0x1804eafb8	de-CH
+0x1804eb038	sr-SP-Latn
+0x1804eb088	se-SE
+0x1804eb0f8	de-AT
+0x1804eb138	sr-SP-Cyrl
+0x1804eb1c8	fr-CH
+0x1804eb218	de-LI
+0x1804eb258	bs-BA-Latn
+0x1804eb2c8	sr-BA-Latn
+0x1804ec7e0	bn-in
+0x1804ec7f0	bs-ba-latn
+0x1804ec850	de-at
+0x1804ec860	de-ch
+0x1804ec870	de-de
+0x1804ec880	de-li
+0x1804ecb30	fr-ch
+0x1804ecba0	hi-in
+0x1804ecc60	kn-in
+0x1804ecd90	pa-in
+0x1804ece20	sa-in
+0x1804ece50	se-se
+0x1804ece70	sl-si
+0x1804ecf10	sr-ba-latn
+0x1804ecf30	sr-sp-cyrl
+0x1804ecf50	sr-sp-latn
+0x1804ecfb0	ta-in
+0x1804ecfc0	te-in
+0x1804ed110	Runtime Error!\n\nProgram: 
+0x1804ed150	<program name unknown>
+0x1804ed1a0	Microsoft Visual C++ Runtime Library
+0x1804ed450	CONOUT$
+0x1804ed4e0	CCharsetFilter
+0x1804ed858	CWordsRankInfo
+0x1804ed870	wordrankinfo.tbl
+0x1804ed898	7c8e76fc-5624-4807-b675-4c053fa2593c
+0x1804eda78	m_vecSyllaEndCharIdx\n
+0x1804edac0	m_vecGraphNode\n
+0x1804edae8	m_vecSyllaEndGraphNodeIdx\n
+0x1804edb80	Missing IHDR before IDAT
+0x1804edba0	Missing PLTE before IDAT
+0x1804edbc0	Too many IDATs found
+0x1804edbe0	attempt to png_read_frame_head() but no acTL present
+0x1804edc20	png_read_frame_head(): out of place IDAT
+0x1804edc58	png_read_frame_head(): out of place fdAT
+0x1804edc90	Skipped (ignored) a chunk between APNG chunks
+0x1804edcc8	png_read_update_info/png_start_read_image: duplicate call
+0x1804edd10	png_start_read_image/png_read_update_info: duplicate call
+0x1804edd58	Invalid attempt to read row data
+0x1804edd80	bad adaptive filter value
+0x1804edda0	sequential row overflow
+0x1804eddc0	internal sequential row size calculation error
+0x1804ede00	Interlace handling should be turned on when using png_read_image
+0x1804ede50	Read palette index exceeding num_palette
+0x1804ede88	.Too many IDATs found
+0x1804edea8	..Too many IDATs found
+0x1804edec8	Image is too high to process with png_read_png()
+0x1804edf08	png_image_read: out of memory
+0x1804edf30	png_image_read: opaque pointer not NULL
+0x1804edf60	png_image_begin_read_from_stdio: invalid argument
+0x1804edfa0	png_image_begin_read_from_stdio: incorrect PNG_IMAGE_VERSION
+0x1804edff0	png_image_begin_read_from_file: invalid argument
+0x1804ee030	png_image_begin_read_from_file: incorrect PNG_IMAGE_VERSION
+0x1804ee078	read beyond end of data
+0x1804ee098	invalid memory read
+0x1804ee0b0	png_image_begin_read_from_memory: invalid argument
+0x1804ee0f0	png_image_begin_read_from_memory: incorrect PNG_IMAGE_VERSION
+0x1804ee140	color-map index out of range
+0x1804ee168	bad encoding (internal error)
+0x1804ee190	background color must be supplied to remove alpha/transparency
+0x1804ee1e0	gray[8] color-map: too few entries
+0x1804ee210	gray[16] color-map: too few entries
+0x1804ee240	gray+alpha color-map: too few entries
+0x1804ee270	gray-alpha color-map: too few entries
+0x1804ee2a0	ga-alpha color-map: too few entries
+0x1804ee2d0	rgb[ga] color-map: too few entries
+0x1804ee300	rgb[gray] color-map: too few entries
+0x1804ee330	rgb+alpha color-map: too few entries
+0x1804ee360	rgb-alpha color-map: too few entries
+0x1804ee390	rgb color-map: too few entries
+0x1804ee3b8	palette color-map: too few entries
+0x1804ee3e8	invalid PNG color type
+0x1804ee408	color map overflow (BAD internal error)
+0x1804ee438	bad processing option (internal error)
+0x1804ee468	bad background index (internal error)
+0x1804ee498	unknown interlace type
+0x1804ee4b8	bad color-map processing (internal error)
+0x1804ee4f0	lost rgb to gray
+0x1804ee508	unexpected compose
+0x1804ee520	lost/gained channels
+0x1804ee540	unexpected 8-bit transformation
+0x1804ee568	png_read_image: unsupported transformation
+0x1804ee5a0	png_image_read: alpha channel lost
+0x1804ee5d0	unexpected alpha swap transformation
+0x1804ee600	png_read_image: invalid transformations
+0x1804ee630	png_image_finish_read[color-map]: no color-map
+0x1804ee668	png_image_finish_read: image too large
+0x1804ee698	png_image_finish_read: invalid argument
+0x1804ee6c8	png_image_finish_read: row_stride too large
+0x1804ee700	png_image_finish_read: damaged PNG_IMAGE_VERSION
+0x1804ee740	Writing zero-length unknown chunk
+0x1804ee768	MNG features are not allowed in a PNG datastream
+0x1804ee7a8	profile matches sRGB but writing iCCP instead
+0x1804ee7e0	Valid palette required for paletted images
+0x1804ee818	No IDATs written into file
+0x1804ee838	Wrote palette index exceeding num_palette
+0x1804ee870	Not enough frames written
+0x1804ee890	png_write_info was never called before png_write_row
+0x1804ee8d0	internal write transform logic error
+0x1804ee900	Unknown row filter for method 0
+0x1804ee928	png_set_filter: UP/AVG/PAETH cannot be added after start
+0x1804ee970	Unknown custom filter method
+0x1804ee998	Only compression windows <= 32k supported by PNG
+0x1804ee9d8	Only compression windows >= 256 supported by PNG
+0x1804eea18	Only compression method 8 is supported by PNG
+0x1804eea50	no rows for png_write_image to write
+0x1804eea80	PNG_TRANSFORM_STRIP_FILLER: BEFORE+AFTER not supported
+0x1804eeac8	png_write_frame_head(): acTL not set
+0x1804eeaf8	png_image_write_: out of memory
+0x1804eeb20	png_write_image: internal call error
+0x1804eeb50	memory image too large
+0x1804eeb70	supplied row stride too small
+0x1804eeb98	image row stride too large
+0x1804eebb8	no color-map for color-mapped image
+0x1804eebe8	png_write_image: unsupported transformation
+0x1804eec20	png_image_write_to_memory: PNG too big
+0x1804eec50	png_image_write_to_memory: invalid argument
+0x1804eec88	png_image_write_to_memory: incorrect PNG_IMAGE_VERSION
+0x1804eecd0	png_image_write_to_stdio: invalid argument
+0x1804eed08	png_image_write_to_stdio: incorrect PNG_IMAGE_VERSION
+0x1804eed50	png_image_write_to_file: invalid argument
+0x1804eed88	png_image_write_to_file: incorrect PNG_IMAGE_VERSION
+0x1804ef918	Too many bytes for PNG signature
+0x1804ef940	Potential overflow in png_zalloc()
+0x1804ef970	Application built with libpng-
+0x1804ef998	 but running with 
+0x1804ef9b0	Unknown freer parameter in png_data_freer
+0x1804ef9e4	 +0000
+0x1804ef9f0	Ignoring invalid time value
+0x1804efa20	libpng version 1.6.34 - September 29, 2017      Copyright (c) 1998-2002,2004,2006-2017 Glenn Randers-Pehrson      Copyright (c) 1996-1997 Andreas Dilger      Copyright (c) 1995-1996 Guy Eric Schalnat, Group 42, Inc.
+0x1804efb28	 libpng version 1.6.34 - September 29, 2017\n
+0x1804efb60	unexpected zlib return code
+0x1804efb88	unexpected end of LZ stream
+0x1804efbb0	missing LZ dictionary
+0x1804efbd0	zlib IO error
+0x1804efbe0	bad parameters to zlib
+0x1804efc00	damaged LZ stream
+0x1804efc18	insufficient memory
+0x1804efc30	truncated
+0x1804efc40	unsupported zlib version
+0x1804efc60	unexpected zlib return
+0x1804efc80	gamma value does not match sRGB
+0x1804efca8	gamma value does not match libpng estimate
+0x1804efce0	gamma value out of range
+0x1804efd00	duplicate
+0x1804efd10	inconsistent chromaticities
+0x1804efd38	invalid chromaticities
+0x1804efd58	internal error checking chromaticities
+0x1804efd88	invalid end points
+0x1804efda0	profile '
+0x1804efdb8	invalid sRGB rendering intent
+0x1804efde8	inconsistent rendering intents
+0x1804efe10	duplicate sRGB information ignored
+0x1804efe40	cHRM chunk does not match sRGB
+0x1804efe68	too short
+0x1804efe78	exceeds application limits
+0x1804efe98	length does not match profile
+0x1804efec0	invalid length
+0x1804efed8	tag count too large
+0x1804efef0	invalid rendering intent
+0x1804eff10	intent outside defined range
+0x1804eff38	invalid signature
+0x1804eff50	PCS illuminant is not D50
+0x1804eff70	RGB color space not permitted on grayscale PNG
+0x1804effa8	Gray color space not permitted on RGB PNG
+0x1804effe0	invalid ICC profile color space
+0x1804f0008	invalid embedded Abstract ICC profile
+0x1804f0038	unexpected DeviceLink ICC profile class
+0x1804f0068	unexpected NamedColor ICC profile class
+0x1804f0098	unrecognized ICC profile class
+0x1804f00c0	unexpected ICC PCS encoding
+0x1804f00e8	ICC profile tag outside profile
+0x1804f0110	ICC profile tag start not a multiple of 4
+0x1804f0148	out-of-date sRGB profile with no signature
+0x1804f0180	Not recognizing known sRGB profile that has been edited
+0x1804f01c8	internal error handling cHRM coefficients
+0x1804f0200	internal error handling cHRM->XYZ
+0x1804f0228	Image width is zero in IHDR
+0x1804f0250	Invalid image width in IHDR
+0x1804f0278	Image width exceeds user limit in IHDR
+0x1804f02a8	Image height is zero in IHDR
+0x1804f02d0	Invalid image height in IHDR
+0x1804f02f8	Image height exceeds user limit in IHDR
+0x1804f0328	Invalid bit depth in IHDR
+0x1804f0348	Invalid color type in IHDR
+0x1804f0368	Invalid color type/bit depth combination in IHDR
+0x1804f03a8	Unknown interlace method in IHDR
+0x1804f03d0	Unknown compression method in IHDR
+0x1804f0400	Unknown filter method in IHDR
+0x1804f0428	Invalid filter method in IHDR
+0x1804f0450	Invalid IHDR data
+0x1804f0468	ASCII conversion buffer too small
+0x1804f0490	fixed point overflow ignored
+0x1804f04b8	gamma table being rebuilt
+0x1804f0910	png_set_filler is invalid for low bit depth gray output
+0x1804f0958	png_set_filler: inappropriate color type
+0x1804f0990	info change after png_start_read_image or png_read_update_info
+0x1804f09e0	0123456789ABCDEF
+0x1804f09fa	3456789
+0x1804f0a08	0123456789ABCDEF
+0x1804f0a28	fixed point overflow in 
+0x1804f0a48	Libpng jmp_buf still allocated
+0x1804f0a70	Application jmp_buf size changed
+0x1804f0a98	undefined
+0x1804f0aa8	libpng error: %s
+0x1804f0ac0	libpng warning: %s
+0x1804f0ad8	bad longjmp: 
+0x1804f0ae8	Call to NULL write function
+0x1804f0b10	Can't set both read_data_fn and write_data_fn in the same structure
+0x1804f0b68	Call to NULL read function
+0x1804f0b88	png_get_eXIf does not work; use png_get_eXIf_1
+0x1804f0bc0	sCAL width
+0x1804f0bd0	sCAL height
+0x1804f0c70	cHRM Blue Y
+0x1804f0c80	cHRM Blue X
+0x1804f0c90	cHRM Green Y
+0x1804f0ca0	cHRM Green X
+0x1804f0cb0	cHRM Red Y
+0x1804f0cc0	cHRM Red X
+0x1804f0cd0	cHRM White Y
+0x1804f0ce0	cHRM White X
+0x1804f0cf0	cHRM Blue Z
+0x1804f0d00	cHRM Green Z
+0x1804f0d10	cHRM Red Z
+0x1804f0d20	png_set_eXIf does not work; use png_set_eXIf_1
+0x1804f0d58	Insufficient memory for eXIf chunk data
+0x1804f0d88	png_set_gAMA
+0x1804f0d98	Invalid palette size, hIST allocation skipped
+0x1804f0dd0	Insufficient memory for hIST chunk data
+0x1804f0e00	Invalid pCAL equation type
+0x1804f0e20	Invalid pCAL parameter count
+0x1804f0e48	Invalid format for pCAL parameter
+0x1804f0e70	Insufficient memory for pCAL purpose
+0x1804f0ea0	Insufficient memory for pCAL units
+0x1804f0ed0	Insufficient memory for pCAL params
+0x1804f0f00	Insufficient memory for pCAL parameter
+0x1804f0f30	Invalid sCAL unit
+0x1804f0f48	Invalid sCAL width
+0x1804f0f60	Invalid sCAL height
+0x1804f0f78	Memory allocation failed while processing sCAL
+0x1804f0fb0	Invalid sCAL width ignored
+0x1804f0fd0	Invalid sCAL height ignored
+0x1804f0ff8	Invalid palette length
+0x1804f1018	Invalid palette
+0x1804f1030	Invalid iCCP compression method
+0x1804f1058	Insufficient memory to process iCCP chunk
+0x1804f1090	Insufficient memory to process iCCP profile
+0x1804f10c8	Insufficient memory to store text
+0x1804f10f0	too many text chunks
+0x1804f1110	text compression mode is out of range
+0x1804f1140	text chunk: out of memory
+0x1804f1160	tRNS chunk has out-of-range samples for bit_depth
+0x1804f11a0	too many sPLT chunks
+0x1804f11c0	png_set_sPLT: invalid sPLT
+0x1804f11e0	sPLT out of memory
+0x1804f11f8	Call to png_set_acTL() with NULL png_ptr or info_ptr ignored
+0x1804f1248	Ignoring attempt to set acTL with num_frames zero
+0x1804f1288	Ignoring attempt to set acTL with num_frames > 2^31-1
+0x1804f12c8	Ignoring attempt to set acTL with num_plays > 2^31-1
+0x1804f1308	Call to png_set_fcTL() with NULL png_ptr or info_ptr ignored
+0x1804f1360	PNG_BLEND_OP_OVER is meaningless and wasteful for opaque images, ignored
+0x1804f13b8	invalid width in fcTL (> 2^31-1)
+0x1804f13e0	invalid height in fcTL (> 2^31-1)
+0x1804f1408	invalid x_offset in fcTL (> 2^31-1)
+0x1804f1438	invalid y_offset in fcTL (> 2^31-1)
+0x1804f1468	dimensions of a frame are greater thanthe ones in IHDR
+0x1804f14b0	invalid dispose_op in fcTL
+0x1804f14d0	invalid blend_op in fcTL
+0x1804f14f0	png_set_unknown_chunks now expects a valid location
+0x1804f1530	invalid location in png_set_unknown_chunks
+0x1804f1568	too many unknown chunks
+0x1804f1588	unknown chunk: out of memory
+0x1804f15b0	invalid unknown chunk location
+0x1804f15d8	png_set_keep_unknown_chunks: invalid keep
+0x1804f1610	png_set_keep_unknown_chunks: no chunk list
+0x1804f1648	png_set_keep_unknown_chunks: too many chunks
+0x1804f1680	invalid compression buffer size
+0x1804f16a8	Compression buffer size cannot be changed because it is in use
+0x1804f16f8	Compression buffer size limited to system maximum
+0x1804f1738	Compression buffer size cannot be reduced below 6
+0x1804f1778	keyword truncated
+0x1804f1790	keyword "@1": bad character '0x@2'
+0x1804f17c0	Can't discard critical data on CRC error
+0x1804f17f8	invalid after png_start_read_image or png_read_update_info
+0x1804f1840	invalid before the PNG header has been read
+0x1804f1878	Application must supply a known background gamma
+0x1804f18b8	png_set_background
+0x1804f18d0	gamma value
+0x1804f18e0	output gamma out of expected range
+0x1804f1910	invalid alpha mode
+0x1804f1928	conflicting calls to set alpha mode and background
+0x1804f1968	invalid file gamma in png_set_gamma
+0x1804f1998	invalid screen gamma in png_set_gamma
+0x1804f19c8	invalid error action to rgb_to_gray
+0x1804f19f8	ignoring out of range rgb_to_gray coefficients
+0x1804f1a30	rgb to gray green coefficient
+0x1804f1a58	rgb to gray red coefficient
+0x1804f1a80	libpng does not support gamma+background+rgb_to_gray
+0x1804f1ac0	invalid background gamma type
+0x1804f1ae8	Palette is NULL in indexed image
+0x1804f1b10	png_do_encode_alpha: unexpected call
+0x1804f1b40	NULL row buffer
+0x1804f1b58	Uninitialized row
+0x1804f1b70	png_do_rgb_to_gray found nongray pixel
+0x1804f1ba0	png_do_quantize returned rowbytes=0
+0x1804f1be0	internal error: array alloc
+0x1804f1c08	internal error: array realloc
+0x1804f1c30	Out of memory
+0x1804f1c40	Out of Memory
+0x1804f1c50	PNG unsigned integer out of range
+0x1804f1c78	PNG fixed point integer out of range
+0x1804f1ca8	Not a PNG file
+0x1804f1cc0	PNG file corrupted by ASCII conversion
+0x1804f1cf0	CRC error
+0x1804f1d00	insufficient memory to read chunk
+0x1804f1d28	 using zstream
+0x1804f1d3c	1.2.11
+0x1804f1d48	invalid window size (libpng)
+0x1804f1d70	zstream unclaimed
+0x1804f1d88	extra compressed data
+0x1804f1da8	out of place
+0x1804f1db8	invalid
+0x1804f1dc8	missing IHDR
+0x1804f1dd8	ignored in grayscale PNG
+0x1804f1df8	tRNS must be after
+0x1804f1e10	hIST must be after
+0x1804f1e28	bKGD must be after
+0x1804f1e40	invalid values
+0x1804f1e58	too many profiles
+0x1804f1e70	out of memory
+0x1804f1e80	bad compression method
+0x1804f1ea0	bad keyword
+0x1804f1eb0	No space in chunk cache for sPLT
+0x1804f1ed8	malformed sPLT chunk
+0x1804f1ef8	sPLT chunk has bad length
+0x1804f1f18	sPLT chunk requires too much memory
+0x1804f1f48	invalid with alpha channel
+0x1804f1f68	invalid index
+0x1804f1f78	incorrect byte-order specifier
+0x1804f1fa0	invalid parameter count
+0x1804f1fc0	unrecognized equation type
+0x1804f1fe0	invalid data
+0x1804f1ff0	invalid unit
+0x1804f2000	bad width format
+0x1804f2018	non-positive width
+0x1804f2030	bad height format
+0x1804f2048	non-positive height
+0x1804f2060	no space in chunk cache
+0x1804f2080	Insufficient memory to process text chunk
+0x1804f20b8	unknown compression type
+0x1804f20d8	Read failure in png_handle_zTXt
+0x1804f2100	bad compression info
+0x1804f2120	Missing IHDR before acTL
+0x1804f2140	Invalid acTL after IDAT skipped
+0x1804f2168	Duplicate acTL skipped
+0x1804f2188	acTL with invalid length skipped
+0x1804f21b0	Missing IHDR before fcTL
+0x1804f21d0	Invalid fcTL after IDAT skipped
+0x1804f21f8	Duplicate fcTL within one frame skipped
+0x1804f2228	fcTL with invalid length skipped
+0x1804f2250	fcTL for the first frame must have zero offset
+0x1804f2288	size in first frame's fcTL must match the size in IHDR
+0x1804f22d0	ignoring fdAT chunk
+0x1804f22e8	invalid fcTL or fdAT chunk found
+0x1804f2310	fcTL or fdAT chunk with out-of-order sequence number found
+0x1804f2358	unknown chunk exceeds memory limits
+0x1804f2388	error in user chunk
+0x1804f23a0	Saving unknown chunk:
+0x1804f23c0	forcing save of an unhandled chunk; please call png_set_keep_unknown_chunks
+0x1804f2420	unhandled critical chunk
+0x1804f2440	invalid chunk type
+0x1804f2458	chunk data is too large
+0x1804f25e0	internal row logic error
+0x1804f2600	internal row size calculation error
+0x1804f2630	internal row width error
+0x1804f2650	invalid user transform pixel depth
+0x1804f2680	Not enough image data
+0x1804f26a0	Extra compressed data
+0x1804f26c0	Too much image data
+0x1804f26d8	Row has too many bytes to allocate in memory
+0x1804f2710	inflateReset failed
+0x1804f2768	length exceeds PNG maximum
+0x1804f2788	in use by IDAT
+0x1804f27a0	deflateEnd failed (ignored)
+0x1804f27c8	compressed data too long
+0x1804f27e8	error writing ancillary chunked compressed data
+0x1804f2828	Invalid bit depth for grayscale image
+0x1804f2858	Invalid bit depth for RGB image
+0x1804f2880	Invalid bit depth for paletted image
+0x1804f28b0	Invalid bit depth for grayscale+alpha image
+0x1804f28e8	Invalid bit depth for RGBA image
+0x1804f2910	Invalid image color type specified
+0x1804f2940	Invalid compression type specified
+0x1804f2970	Invalid filter type specified
+0x1804f2998	Invalid interlace type specified
+0x1804f29c0	Invalid number of colors in palette
+0x1804f29f0	Ignoring request to write a PLTE chunk in grayscale PNG
+0x1804f2a38	Z_OK on Z_FINISH with output space
+0x1804f2a68	Invalid sRGB rendering intent specified
+0x1804f2a98	No profile for iCCP chunk
+0x1804f2ab8	ICC profile too short
+0x1804f2ad8	ICC profile length invalid (not a multiple of 4)
+0x1804f2b18	iCCP: invalid keyword
+0x1804f2b38	sPLT: invalid keyword
+0x1804f2b58	Invalid sBIT depth specified
+0x1804f2b80	Invalid number of transparent colors specified
+0x1804f2bc0	Ignoring attempt to write tRNS chunk out-of-range for bit_depth
+0x1804f2c10	Ignoring attempt to write 16-bit tRNS chunk when bit_depth is 8
+0x1804f2c60	Can't write tRNS with an alpha channel
+0x1804f2c90	Invalid background palette index
+0x1804f2cc0	Ignoring attempt to write 16-bit bKGD chunk when bit_depth is 8
+0x1804f2d10	Ignoring attempt to write bKGD chunk out-of-range for bit_depth
+0x1804f2d60	Invalid number of histogram entries specified
+0x1804f2d98	tEXt: invalid keyword
+0x1804f2db8	tEXt: text too long
+0x1804f2dd0	zTXt: invalid compression type
+0x1804f2df8	zTXt: invalid keyword
+0x1804f2e18	iTXt: invalid keyword
+0x1804f2e38	iTXt: invalid compression
+0x1804f2e58	iTXt: uncompressed text too long
+0x1804f2e80	Unrecognized unit type for oFFs chunk
+0x1804f2eb0	Unrecognized equation type for pCAL chunk
+0x1804f2ee8	pCAL: invalid keyword
+0x1804f2f08	Can't write sCAL (buffer too small)
+0x1804f2f38	Unrecognized unit type for pHYs chunk
+0x1804f2f68	Invalid time specified for tIME chunk
+0x1804f2f98	x and/or y offset for the first frame aren't 0
+0x1804f2fd0	width and/or height in the first frame's fcTL don't match the ones in IHDR
+0x1804f3068	width and/or height for a frame greater thanthe ones in IHDR
+0x1804f3590	Bogus message code %d
+0x1804f35b0	Sorry, arithmetic coding is not implemented
+0x1804f35e8	ALIGN_TYPE is wrong, please fix
+0x1804f3610	MAX_ALLOC_CHUNK is wrong, please fix
+0x1804f3640	Bogus buffer control mode
+0x1804f3660	Invalid component ID %d in SOS
+0x1804f3688	DCT coefficient out of range
+0x1804f36b0	IDCT output block size %d not supported
+0x1804f36e0	Bogus Huffman table definition
+0x1804f3708	Bogus input colorspace
+0x1804f3728	Bogus JPEG colorspace
+0x1804f3748	Bogus marker length
+0x1804f3760	Wrong JPEG library version: library is %d, caller expects %d
+0x1804f37b0	Sampling factors too large for interleaved scan
+0x1804f37f0	Invalid memory pool code %d
+0x1804f3818	Unsupported JPEG data precision %d
+0x1804f3848	Invalid progressive parameters Ss=%d Se=%d Ah=%d Al=%d
+0x1804f3890	Invalid progressive parameters at scan script entry %d
+0x1804f38d8	Bogus sampling factors
+0x1804f38f8	Invalid scan script at entry %d
+0x1804f3920	Improper call to JPEG library in state %d
+0x1804f3960	JPEG parameter struct mismatch: library thinks size is %u, caller expects %u
+0x1804f39c0	Bogus virtual array access
+0x1804f39e0	Buffer passed to JPEG library is too small
+0x1804f3a18	Suspension not allowed here
+0x1804f3a40	CCIR601 sampling not implemented yet
+0x1804f3a70	Too many color components: %d, max %d
+0x1804f3aa0	Unsupported color conversion request
+0x1804f3ad0	Bogus DAC index %d
+0x1804f3ae8	Bogus DAC value 0x%x
+0x1804f3b08	Bogus DHT index %d
+0x1804f3b20	Bogus DQT index %d
+0x1804f3b38	Empty JPEG image (DNL not supported)
+0x1804f3b68	Read from EMS failed
+0x1804f3b88	Write to EMS failed
+0x1804f3ba0	Didn't expect more than one scan
+0x1804f3bc8	Input file read error
+0x1804f3be8	Output file write error --- out of disk space?
+0x1804f3c20	Fractional sampling not implemented yet
+0x1804f3c50	Huffman code size table overflow
+0x1804f3c78	Missing Huffman code table entry
+0x1804f3ca0	Maximum supported image dimension is %u pixels
+0x1804f3cd8	Empty input file
+0x1804f3cf0	Premature end of input file
+0x1804f3d18	Cannot transcode due to multiple use of quantization table %d
+0x1804f3d68	Scan script does not transmit all data
+0x1804f3d98	Invalid color quantization mode change
+0x1804f3dc8	Not implemented yet
+0x1804f3de0	Requested feature was omitted at compile time
+0x1804f3e18	Backing store not supported
+0x1804f3e40	Huffman table 0x%02x was not defined
+0x1804f3e70	JPEG datastream contains no image
+0x1804f3e98	Quantization table 0x%02x was not defined
+0x1804f3ed0	Not a JPEG file: starts with 0x%02x 0x%02x
+0x1804f3f08	Insufficient memory (case %d)
+0x1804f3f30	Cannot quantize more than %d color components
+0x1804f3f68	Cannot quantize to fewer than %d colors
+0x1804f3f98	Cannot quantize to more than %d colors
+0x1804f3fc8	Invalid JPEG file structure: two SOF markers
+0x1804f4000	Invalid JPEG file structure: missing SOS marker
+0x1804f4040	Unsupported JPEG process: SOF type 0x%02x
+0x1804f4078	Invalid JPEG file structure: two SOI markers
+0x1804f40b0	Invalid JPEG file structure: SOS before SOF
+0x1804f40e8	Failed to create temporary file %s
+0x1804f4118	Read failed on temporary file
+0x1804f4140	Seek failed on temporary file
+0x1804f4168	Write failed on temporary file --- out of disk space?
+0x1804f41a8	Application transferred too few scanlines
+0x1804f41e0	Unsupported marker type 0x%02x
+0x1804f4208	Virtual array controller messed up
+0x1804f4238	Image too wide for this implementation
+0x1804f4268	Read from XMS failed
+0x1804f4288	Write to XMS failed
+0x1804f42a0	Copyright (C) 1991-2017 The libjpeg-turbo Project and many others
+0x1804f42f0	6b  27-Mar-1998
+0x1804f4308	Caution: quantization tables are too coarse for baseline JPEG
+0x1804f4360	Adobe APP14 marker: version %d, flags 0x%04x 0x%04x, transform %d
+0x1804f43b0	Unknown APP0 marker (not JFIF), length %u
+0x1804f43e8	Unknown APP14 marker (not Adobe), length %u
+0x1804f4420	Define Arithmetic Table 0x%02x: 0x%02x
+0x1804f4450	Define Huffman Table 0x%02x
+0x1804f4478	Define Quantization Table %d  precision %d
+0x1804f44b0	Define Restart Interval %u
+0x1804f44d0	Freed EMS handle %u
+0x1804f44e8	Obtained EMS handle %u
+0x1804f4508	End Of Image
+0x1804f4518	        %3d %3d %3d %3d %3d %3d %3d %3d
+0x1804f4548	JFIF APP0 marker: version %d.%02d, density %dx%d  %d
+0x1804f4588	Warning: thumbnail image size does not match data length %u
+0x1804f45d0	JFIF extension marker: type 0x%02x, length %u
+0x1804f4608	    with %d x %d thumbnail image
+0x1804f4630	Miscellaneous marker 0x%02x, length %u
+0x1804f4660	Unexpected marker 0x%02x
+0x1804f4680	        %4u %4u %4u %4u %4u %4u %4u %4u
+0x1804f46b0	Quantizing to %d = %d*%d*%d colors
+0x1804f46e0	Quantizing to %d colors
+0x1804f4700	Selected %d colors for quantization
+0x1804f4730	At marker 0x%02x, recovery action %d
+0x1804f475c	RST%d
+0x1804f4768	Smoothing not supported with nonstandard sampling ratios
+0x1804f47b0	Start Of Frame 0x%02x: width=%u, height=%u, components=%d
+0x1804f47f8	    Component %d: %dhx%dv q=%d
+0x1804f4820	Start of Image
+0x1804f4838	Start Of Scan: %d components
+0x1804f4860	    Component %d: dc=%d ac=%d
+0x1804f4888	  Ss=%d, Se=%d, Ah=%d, Al=%d
+0x1804f48b0	Closed temporary file %s
+0x1804f48d0	Opened temporary file %s
+0x1804f48f0	JFIF extension marker: JPEG-compressed thumbnail image, length %u
+0x1804f4940	JFIF extension marker: palette thumbnail image, length %u
+0x1804f4988	JFIF extension marker: RGB thumbnail image, length %u
+0x1804f49c8	Unrecognized component IDs %d %d %d, assuming YCbCr
+0x1804f4a08	Freed XMS handle %u
+0x1804f4a20	Obtained XMS handle %u
+0x1804f4a40	Unknown Adobe color transform code %d
+0x1804f4a70	Inconsistent progression sequence for component %d coefficient %d
+0x1804f4ac0	Corrupt JPEG data: %u extraneous bytes before marker 0x%02x
+0x1804f4b08	Corrupt JPEG data: premature end of data segment
+0x1804f4b48	Corrupt JPEG data: bad Huffman code
+0x1804f4b78	Warning: unknown JFIF revision number %d.%02d
+0x1804f4bb0	Premature end of JPEG file
+0x1804f4bd0	Corrupt JPEG data: found marker 0x%02x instead of RST%d
+0x1804f4c18	Invalid SOS parameters for sequential JPEG
+0x1804f4c50	Application transferred too many scanlines
+0x1804f4c88	Invalid crop request
+0x1804f4ca8	Arithmetic table 0x%02x was not defined
+0x1804f4cd8	Corrupt JPEG data: bad arithmetic code
+0x1804f5240	JPEGMEM
+0x1804f524c	%ld%c
+0x1804f5d50	JSIMD_FORCENONE
+0x1804f5d68	JSIMD_NOHUFFENC
+0x1804f5d80	libjpeg-turbo version 1.5.2 (build 20170922)
+0x18051cff0	Visual C++ CRT: Not enough memory to complete call to strerror.
+0x18051d040	Visual C++ CRT: Not enough memory to complete call to strerror.
+0x18051d288	No error
+0x18051d298	Operation not permitted
+0x18051d2b8	No such file or directory
+0x18051d2d8	No such process
+0x18051d2f0	Interrupted function call
+0x18051d310	Input/output error
+0x18051d328	No such device or address
+0x18051d348	Arg list too long
+0x18051d360	Exec format error
+0x18051d378	Bad file descriptor
+0x18051d390	No child processes
+0x18051d3a8	Resource temporarily unavailable
+0x18051d3d0	Not enough space
+0x18051d3e8	Permission denied
+0x18051d400	Bad address
+0x18051d410	Unknown error
+0x18051d420	Resource device
+0x18051d438	File exists
+0x18051d448	Improper link
+0x18051d458	No such device
+0x18051d470	Not a directory
+0x18051d488	Is a directory
+0x18051d4a0	Invalid argument
+0x18051d4b8	Too many open files in system
+0x18051d4e0	Too many open files
+0x18051d4f8	Inappropriate I/O control operation
+0x18051d528	File too large
+0x18051d540	No space left on device
+0x18051d560	Invalid seek
+0x18051d570	Read-only file system
+0x18051d590	Too many links
+0x18051d5a8	Broken pipe
+0x18051d5b8	Domain error
+0x18051d5c8	Result too large
+0x18051d5e0	Resource deadlock avoided
+0x18051d600	Filename too long
+0x18051d618	No locks available
+0x18051d630	Function not implemented
+0x18051d650	Directory not empty
+0x18051d668	Illegal byte sequence
+0x18051e0f0	incorrect header check
+0x18051e110	unknown compression method
+0x18051e130	invalid window size
+0x18051e148	unknown header flags set
+0x18051e168	header crc mismatch
+0x18051e180	invalid block type
+0x18051e198	invalid stored block lengths
+0x18051e1c0	too many length or distance symbols
+0x18051e1f0	invalid code lengths set
+0x18051e210	invalid bit length repeat
+0x18051e230	invalid code -- missing end-of-block
+0x18051e260	invalid literal/lengths set
+0x18051e288	invalid distances set
+0x18051e2a8	invalid literal/length code
+0x18051e2d0	invalid distance code
+0x18051e2f0	invalid distance too far back
+0x18051e318	incorrect data check
+0x18051e338	incorrect length check
+0x18051e360	 deflate 1.2.11 Copyright 1995-2017 Jean-loup Gailly and Mark Adler 
+0x180520ae8	need dictionary
+0x180520b00	stream end
+0x180520b10	file error
+0x180520b20	stream error
+0x180520b30	data error
+0x180520b40	buffer error
+0x180520b50	incompatible version
+0x180520bd0	 inflate 1.2.11 Copyright 1995-2017 Mark Adler 
+0x1805b4a1c	QQWubi.dll
+0x1805b4a27	ImeFreeEnv
+0x1805b4a32	ImeGetEnv
+0x1805b4a3c	ImeInquire
+0x1805b4a47	ImeSetCompositionString
+0x1805b4a5f	ImeConfigure
+0x1805b4a6c	ImeConversionList
+0x1805b4a7e	ImeDestroy
+0x1805b4a89	ImeEnumRegisterWord
+0x1805b4a9d	ImeEscape
+0x1805b4aa7	ImeExtension
+0x1805b4ab4	ImeGetRegisterWordStyle
+0x1805b4acc	ImeProcessKey
+0x1805b4ada	ImeRegisterWord
+0x1805b4aea	ImeSelect
+0x1805b4af4	ImeSetActiveContext
+0x1805b4b08	ImeToAsciiEx
+0x1805b4b15	ImeUnregisterWord
+0x1805b4b27	NotifyIME
+0x1805b93b0	ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/
+0x1805b9420	Copyright (c) by P.J. Plauger, licensed by Dinkumware, Ltd. ALL RIGHTS RESERVED.
+0x1805c14fa	abcdefghijklmnopqrstuvwxyz
+0x1805c151a	ABCDEFGHIJKLMNOPQRSTUVWXYZ
+0x1805c17e0	            
+0x1805c18f1	abcdefghijklmnopqrstuvwxyz
+0x1805c1911	ABCDEFGHIJKLMNOPQRSTUVWXYZ
+0x1805c1f90	.?AVCAtlException@ATL@@
+0x1805c1fc0	.?AVCWin32Heap@ATL@@
+0x1805c1ff0	.?AUIAtlMemMgr@ATL@@
+0x1805c2020	.?AUIAtlStringMgr@ATL@@
+0x1805c2050	.?AVCAtlStringMgr@ATL@@
+0x1805c2080	.?AVCQQPinyinPerformanceProfiler@@
+0x1805c20c0	.?AVCAccountSemaphore@@
+0x1805c20f0	.?AVCHandle@ATL@@
+0x1805c2118	.?AVCAccountMutex@@
+0x1805c2148	.?AVCAccountFileLock@@
+0x1805c2178	.?AVCAccountFileReadLock@@
+0x1805c21b0	.?AVCAccountFileWriteLock@@
+0x1805c21f0	.?AV<lambda_90bc06222059d4cc2b3d4668c11aa9cf>@@
+0x1805c2240	.?AV<lambda_f3a63dad5857d45d7b6f4fed76ad0dbb>@@
+0x1805c2290	.?AV?$_Func_base@_NAEBU_WIN32_FIND_DATAW@@@std@@
+0x1805c22e0	.?AV?$_Func_impl_no_alloc@V<lambda_f3a63dad5857d45d7b6f4fed76ad0dbb>@@_NAEBU_WIN32_FIND_DATAW@@@std@@
+0x1805c2370	.?AV?$_Func_impl_no_alloc@V<lambda_90bc06222059d4cc2b3d4668c11aa9cf>@@_NAEBU_WIN32_FIND_DATAW@@@std@@
+0x1805c2400	.?AVCBaseStyle@@
+0x1805c2428	.?AVCAssociateStyle@@
+0x1805c2458	.?AVCEnglishStateStyle@@
+0x1805c2490	.?AVCEmptyCandsMgr@@
+0x1805c24c0	.?AVCCandsMgr@@
+0x1805c24e8	.?AVCExtraInfoStyle@@
+0x1805c2518	.?AVCKeyManager@@
+0x1805c2540	.?AVImmCleanup@@
+0x1805c2570	.?AV?$ImmSingleton@VCUserInputCache@WbUserDict@@@@
+0x1805c25c0	.?AV?$ImmSingleton@VCKeyManager@@@@
+0x1805c2600	.?AVCMakeWordStyle@@
+0x1805c2630	.?AV?$ImmSingleton@VCAbandonedDict@AbandonedDict@@@@
+0x1805c2688	.?AVCMixedStyle@@
+0x1805c26b0	.?AVCPurePinyinStyle@@
+0x1805c26e0	.?AVCQQWubiStyle@@
+0x1805c2710	.?AVCSpecialStateStyle@@
+0x1805c2748	.?AVCTempPinyinStyle@@
+0x1805c2778	.?AVCTempRareWordStyle@@
+0x1805c27b0	.?AVCUrlStateStyle@@
+0x1805c27e0	.?AVCShareMemSetting2@@
+0x1805c2810	.?AVCCurTypeSpeedData@@
+0x1805c2840	.?AVCTypeStatObserver@@
+0x1805c2870	.?AVCImeScriptSys@@
+0x1805c28a0	.?AVCPyScriptSys@@
+0x1805c28d0	.?AVCImeWnd@@
+0x1805c28f8	.?AVTiXmlDocument@@
+0x1805c2928	.?AVTiXmlNode@@
+0x1805c2950	.?AVTiXmlBase@@
+0x1805c2978	.?AUSKIN_LIST_INFO@@
+0x1805c29a8	.?AUMENU_SKIN_ST@@
+0x1805c29d8	.?AUFileIterator@Toollib@@
+0x1805c2a10	.?AVFileIO@Toollib@@
+0x1805c2a40	.?AVTextFileReader@Toollib@@
+0x1805c2a78	.?AVTextFileWriter@Toollib@@
+0x1805c2ab0	.?AVCQPYMenu@@
+0x1805c2ad8	.?AV?$CMenuT@$00@WTL@@
+0x1805c2b08	.?AVCSkinViewWnd@@
+0x1805c2b38	.?AV?$CSingleton@VCSkinViewWnd@@@@
+0x1805c2b78	.?AVCxImageEx@@
+0x1805c2ba0	.?AVCxImage@@
+0x1805c2bc8	.?AVCToolBoxWnd@@
+0x1805c2bf0	.?AVTiXmlDeclaration@@
+0x1805c2c20	.?AVCSimpleMemDib@@
+0x1805c2c50	.?AVCToolTipsEx@@
+0x1805c2c78	.?AVt_wndSoftKeyboard@@
+0x1805c2ca8	.?AVt_wndSoftKeyboardItem@@
+0x1805c2ce0	.?AUCTask@CTaskMgr@@
+0x1805c2d10	.?AVCAutoSync_AutoUpdate@@
+0x1805c2d48	.?AV?$ImmSingleton@VCAddons@@@@
+0x1805c2d88	.?AVCLevelPointStat@@
+0x1805c2db8	.?AVCNotifyRefreshTask@@
+0x1805c2df0	.?AVCQQPySelReport@@
+0x1805c2e20	.?AUCTask_DeleteOnKill@CTaskMgr@@
+0x1805c2e60	.?AVCRegHotKeyTask@@
+0x1805c2e90	.?AVCExecuteTask@@
+0x1805c2ec0	.?AVCStatusCheckTask@@
+0x1805c2ef0	.?AVCHddFetcher@@
+0x1805c2f18	.?AVCMacFetcher@@
+0x1805c2f40	.?AVruntime_error@std@@
+0x1805c2f70	.?AVexception@std@@
+0x1805c2fa0	.?AVfailure@ios_base@std@@
+0x1805c2fd8	.?AVsystem_error@std@@
+0x1805c3008	.?AV_System_error@std@@
+0x1805c3038	.?AVbad_cast@std@@
+0x1805c3068	.?AVios_base@std@@
+0x1805c3098	.?AV?$_Iosb@H@std@@
+0x1805c30c8	.?AV?$basic_ios@DU?$char_traits@D@std@@@std@@
+0x1805c3120	.?AV?$basic_streambuf@DU?$char_traits@D@std@@@std@@
+0x1805c3180	.?AV?$basic_ostream@DU?$char_traits@D@std@@@std@@
+0x1805c31d0	.?AV?$basic_stringbuf@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@
+0x1805c3240	.?AV?$basic_ostringstream@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@
+0x1805c32b0	.?AV_Facet_base@std@@
+0x1805c32e0	.?AVfacet@locale@std@@
+0x1805c3310	.?AU_Crt_new_delete@std@@
+0x1805c3348	.?AUctype_base@std@@
+0x1805c3378	.?AV?$ctype@D@std@@
+0x1805c33a8	.?AVerror_category@std@@
+0x1805c33e0	.?AV_Generic_error_category@std@@
+0x1805c3420	.?AV_Iostream_error_category@std@@
+0x1805c3460	.?AVCSeqIDGenerator@@
+0x1805c3490	.?AV?$num_put@DV?$ostreambuf_iterator@DU?$char_traits@D@std@@@std@@@std@@
+0x1805c3500	.?AV?$numpunct@D@std@@
+0x1805c3530	.?AVnoncopyable@fund@@
+0x1805c3560	.?AVmutex@lock@fund@@
+0x1805c3590	.?AV?$ImmSingleton@VCSkinInfoMgr@@@@
+0x1805c35d0	.?AVCLangBar@@
+0x1805c35f8	.?AUIUnknown@@
+0x1805c3620	.?AUITfSource@@
+0x1805c3648	.?AUITfLangBarItem@@
+0x1805c3678	.?AUITfLangBarItemButton@@
+0x1805c36b0	.?AUILangBarItemSetinfo@@
+0x1805c36e8	.?AVCLangBarItemButton@@
+0x1805c3720	.?AVbad_alloc@std@@
+0x1805c3750	.?AVinvalid_argument@std@@
+0x1805c3788	.?AVlogic_error@std@@
+0x1805c37b8	.?AVlength_error@std@@
+0x1805c37e8	.?AVout_of_range@std@@
+0x1805c3818	.?AVoverflow_error@std@@
+0x1805c3850	.?AVbad_function_call@std@@
+0x1805c3888	.?AVregex_error@std@@
+0x1805c38b8	.?AV_Locimp@locale@std@@
+0x1805c38f0	.?AV_System_error_category@std@@
+0x1805c3930	.?AVcodecvt_base@std@@
+0x1805c3960	.?AV?$num_get@DV?$istreambuf_iterator@DU?$char_traits@D@std@@@std@@@std@@
+0x1805c39d0	.?AV?$codecvt@DDU_Mbstatet@@@std@@
+0x1805c3a10	.?AV?$codecvt@_WDU_Mbstatet@@@std@@
+0x1805c3a50	.?AV?$codecvt@GDU_Mbstatet@@@std@@
+0x1805c3a90	.?AV?$ctype@_W@std@@
+0x1805c3ac0	.?AV?$ctype@G@std@@
+0x1805c3af0	.?AUmessages_base@std@@
+0x1805c3b20	.?AUmoney_base@std@@
+0x1805c3b50	.?AUtime_base@std@@
+0x1805c3b80	.?AV?$num_get@_WV?$istreambuf_iterator@_WU?$char_traits@_W@std@@@std@@@std@@
+0x1805c3bf0	.?AV?$num_put@_WV?$ostreambuf_iterator@_WU?$char_traits@_W@std@@@std@@@std@@
+0x1805c3c60	.?AV?$numpunct@_W@std@@
+0x1805c3c90	.?AV?$collate@_W@std@@
+0x1805c3cc0	.?AV?$messages@_W@std@@
+0x1805c3cf0	.?AV?$money_get@_WV?$istreambuf_iterator@_WU?$char_traits@_W@std@@@std@@@std@@
+0x1805c3d70	.?AV?$money_put@_WV?$ostreambuf_iterator@_WU?$char_traits@_W@std@@@std@@@std@@
+0x1805c3de8	.?AV?$moneypunct@_W$0A@@std@@
+0x1805c3e20	.?AV?$_Mpunct@_W@std@@
+0x1805c3e50	.?AV?$moneypunct@_W$00@std@@
+0x1805c3e90	.?AV?$time_get@_WV?$istreambuf_iterator@_WU?$char_traits@_W@std@@@std@@@std@@
+0x1805c3f00	.?AV?$time_put@_WV?$ostreambuf_iterator@_WU?$char_traits@_W@std@@@std@@@std@@
+0x1805c3f70	.?AV?$num_get@GV?$istreambuf_iterator@GU?$char_traits@G@std@@@std@@@std@@
+0x1805c3fe0	.?AV?$num_put@GV?$ostreambuf_iterator@GU?$char_traits@G@std@@@std@@@std@@
+0x1805c4050	.?AV?$numpunct@G@std@@
+0x1805c4080	.?AV?$collate@G@std@@
+0x1805c40b0	.?AV?$messages@G@std@@
+0x1805c40e0	.?AV?$money_get@GV?$istreambuf_iterator@GU?$char_traits@G@std@@@std@@@std@@
+0x1805c4150	.?AV?$money_put@GV?$ostreambuf_iterator@GU?$char_traits@G@std@@@std@@@std@@
+0x1805c41c0	.?AV?$moneypunct@G$0A@@std@@
+0x1805c41f8	.?AV?$_Mpunct@G@std@@
+0x1805c4228	.?AV?$moneypunct@G$00@std@@
+0x1805c4260	.?AV?$time_get@GV?$istreambuf_iterator@GU?$char_traits@G@std@@@std@@@std@@
+0x1805c42d0	.?AV?$time_put@GV?$ostreambuf_iterator@GU?$char_traits@G@std@@@std@@@std@@
+0x1805c4340	.?AV?$collate@D@std@@
+0x1805c4370	.?AV?$messages@D@std@@
+0x1805c43a0	.?AV?$money_get@DV?$istreambuf_iterator@DU?$char_traits@D@std@@@std@@@std@@
+0x1805c4410	.?AV?$money_put@DV?$ostreambuf_iterator@DU?$char_traits@D@std@@@std@@@std@@
+0x1805c4480	.?AV?$moneypunct@D$0A@@std@@
+0x1805c44b8	.?AV?$_Mpunct@D@std@@
+0x1805c44e8	.?AV?$moneypunct@D$00@std@@
+0x1805c4520	.?AV?$time_get@DV?$istreambuf_iterator@DU?$char_traits@D@std@@@std@@@std@@
+0x1805c4590	.?AV?$time_put@DV?$ostreambuf_iterator@DU?$char_traits@D@std@@@std@@@std@@
+0x1805c4600	.?AVtype_info@@
+0x1805c4628	.?AVbad_array_new_length@std@@
+0x1805c4660	.?AVCSkinEngine2@@
+0x1805c4690	.?AVCPyCtrlBase@@
+0x1805c46b8	.?AVCPyPicFrame@@
+0x1805c46e0	.?AVCPyButton@@
+0x1805c4708	.?AVCMemDIBSprite@@
+0x1805c4738	.?AVCSprite@@
+0x1805c4760	.?AVCPySkinStatus@@
+0x1805c4790	.?AVCPySkinUniteDlg@@
+0x1805c47c0	.?AVCPySkinDivideDlg@@
+0x1805c47f0	.?AVCPySkinCand@@
+0x1805c4818	.?AVCSkinEngGlobal@@
+0x1805c4848	.?AVCPyXSpriteMgr@@
+0x1805c4878	.?AVCPyDialogEx@@
+0x1805c48a0	.?AVCPyDialog@@
+0x1805c48c8	.?AVCPyPanel@@
+0x1805c48f0	.?AVCPySkinTransDlg@@
+0x1805c4920	.?AVCDefaultDialog@@
+0x1805c4950	.?AVCDefaultCompCand@@
+0x1805c4980	.?AVCDefaultStatus@@
+0x1805c49b0	.?AVCDefaultTransCand@@
+0x1805c49e0	.?AVCUSprite@@
+0x1805c4a08	.?AVCEngDataCache2@@
+0x1805c4a38	.?AVCWndPaintMgr@@
+0x1805c4a68	.?AVCCandImageMgr@@
+0x1805c4a98	.?AVCCloudImgMgr@@
+0x1805c4ac8	.?AVCPySuEnMap@@
+0x1805c4af0	.?AVCPyDesktop@@
+0x1805c4b18	.?AVCPyCtrlXmlMgr@@
+0x1805c4b48	.?AVCSkinFileInfoXml@@
+0x1805c4b78	.?AVCPyStatic@@
+0x1805c4ba0	.?AVCxImageSprite@@
+0x1805c4bd0	.?AVCSkinFileMgr@@
+0x1805c4c00	.?AVCGroundCanvasCache@@
+0x1805c4c38	.?AVCPyPicFrameMgr@@
+0x1805c4c68	.?AVCPyPicFrameHelper@@
+0x1805c4c98	.?AVCDefaultXmlData@@
+0x1805c4cc8	.?AVCDefaultSkinXml@@
+0x1805c4cf8	.?AVCSkinXmlDfuInfo@@
+0x1805c4d28	.?AVCIToolsIcoMgr@@
+0x1805c4d58	.?AVCDefaultComp@@
+0x1805c4d88	.?AVCDefaultCand@@
+0x1805c4db8	.?AVCFaceFileCab@@
+0x1805c4de8	.?AV?$CSingleton@VCFaceFileCab@@@@
+0x1805c4e28	.?AVCImageFlash2@@
+0x1805c4e58	.?AVCPyCtrlListMgr@@
+0x1805c4e88	.?AVCPyCtrlXmlTemplate@@
+0x1805c4ec0	.?AVCFileCab@@
+0x1805c4ee8	.?AVCPyCtrlFram@@
+0x1805c4f10	.?AVCPyImageBox@@
+0x1805c4f38	.?AVCPySkinComp@@
+0x1805c4f60	.D
+0x1805c4f78	._W
+0x1805c4f90	.?AV?$scoped_lock@Vmutex@lock@fund@@@lock@fund@@
+0x1805c4fe0	.?AV?$ImmSingleton@VCDataObject@@@@
+0x1805c5020	.?AVCShareMemSetting@@
+0x1805c5050	.?AV?$ImmSingleton@VCCommonDataObject@@@@
+0x1805c5098	.?AV?$ImmSingleton@VCSysDictsConfig@@@@
+0x1805c50e0	.?AUSyllableHandler@CPinyinCodeGenerator@@
+0x1805c5128	.?AUSyllableReader@CPinyinCodeGenerator@@
+0x1805c5170	.?AUSyllableComparator@CPinyinCodeGenerator@@
+0x1805c51c0	.?AV?$ImmSingleton@VCPinyinCodeGenerator@@@@
+0x1805c5210	.?AVCSimp2Trad@@
+0x1805c5238	.?AV?$ImmSingleton@VCSimp2Trad@@@@
+0x1805c5280	.?AV?$_shared_baseptr@VCWbStaticDictionary@@$0A@$0A@@memory@fund@@
+0x1805c52f0	.?AV_ptr_data@?$_shared_baseptr@VCWbStaticDictionary@@$0A@$0A@@memory@fund@@
+0x1805c5360	.?AV?$ImmSingleton@VCDictMgr@@@@
+0x1805c53a0	.?AV?$ImmSingleton@VCWubiFixOrderDictionary@@@@
+0x1805c53f0	.?AV?$_shared_baseptr@VCUserDictionary@@$0A@$0A@@memory@fund@@
+0x1805c5450	.?AU?$stshared_ptr@VCUserDictionary@@V?$_shared_baseptr@VCUserDictionary@@$0A@$0A@@memory@fund@@@fund@@
+0x1805c54e0	.?AV_ptr_data@?$_shared_baseptr@VCUserDictionary@@$0A@$0A@@memory@fund@@
+0x1805c5550	.?AV?$ImmSingleton@VCPinyinEngineMgr@@@@
+0x1805c55a0	.?AV?$_shared_baseptr@VCEmptyCandRecordSet@@$0A@$0A@@memory@fund@@
+0x1805c5610	.?AU?$stshared_ptr@VCEmptyCandRecordSet@@V?$_shared_baseptr@VCEmptyCandRecordSet@@$0A@$0A@@memory@fund@@@fund@@
+0x1805c56b0	.?AV_ptr_data@?$_shared_baseptr@VCEmptyCandRecordSet@@$0A@$0A@@memory@fund@@
+0x1805c5720	.?AV?$counter@$0A@@memory@fund@@
+0x1805c5760	.?AVCAssociateCandsMgr@@
+0x1805c5798	.?AVICandWordSet@@
+0x1805c57c8	.?AVCEmptyCandRecordSet@@
+0x1805c5800	.?AVCEnglishCandsMgr@@
+0x1805c5830	.?AVCNormalEnglishCandRecordSet@@
+0x1805c5870	.?AVCEnglishStateRecordSet@@
+0x1805c58a8	.?AVCFixedOrderComparator@@
+0x1805c58e0	.?AVCWordComparator@@
+0x1805c5910	.?AVCCustomizePhraseComparator@@
+0x1805c5950	.?AVCWordTypeComparator@@
+0x1805c5988	.?AVCDiffTypeSimilarityComparator@@
+0x1805c59c8	.?AVCWordWeightComparator@@
+0x1805c5a00	.?AVCzWildcardWordComparator@@
+0x1805c5a38	.?AVCMixedCandsMgr@@
+0x1805c5a68	.?AVCPyCandsMgr@@
+0x1805c5a90	.?AVCQQWubiCandsMgr@@
+0x1805c5ac0	.?AVCSpecialCandsMgr@@
+0x1805c5af0	.?AVCSpecialCandRecordSet@@
+0x1805c5b28	.?AVCSpecialUrlCandRecordSet@@
+0x1805c5b60	.?AVCUrlCandRecordSet@@
+0x1805c5b90	.?AVCSpecialEnglishCandRecordSet@@
+0x1805c5bd0	.?AVCPyCandRecordsetAdapter@@
+0x1805c5c08	.?AVCPyEngineService@@
+0x1805c5c38	.?AVCTempPinyinAndRareWordCandsMgr@@
+0x1805c5c78	.?AVCTempRareWordCandsMgr@@
+0x1805c5cb0	.?AVCUrlCandsMgr@@
+0x1805c5ce0	.?AVCAssociateCandRecordSet@@
+0x1805c5d18	.?AVCQQWubiCandRecordSet@@
+0x1805c5d50	.?AVCWubiCandRecordSet@@
+0x1805c5d88	.?AVCWubiUserCandRecordset@@
+0x1805c5dc0	.?AVCWbCellDictCandRecordset@@
+0x1805c5df8	.?AVCWubiAutoCandRecordset@@
+0x1805c5e30	.?AVCzWildcardInputGenerator@@
+0x1805c5e68	.?AVCWbInputGenerator@@
+0x1805c5ea0	.?AV?$_shared_baseptr@VCWbInputGenerator@@$0A@$0A@@memory@fund@@
+0x1805c5f10	.?AU?$stshared_ptr@VCWbInputGenerator@@V?$_shared_baseptr@VCWbInputGenerator@@$0A@$0A@@memory@fund@@@fund@@
+0x1805c5fb0	.?AV_ptr_data@?$_shared_baseptr@VCWbInputGenerator@@$0A@$0A@@memory@fund@@
+0x1805c6020	.?AVCAssociateSysDictSearcher@@
+0x1805c6060	.?AVCAssociateUDictSearcher@@
+0x1805c6098	.?AVCStockManager@@
+0x1805c60d0	.?AV?$_shared_baseptr@VCDictData@WbDynamicDict@@$0A@$0A@@memory@fund@@
+0x1805c6140	.?AU?$stshared_ptr@VCDictData@WbDynamicDict@@V?$_shared_baseptr@VCDictData@WbDynamicDict@@$0A@$0A@@memory@fund@@@fund@@
+0x1805c61f0	.?AV_ptr_data@?$_shared_baseptr@VCDictData@WbDynamicDict@@$0A@$0A@@memory@fund@@
+0x1805c6268	.?AV?$ImmSingleton@VCDictMgr@WbUserDict@@@@
+0x1805c62b0	.?AVCCommonUsedDict@WbUserDict@@
+0x1805c62f0	.?AVCDict@WbUserDict@@
+0x1805c6320	.?AVCUserDefineDict@WbUserDict@@
+0x1805c6360	.?AVCInputAnalysis@@
+0x1805c6390	.?AVCPhraseCandRecordSet@@
+0x1805c63c8	.?AVcritical_section@lock@fund@@
+0x1805c6410	.?AV?$scoped_lock@Vcritical_section@lock@fund@@@lock@fund@@
+0x1805c6470	.?AV?$_shared_baseptr@VCStaticDictionary2@@$0A@$0A@@memory@fund@@
+0x1805c64e0	.?AU?$stshared_ptr@VCStaticDictionary2@@V?$_shared_baseptr@VCStaticDictionary2@@$0A@$0A@@memory@fund@@@fund@@
+0x1805c6580	.?AV_ptr_data@?$_shared_baseptr@VCStaticDictionary2@@$0A@$0A@@memory@fund@@
+0x1805c65f0	.?AV?$_shared_baseptr@VCStaticDictionary@@$0A@$0A@@memory@fund@@
+0x1805c6660	.?AU?$stshared_ptr@VCStaticDictionary@@V?$_shared_baseptr@VCStaticDictionary@@$0A@$0A@@memory@fund@@@fund@@
+0x1805c6700	.?AV_ptr_data@?$_shared_baseptr@VCStaticDictionary@@$0A@$0A@@memory@fund@@
+0x1805c6770	.?AVCQQPYCandRecordSet@@
+0x1805c67a8	.?AVCCandRecordSet@@
+0x1805c67d8	.?AVCDictionary@@
+0x1805c6800	.?AVCUserDictionary@@
+0x1805c6830	.?AVCDynamicDictionary@@
+0x1805c6868	.?AV?$ImmSingleton@VCPinyinConfig@@@@
+0x1805c68a8	.?AVCStaticDictionary@@
+0x1805c68d8	.?AVCDictResultProc@@
+0x1805c6908	.?AVCSD2ResultProc@@
+0x1805c6938	.?AVCUnigramResultProc@@
+0x1805c6970	.?AVCCandSearchProc@@
+0x1805c69a0	.?AVCRecordSearchProc@@
+0x1805c69d0	.?AV?$ImmSingleton@VCAutoMakeWordMgr@WubiAutoMakeWord@@@@
+0x1805c6a30	.?AU?$stshared_ptr@VCWbStaticDictionary@@V?$_shared_baseptr@VCWbStaticDictionary@@$0A@$0A@@memory@fund@@@fund@@
+0x1805c6ad0	.?AVCWubiDictEngine@@
+0x1805c6b00	.?AV?$ImmSingleton@VCWubiDictEngine@@@@
+0x1805c6b48	.?AVCWubiCacheDictEngine@@
+0x1805c6b80	.?AV?$ImmSingleton@VCWubiCacheDictEngine@@@@
+0x1805c6bd0	.?AVCWubiCacheDictSearcher@@
+0x1805c6c08	.?AVCWubiFixOrderDictionary@@
+0x1805c6c40	.?AVCFODictCandRecordSet@@
+0x1805c6c78	.?AVCSSEnum@@
+0x1805c6ca0	.?AVITXFile@@
+0x1805c6cc8	.?AVCSSFiles@@
+0x1805c6cf0	.?AVCWindowsFile@@
+0x1805c6d20	.?AVCWindowsFileSystem@@
+0x1805c6d58	.?AVST_QPSF_DESCRIBE@@
+0x1805c6d88	.?AVCSsFileHelper@@
+0x1805c6db8	.?AVCWindowsEnum@@
+0x1805c6de8	.?AVCxFile@@
+0x1805c6e10	.?AVCxIOFile@@
+0x1805c6e38	.?AVCxImageGIF@@
+0x1805c6e60	.?AVCxImagePNG@@
+0x1805c6e88	.?AVCxImageBMP@@
+0x1805c6eb0	.?AVCxImageICO@@
+0x1805c6ed8	.?AVCxMemFile@@
+0x1805c6f00	.?AVCxImageJPG@@
+0x1805c6f28	.?AVTiXmlElement@@
+0x1805c6f58	.?AVTiXmlComment@@
+0x1805c6f88	.?AVTiXmlUnknown@@
+0x1805c6fb8	.?AVTiXmlAttribute@@
+0x1805c6fe8	.?AVTiXmlText@@
+0x1805c7010	.?AV_com_error@@
+0x1805c7038	.?AV__non_rtti_object@std@@
+0x1805c7070	.?AVbad_typeid@std@@
+0x1805c70a0	.?AVbad_exception@std@@
+0x1805c70d0	.?AVDNameNode@@
+0x1805c70f8	.?AVcharNode@@
+0x1805c7120	.?AVpcharNode@@
+0x1805c7148	.?AVpDNameNode@@
+0x1805c7170	.?AVDNameStatusNode@@
+0x1805c71a0	.?AVpairNode@@
+0x1805c71c8	.?AV?$ImmSingleton@VCCharsetFilter@@@@
+0x1805c7210	.?AV?$ImmSingleton@VCWordsRankInfo@@@@
+0x180607ca2	LockResource
+0x180607cb2	HeapDestroy
+0x180607cc0	HeapAlloc
+0x180607ccc	HeapReAlloc
+0x180607cda	HeapFree
+0x180607ce6	HeapSize
+0x180607cf2	GetProcessHeap
+0x180607d04	LoadResource
+0x180607d14	SizeofResource
+0x180607d26	CloseHandle
+0x180607d34	MapViewOfFile
+0x180607d44	UnmapViewOfFile
+0x180607d56	CreateFileMappingW
+0x180607d6c	OpenFileMappingW
+0x180607d80	FindResourceW
+0x180607d90	FindResourceExW
+0x180607da2	DecodePointer
+0x180607db2	GetProcAddress
+0x180607dc4	RaiseException
+0x180607dd6	GetLastError
+0x180607de6	InitializeCriticalSectionAndSpinCount
+0x180607e0e	DeleteCriticalSection
+0x180607e26	ReleaseSemaphore
+0x180607e3a	ReleaseMutex
+0x180607e4a	WaitForSingleObject
+0x180607e60	WriteFile
+0x180607e6c	ReadFile
+0x180607e78	SetFilePointer
+0x180607e8a	CreateMutexW
+0x180607e9a	OpenMutexW
+0x180607ea8	CreateSemaphoreW
+0x180607ebc	OpenSemaphoreW
+0x180607ece	GetModuleHandleW
+0x180607ee2	CreateFileW
+0x180607ef0	GetCurrentProcess
+0x180607f04	TerminateProcess
+0x180607f18	GetFileTime
+0x180607f26	GetModuleFileNameW
+0x180607f3c	DeleteFileW
+0x180607f4a	GetCurrentProcessId
+0x180607f60	GetCurrentThreadId
+0x180607f76	InitializeCriticalSection
+0x180607f92	TlsAlloc
+0x180607f9e	TlsGetValue
+0x180607fac	TlsSetValue
+0x180607fba	TlsFree
+0x180607fc4	MultiByteToWideChar
+0x180607fda	GlobalLock
+0x180607fe8	EnterCriticalSection
+0x180608000	LeaveCriticalSection
+0x180608018	GetTickCount
+0x180608028	Beep
+0x180608030	GetSystemTimeAsFileTime
+0x18060804a	SystemTimeToFileTime
+0x180608062	FileTimeToLocalFileTime
+0x18060807c	LocalFileTimeToFileTime
+0x180608096	FileTimeToSystemTime
+0x1806080ae	GetFileSize
+0x1806080bc	GlobalUnlock
+0x1806080cc	Sleep
+0x1806080d4	FindClose
+0x1806080e0	FindFirstFileW
+0x1806080f2	FindNextFileW
+0x180608102	WideCharToMultiByte
+0x180608118	GlobalAlloc
+0x180608126	GlobalFree
+0x180608134	GetModuleFileNameA
+0x18060814a	GetModuleHandleA
+0x18060815e	GetPrivateProfileStringW
+0x18060817a	CreateDirectoryW
+0x18060818e	GetFileAttributesW
+0x1806081a4	CopyFileW
+0x1806081b0	SetEndOfFile
+0x1806081c0	FreeLibrary
+0x1806081ce	LoadLibraryW
+0x1806081de	MulDiv
+0x1806081e8	RtlLookupFunctionEntry
+0x180608202	RtlVirtualUnwind
+0x180608216	RtlCaptureContext
+0x18060822a	VirtualQuery
+0x18060823a	SetUnhandledExceptionFilter
+0x180608258	GetCurrentThread
+0x18060826c	IsDebuggerPresent
+0x180608280	GetLocalTime
+0x180608290	FormatMessageW
+0x1806082a2	lstrcpyW
+0x1806082ae	lstrcatW
+0x1806082ba	lstrlenW
+0x1806082c6	IsBadWritePtr
+0x1806082d6	IsBadCodePtr
+0x1806082e6	GlobalAddAtomW
+0x1806082f8	WritePrivateProfileStringW
+0x180608316	MapViewOfFileEx
+0x180608328	VirtualAlloc
+0x180608338	CreateThread
+0x180608348	GetVersionExW
+0x180608358	GetPrivateProfileIntW
+0x180608370	SetFileTime
+0x18060837e	GetSystemTime
+0x18060838e	SetFileAttributesW
+0x1806083a4	GetLogicalDrives
+0x1806083b8	DeviceIoControl
+0x1806083ca	GetDriveTypeW
+0x1806083da	GetDiskFreeSpaceExW
+0x1806083f0	GetSystemDirectoryW
+0x180608406	GetVersion
+0x180608414	OutputDebugStringW
+0x180608428	KERNEL32.dll
+0x180608438	UnregisterClassW
+0x18060844c	DefWindowProcW
+0x18060845e	IsWindow
+0x18060846a	SetWindowLongPtrW
+0x18060847e	InvalidateRect
+0x180608490	GetMessageExtraInfo
+0x1806084a6	GetKeyState
+0x1806084b4	SendInput
+0x1806084c0	IsWindowVisible
+0x1806084d2	SetTimer
+0x1806084de	KillTimer
+0x1806084ea	PostMessageW
+0x1806084fa	ToAscii
+0x180608504	keybd_event
+0x180608512	GetWindowLongPtrW
+0x180608526	GetMessagePos
+0x180608536	SendMessageW
+0x180608546	CallWindowProcW
+0x180608558	ShowWindow
+0x180608566	DialogBoxParamW
+0x180608578	EndDialog
+0x180608584	GetDlgItem
+0x180608592	BeginPaint
+0x1806085a0	EndPaint
+0x1806085ac	SetWindowTextW
+0x1806085be	GetClientRect
+0x1806085ce	SetCursor
+0x1806085da	GetCursorPos
+0x1806085ea	ClientToScreen
+0x1806085fc	ScreenToClient
+0x18060860e	OffsetRect
+0x18060861c	PtInRect
+0x180608628	LoadCursorW
+0x180608636	DestroyIcon
+0x180608644	LoadImageW
+0x180608652	RegisterClassExW
+0x180608666	CreateWindowExW
+0x180608678	GetCapture
+0x180608686	SetCapture
+0x180608694	ReleaseCapture
+0x1806086a6	GetWindowRect
+0x1806086b6	SetCursorPos
+0x1806086c6	GetForegroundWindow
+0x1806086dc	MessageBoxW
+0x1806086ea	GetDC
+0x1806086f2	ReleaseDC
+0x1806086fe	SetWindowRgn
+0x18060870e	SetRect
+0x180608718	GetSystemMetrics
+0x18060872c	GetClassInfoExW
+0x18060873e	DestroyWindow
+0x18060874e	SetWindowPos
+0x18060875e	UpdateWindow
+0x18060876e	CreatePopupMenu
+0x180608780	DestroyMenu
+0x18060878e	EnableMenuItem
+0x1806087a0	GetMenuItemCount
+0x1806087b4	AppendMenuW
+0x1806087c2	TrackPopupMenu
+0x1806087d4	GetMenuItemInfoW
+0x1806087e8	LoadMenuW
+0x1806087f4	GetMenuStringW
+0x180608806	CreateMenu
+0x180608814	CheckMenuItem
+0x180608824	GetSubMenu
+0x180608832	ModifyMenuW
+0x180608840	GetMenuItemRect
+0x180608852	GetParent
+0x18060885e	CheckMenuRadioItem
+0x180608874	SystemParametersInfoW
+0x18060888c	GetMenuItemID
+0x18060889c	MenuItemFromPoint
+0x1806088b0	DrawTextW
+0x1806088bc	WindowFromPoint
+0x1806088ce	GetSysColor
+0x1806088dc	GetSysColorBrush
+0x1806088f0	FillRect
+0x1806088fc	CopyRect
+0x180608908	SetWindowsHookExW
+0x18060891c	UnhookWindowsHookEx
+0x180608932	CallNextHookEx
+0x180608944	LoadBitmapW
+0x180608952	EnumChildWindows
+0x180608966	FindWindowW
+0x180608974	GetClassNameW
+0x180608984	MoveWindow
+0x180608992	MonitorFromPoint
+0x1806089a6	GetMonitorInfoW
+0x1806089b8	TrackMouseEvent
+0x1806089ca	wvsprintfW
+0x1806089d8	UpdateLayeredWindow
+0x1806089ee	EnumDisplayMonitors
+0x180608a04	MapVirtualKeyW
+0x180608a16	GetWindowTextW
+0x180608a28	GetCaretPos
+0x180608a36	EqualRect
+0x180608a42	GetWindowThreadProcessId
+0x180608a5e	MonitorFromWindow
+0x180608a72	GetGUIThreadInfo
+0x180608a86	RegisterHotKey
+0x180608a98	UnregisterHotKey
+0x180608aac	GetFocus
+0x180608ab6	USER32.dll
+0x180608ac4	RegCloseKey
+0x180608ad2	RegOpenKeyExW
+0x180608ae2	RegQueryValueExW
+0x180608af6	RegOpenKeyW
+0x180608b04	RegSetValueExW
+0x180608b16	RegCreateKeyExW
+0x180608b28	RegOpenKeyExA
+0x180608b38	RegQueryValueExA
+0x180608b4a	ADVAPI32.dll
+0x180608b5a	CoCreateGuid
+0x180608b6a	CoInitialize
+0x180608b7a	CoUninitialize
+0x180608b8c	CoCreateInstance
+0x180608b9e	ole32.dll
+0x180608baa	ShellExecuteW
+0x180608bba	SHFileOperationW
+0x180608bce	SHCreateDirectoryExW
+0x180608be6	SHGetSpecialFolderPathW
+0x180608c00	ShellExecuteExW
+0x180608c10	SHELL32.dll
+0x180608c1c	OLEAUT32.dll
+0x180608c2c	PathFileExistsW
+0x180608c3c	SHLWAPI.dll
+0x180608c4a	ImmCreateIMCC
+0x180608c5a	ImmDestroyIMCC
+0x180608c6c	ImmLockIMCC
+0x180608c7a	ImmUnlockIMCC
+0x180608c8a	ImmReSizeIMCC
+0x180608c9a	ImmGenerateMessage
+0x180608cb0	ImmLockIMC
+0x180608cbe	ImmUnlockIMC
+0x180608cce	ImmGetHotKey
+0x180608cde	ImmSetHotKey
+0x180608cee	ImmGetConversionStatus
+0x180608d08	ImmDestroySoftKeyboard
+0x180608d22	ImmDisableIME
+0x180608d30	IMM32.dll
+0x180608d3c	GetFileVersionInfoSizeW
+0x180608d56	GetFileVersionInfoW
+0x180608d6c	VerQueryValueW
+0x180608d7c	VERSION.dll
+0x180608d8a	CreateFontW
+0x180608d98	DeleteObject
+0x180608da8	SetTextColor
+0x180608db8	CombineRgn
+0x180608dc6	CreateRectRgn
+0x180608dd6	DeleteDC
+0x180608de2	CreateRectRgnIndirect
+0x180608dfa	StretchDIBits
+0x180608e0a	SetStretchBltMode
+0x180608e1e	ExtCreateRegion
+0x180608e30	GetDeviceCaps
+0x180608e40	GetObjectW
+0x180608e4e	BitBlt
+0x180608e58	CreateCompatibleBitmap
+0x180608e72	CreateCompatibleDC
+0x180608e88	CreateFontIndirectW
+0x180608e9e	CreatePen
+0x180608eaa	CreateSolidBrush
+0x180608ebe	Ellipse
+0x180608ec8	ExcludeClipRect
+0x180608eda	FillRgn
+0x180608ee4	GetPixel
+0x180608ef0	SelectObject
+0x180608f00	SetBkMode
+0x180608f0c	SetPixel
+0x180608f18	StretchBlt
+0x180608f26	CreateDIBSection
+0x180608f3a	CreatePolygonRgn
+0x180608f4e	PatBlt
+0x180608f58	Rectangle
+0x180608f64	TextOutW
+0x180608f70	EnumFontFamiliesW
+0x180608f84	GetStockObject
+0x180608f96	LineTo
+0x180608fa0	MoveToEx
+0x180608fac	Polygon
+0x180608fb6	RectVisible
+0x180608fc4	GetClipBox
+0x180608fd2	RestoreDC
+0x180608fde	SaveDC
+0x180608fe8	ExtSelectClipRgn
+0x180608ffc	CreateBitmap
+0x18060900c	CreateDIBPatternBrushPt
+0x180609026	GetDIBits
+0x180609032	RealizePalette
+0x180609044	SetBkColor
+0x180609052	SetDIBitsToDevice
+0x180609066	SetBrushOrgEx
+0x180609074	GDI32.dll
+0x180609080	TransparentBlt
+0x180609090	MSIMG32.dll
+0x18060909c	WS2_32.dll
+0x1806090aa	NetWkstaTransportEnum
+0x1806090c2	NetApiBufferFree
+0x1806090d6	Netbios
+0x1806090de	NETAPI32.dll
+0x1806090ee	QueryPerformanceCounter
+0x180609108	QueryPerformanceFrequency
+0x180609124	SetLastError
+0x180609134	CreateEventW
+0x180609144	SwitchToThread
+0x180609156	EncodePointer
+0x180609166	CompareStringW
+0x180609178	LCMapStringW
+0x180609188	GetLocaleInfoW
+0x18060919a	GetStringTypeW
+0x1806091ac	GetCPInfo
+0x1806091b8	UnhandledExceptionFilter
+0x1806091d4	IsProcessorFeaturePresent
+0x1806091f0	GetStartupInfoW
+0x180609202	InitializeSListHead
+0x180609218	GetStdHandle
+0x180609228	FillConsoleOutputCharacterW
+0x180609246	GetConsoleScreenBufferInfo
+0x180609264	FlushConsoleInputBuffer
+0x18060927e	SetConsoleCursorPosition
+0x18060929a	ScrollConsoleScreenBufferW
+0x1806092b8	WriteConsoleW
+0x1806092c8	FreeResource
+0x1806092d8	LocalFree
+0x1806092e4	ExpandEnvironmentStringsW
+0x180609300	GetPrivateProfileSectionW
+0x18060931c	WritePrivateProfileSectionW
+0x18060933a	GetPrivateProfileSectionNamesW
+0x18060935c	GetPrivateProfileStructW
+0x180609378	WritePrivateProfileStructW
+0x180609396	GetFullPathNameW
+0x1806093aa	IsDBCSLeadByte
+0x1806093bc	ProcessIdToSessionId
+0x1806093d4	CreateToolhelp32Snapshot
+0x1806093f0	Process32FirstW
+0x180609402	Process32NextW
+0x180609414	TerminateThread
+0x180609426	GetFileSizeEx
+0x180609436	MoveFileExW
+0x180609444	GetFileType
+0x180609452	RemoveDirectoryW
+0x180609466	lstrcmpW
+0x180609472	GlobalSize
+0x180609480	RtlPcToFileHeader
+0x180609494	RtlUnwindEx
+0x1806094a2	InterlockedPushEntrySList
+0x1806094be	InterlockedFlushSList
+0x1806094d6	LoadLibraryExW
+0x1806094e8	GetTimeZoneInformation
+0x180609502	PeekNamedPipe
+0x180609512	SystemTimeToTzSpecificLocalTime
+0x180609534	ExitProcess
+0x180609542	GetModuleHandleExW
+0x180609558	GetACP
+0x180609562	GetDateFormatW
+0x180609574	GetTimeFormatW
+0x180609586	IsValidLocale
+0x180609596	GetUserDefaultLCID
+0x1806095ac	EnumSystemLocalesW
+0x1806095c2	SetCurrentDirectoryW
+0x1806095da	GetCurrentDirectoryW
+0x1806095f2	GetFullPathNameA
+0x180609606	SetStdHandle
+0x180609616	SetConsoleCtrlHandler
+0x18060962e	FindFirstFileExA
+0x180609642	FindFirstFileExW
+0x180609656	FindNextFileA
+0x180609666	IsValidCodePage
+0x180609678	GetOEMCP
+0x180609684	GetCommandLineA
+0x180609696	GetCommandLineW
+0x1806096a8	GetEnvironmentStringsW
+0x1806096c2	FreeEnvironmentStringsW
+0x1806096dc	SetEnvironmentVariableA
+0x1806096f6	SetEnvironmentVariableW
+0x180609710	FlushFileBuffers
+0x180609724	GetConsoleCP
+0x180609734	GetConsoleMode
+0x180609746	ReadConsoleW
+0x180609756	SetFilePointerEx
+0x18060976a	OutputDebugStringA
+0x180609780	WaitForSingleObjectEx
+0x180609798	MonitorFromRect
+0x1806097aa	AttachThreadInput
+0x1806097be	IsIconic
+0x1806097ca	mouse_event
+0x1806097d8	SetForegroundWindow
+0x1806097ee	GetWindowLongW
+0x180609800	OpenClipboard
+0x180609810	CloseClipboard
+0x180609822	SetClipboardData
+0x180609836	GetClipboardData
+0x18060984a	EmptyClipboard
+0x18060985c	IsClipboardFormatAvailable
+0x18060987a	GetKeyNameTextW
+0x18060988c	GetKeyboardLayoutList
+0x1806098a4	GetIconInfo
+0x1806098b2	IsTextUnicode
+0x1806098c2	OpenProcessToken
+0x1806098d6	OpenThreadToken
+0x1806098e8	GetTokenInformation
+0x1806098fe	GetSidIdentifierAuthority
+0x18060991a	GetSidSubAuthority
+0x180609930	GetSidSubAuthorityCount
+0x18060994a	GetSecurityDescriptorSacl
+0x180609966	SetEntriesInAclW
+0x18060997a	GetSecurityInfo
+0x18060998c	SetSecurityInfo
+0x18060999e	BuildExplicitAccessWithNameW
+0x1806099be	ConvertStringSecurityDescriptorToSecurityDescriptorW
+0x1806099f6	LookupAccountNameW
+0x180609a0c	RegDeleteKeyW
+0x180609a1c	RegDeleteValueW
+0x180609a2e	ConvertSidToStringSidW
+0x180609a48	LookupAccountSidW
+0x180609a5c	RegEnumKeyExW
+0x180609a6c	RegFlushKey
+0x180609a7a	StringFromGUID2
+0x180609a8c	CoTaskMemFree
+0x180609a9c	StgCreateDocfile
+0x180609ab0	StgOpenStorage
+0x180609ac2	StgOpenStorageOnILockBytes
+0x180609ae0	CreateILockBytesOnHGlobal
+0x180609afc	PathRemoveFileSpecW
+0x180609b12	WTSQuerySessionInformationW
+0x180609b30	WTSFreeMemory
+0x180609b3e	WTSAPI32.dll
+0x180609b4e	ImmGetIMEFileNameW
+0x180609b64	PlaySoundW
+0x180609b70	WINMM.dll
+0x180609b7c	RtlUnwind
+0x18064e42a	StringFileInfo
+0x18064e44e	080404b0
+0x18064e466	Comments
+0x18064e478	2021-09-27 10:35:22
+0x18064e4a6	CompanyName
+0x18064e4c0	Sogou
+0x18064e4d2	FileDescription
+0x18064e4f4	QQ五笔输入法
+0x18064e50a	FileVersion
+0x18064e524	2.4.629.400
+0x18064e542	InternalName
+0x18064e55c	QQWubi Input Method Editor
+0x18064e59a	LegalCopyright
+0x18064e5b8	Copyright © 2007-2020 Sogou Inc. All Rights Reserved.
+0x18064e62a	OriginalFilename
+0x18064e64c	QQWUBI.IME
+0x18064e66a	ProductName
+0x18064e684	QQ五笔输入法
+0x18064e69a	ProductVersion
+0x18064e6b8	2.4.629.400
+0x18064e6d6	VarFileInfo
+0x18064e6f6	Translation
+0x18064e998	<?xml version='1.0' encoding='UTF-8' standalone='yes'?>\n<assembly xmlns='urn:schemas-microsoft-com:asm.v1' manifestVersion='1.0'>\n  <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">\n    <security>\n      <requestedPrivileges>\n        <requestedExecutionLevel level='asInvoker' uiAccess='false' />\n      </requestedPrivileges>\n    </security>\n  </trustInfo>\n</assembly>\n

@@ -1,0 +1,636 @@
+0x180029650	QQWBBugReport.exe
+0x180029678	open
+0x180029690	##cmd=dump;file="%s";moduleid="%s";
+0x1800296d8	string too long
+0x180029750	kernel32.dll
+0x180029770	Advapi32.dll
+0x180029790	RegOpenKeyTransactedW
+0x1800297b0	wow.exe
+0x1800297c0	wow-64.exe
+0x1800297d8	dnf.exe
+0x1800299e0	TextService Display Attribute Input
+0x180029a28	DisplayAttributeInput
+0x180029a80	TextService Display Attribute Converted
+0x180029ad0	DisplayAttributeConverted
+0x180029b08	Software\QQWubi Text Service
+0x180029f50	%s%s\*
+0x180029f60	lock.txt
+0x180029f88	invalid string position
+0x18002a1a0	PreservedKey_DoubleSingleByte
+0x18002a1e0	PreservedKey_Punctuation
+0x18002a478	LangBar_InputMode
+0x18002a4a0	Punctuation
+0x18002a4b8	LangBar_Punctuation
+0x18002a510	InProcServer32
+0x18002a530	ThreadingModel
+0x18002a608	0123456789ABCDEF
+0x18002a630	Apartment
+0x18002a730	SOFTWARE\Tencent\QQWubi
+0x18002a760	FramePic\QQFace\
+0x18002a79a	emp\
+0x18002a7a8	upgrade\
+0x18002a7c2	ump\
+0x18002a7d0	Version
+0x18002a7e6	.629.400
+0x18002a7f8	InstallDir
+0x18002a810	Tencent\QQWubi\
+0x18002a830	CurCfgFile
+0x18002a848	Config.ini
+0x18002ae58	QQWubi.ime
+0x18002ae68	\IME\QQWubiTSF\QQWubi.ime
+0x18002aea0	ImeInquire
+0x18002aeb0	ImeSelect
+0x18002aec0	ImeSetActiveContext
+0x18002aed8	ImeProcessKey
+0x18002aee8	ImeToAsciiEx
+0x18002aef8	NotifyIME
+0x18002af08	ImeExtension
+0x18002af18	ImeConfigure
+0x18002af28	ImeGetEnv
+0x18002af38	ImeFreeEnv
+0x18002af48	war3.exe
+0x18002af60	fifazf.exe
+0x18002af78	exefile.exe
+0x18002af90	Wow.exe
+0x18002afa0	Wow-64.exe
+0x18002afb8	ffxiv.exe
+0x18002afd0	TGame.exe
+0x18002afe8	CosClient.exe
+0x18002b008	TXWebGame.exe
+0x18002b028	QQPhoneManager.exe
+0x18002b050	iexplore.exe
+0x18002b070	edit
+0x18002b080	QQWubiUIWnd
+0x18002b098	StartChinese
+0x18002b0b8	Config
+0x18002b0c8	StartFullshape
+0x18002b0e8	EnglishSymbol
+0x18002b108	ChangeLanguageKey
+0x18002b130	HotKey
+0x18002b140	Control Panel\Desktop
+0x18002b158	UserPreferencesMask
+0x18002b590	vector<T> too long
+0x18002b5d0	%.2x
+0x18002b5e0	kernel32
+0x18002b5f8	SoftWare\Tencent\QQWubi
+0x18002b628	CheckCrash
+0x18002b640	CheckCrashRes
+0x18002b660	ntdll.dll
+0x18002b678	imm32.dll
+0x18002b690	kernelbase.dll
+0x18002b6b0	shell32.dll
+0x18002b6c8	user32.dll
+0x18002b6e0	gdi32.dll
+0x18002b6f8	advapi32.dll
+0x18002b718	ziplib.dll
+0x18002b770	%I64u
+0x18002b780	%s\%s.rpt
+0x18002b798	%s\%s.dmp
+0x18002b7b0	//=====================================================\n
+0x18002b830	Time: %d.%02d.%02d %02d:%02d:%02d %03d\n
+0x18002b880	Application: %s\n
+0x18002b8a8	Exception code: %08X %s\n
+0x18002b8e0	Fault address:  %p %02X:%08X %s\n
+0x18002b928	Flags:%08X\n
+0x18002b948	Exception Param:
+0x18002b978	CPU mode: AMD64\n
+0x18002b9a0	Registers:
+0x18002b9c0	RAX:%p RBX:%p RCX:%p RDX:%p RSI:%p RDI:%p 
+0x18002ba18	CS:RIP:%04X:%p 
+0x18002ba38	SS:RSP:%04X:%p RBP:%p 
+0x18002ba68	DS:%04X FS:%04X GS:%04X 
+0x18002baa0	type:%d\n
+0x18002bab8	DbgHelp.dll
+0x18002bad0	imagehlp.dll
+0x18002baf0	StackWalk64
+0x18002bb00	SymFunctionTableAccess64
+0x18002bb20	SymGetModuleBase64
+0x18002bb38	SymInitialize
+0x18002bb50	Num Address   Frame     Logical addr  Module  Version\n
+0x18002bbc0	%p	%p	%04X:%08X	%s	%d.%d.%d.%d	(%p,%p,%p,%p)\n
+0x18002bc20	MiniDumpWriteDump
+0x18002bc38	ACCESS_VIOLATION
+0x18002bc60	DATATYPE_MISALIGNMENT
+0x18002bc90	BREAKPOINT
+0x18002bca8	SINGLE_STEP
+0x18002bcc0	ARRAY_BOUNDS_EXCEEDED
+0x18002bcf0	FLT_DENORMAL_OPERAND
+0x18002bd20	FLT_DIVIDE_BY_ZERO
+0x18002bd48	FLT_INEXACT_RESULT
+0x18002bd70	FLT_INVALID_OPERATION
+0x18002bda0	FLT_OVERFLOW
+0x18002bdc0	FLT_STACK_CHECK
+0x18002bde0	FLT_UNDERFLOW
+0x18002be00	INT_DIVIDE_BY_ZERO
+0x18002be28	INT_OVERFLOW
+0x18002be48	PRIV_INSTRUCTION
+0x18002be70	IN_PAGE_ERROR
+0x18002be90	ILLEGAL_INSTRUCTION
+0x18002beb8	NONCONTINUABLE_EXCEPTION
+0x18002bef0	STACK_OVERFLOW
+0x18002bf10	INVALID_DISPOSITION
+0x18002bf38	GUARD_PAGE
+0x18002bf50	INVALID_HANDLE
+0x18002bf70	NTDLL.DLL
+0x18002bfa0	//-------------------------------------\n
+0x18002bff8	too long comp\n
+0x18002c018	comp: %s\n
+0x18002c080	RtlGetNtVersionNumbers
+0x18002cd20	Unknown exception
+0x18002cd50	bad allocation
+0x18002cdc0	bad function call
+0x18002cdd8	FlsAlloc
+0x18002cde8	FlsFree
+0x18002cdf0	FlsGetValue
+0x18002ce00	FlsSetValue
+0x18002ce10	InitializeCriticalSectionEx
+0x18002ce30	InitOnceExecuteOnce
+0x18002ce48	CreateEventExW
+0x18002ce58	CreateSemaphoreW
+0x18002ce70	CreateSemaphoreExW
+0x18002ce88	CreateThreadpoolTimer
+0x18002cea0	SetThreadpoolTimer
+0x18002ceb8	WaitForThreadpoolTimerCallbacks
+0x18002ced8	CloseThreadpoolTimer
+0x18002cef0	CreateThreadpoolWait
+0x18002cf08	SetThreadpoolWait
+0x18002cf20	CloseThreadpoolWait
+0x18002cf38	FlushProcessWriteBuffers
+0x18002cf58	FreeLibraryWhenCallbackReturns
+0x18002cf78	GetCurrentProcessorNumber
+0x18002cf98	CreateSymbolicLinkW
+0x18002cfb0	GetCurrentPackageId
+0x18002cfc8	GetTickCount64
+0x18002cfd8	GetFileInformationByHandleEx
+0x18002cff8	SetFileInformationByHandle
+0x18002d018	GetSystemTimePreciseAsFileTime
+0x18002d038	InitializeConditionVariable
+0x18002d058	WakeConditionVariable
+0x18002d070	WakeAllConditionVariable
+0x18002d090	SleepConditionVariableCS
+0x18002d0b0	InitializeSRWLock
+0x18002d0c8	AcquireSRWLockExclusive
+0x18002d0e0	TryAcquireSRWLockExclusive
+0x18002d100	ReleaseSRWLockExclusive
+0x18002d118	SleepConditionVariableSRW
+0x18002d138	CreateThreadpoolWork
+0x18002d150	SubmitThreadpoolWork
+0x18002d168	CloseThreadpoolWork
+0x18002d180	CompareStringEx
+0x18002d190	GetLocaleInfoEx
+0x18002d1a0	LCMapStringEx
+0x18002d1c0	ERROR : Unable to initialize critical section in CAtlBaseModule\n
+0x18002d2b0	bad array new length
+0x18002d3d8	bad exception
+0x18002d728	__based(
+0x18002d738	__cdecl
+0x18002d740	__pascal
+0x18002d750	__stdcall
+0x18002d760	__thiscall
+0x18002d770	__fastcall
+0x18002d780	__vectorcall
+0x18002d790	__clrcall
+0x18002d79c	__eabi
+0x18002d7a8	__swift_1
+0x18002d7b8	__swift_2
+0x18002d7c8	__ptr64
+0x18002d7d0	__restrict
+0x18002d7e0	__unaligned
+0x18002d7f0	restrict(
+0x18002d808	 delete
+0x18002d830	operator
+0x18002d8b8	`vftable'
+0x18002d8c8	`vbtable'
+0x18002d8d8	`vcall'
+0x18002d8e0	`typeof'
+0x18002d8f0	`local static guard'
+0x18002d908	`string'
+0x18002d918	`vbase destructor'
+0x18002d930	`vector deleting destructor'
+0x18002d950	`default constructor closure'
+0x18002d970	`scalar deleting destructor'
+0x18002d990	`vector constructor iterator'
+0x18002d9b0	`vector destructor iterator'
+0x18002d9d0	`vector vbase constructor iterator'
+0x18002d9f8	`virtual displacement map'
+0x18002da18	`eh vector constructor iterator'
+0x18002da40	`eh vector destructor iterator'
+0x18002da60	`eh vector vbase constructor iterator'
+0x18002da88	`copy constructor closure'
+0x18002daa8	`udt returning'
+0x18002dabc	`RTTI
+0x18002dac8	`local vftable'
+0x18002dad8	`local vftable constructor closure'
+0x18002dafc	 new[]
+0x18002db08	 delete[]
+0x18002db18	`omni callsig'
+0x18002db28	`placement delete closure'
+0x18002db48	`placement delete[] closure'
+0x18002db68	`managed vector constructor iterator'
+0x18002db90	`managed vector destructor iterator'
+0x18002dbb8	`eh vector copy constructor iterator'
+0x18002dbe0	`eh vector vbase copy constructor iterator'
+0x18002dc10	`dynamic initializer for '
+0x18002dc30	`dynamic atexit destructor for '
+0x18002dc58	`vector copy constructor iterator'
+0x18002dc80	`vector vbase copy constructor iterator'
+0x18002dcb0	`managed vector copy constructor iterator'
+0x18002dce0	`local static thread guard'
+0x18002dd00	operator "" 
+0x18002dd10	operator co_await
+0x18002dd28	 Type Descriptor'
+0x18002dd40	 Base Class Descriptor at (
+0x18002dd60	 Base Class Array'
+0x18002dd78	 Class Hierarchy Descriptor'
+0x18002dd98	 Complete Object Locator'
+0x18002ddd0	api-ms-win-core-fibers-l1-1-1
+0x18002de10	api-ms-win-core-synch-l1-2-0
+0x18002de50	api-ms-
+0x18002de60	ext-ms-
+0x18002df08	(null)
+0x18002e168	mscoree.dll
+0x18002e180	CorExitProcess
+0x18002e290	NAN(SNAN)
+0x18002e2a0	nan(snan)
+0x18002e2b0	NAN(IND)
+0x18002e2c0	nan(ind)
+0x18002e2cc	e+000
+0x18002e5bc	Sunday
+0x18002e5c4	Monday
+0x18002e5d0	Tuesday
+0x18002e5d8	Wednesday
+0x18002e5e8	Thursday
+0x18002e5f4	Friday
+0x18002e600	Saturday
+0x18002e640	January
+0x18002e648	February
+0x18002e654	March
+0x18002e65c	April
+0x18002e674	August
+0x18002e680	September
+0x18002e690	October
+0x18002e698	November
+0x18002e6a8	December
+0x18002e6c0	MM/dd/yy
+0x18002e6d0	dddd, MMMM dd, yyyy
+0x18002e6e8	HH:mm:ss
+0x18002e730	Sunday
+0x18002e740	Monday
+0x18002e750	Tuesday
+0x18002e760	Wednesday
+0x18002e778	Thursday
+0x18002e790	Friday
+0x18002e7a0	Saturday
+0x18002e818	January
+0x18002e828	February
+0x18002e840	March
+0x18002e850	April
+0x18002e860	June
+0x18002e870	July
+0x18002e880	August
+0x18002e890	September
+0x18002e8a8	October
+0x18002e8b8	November
+0x18002e8d0	December
+0x18002e8f8	MM/dd/yy
+0x18002e910	dddd, MMMM dd, yyyy
+0x18002e938	HH:mm:ss
+0x18002e950	en-US
+0x18002f210	api-ms-win-appmodel-runtime-l1-1-1
+0x18002f260	api-ms-win-core-datetime-l1-1-1
+0x18002f2a0	api-ms-win-core-fibers-l1-1-1
+0x18002f2e0	api-ms-win-core-file-l2-1-1
+0x18002f320	api-ms-win-core-localization-l1-2-1
+0x18002f370	api-ms-win-core-localization-obsolete-l1-2-0
+0x18002f3d0	api-ms-win-core-processthreads-l1-1-2
+0x18002f420	api-ms-win-core-string-l1-1-0
+0x18002f460	api-ms-win-core-synch-l1-2-0
+0x18002f4a0	api-ms-win-core-sysinfo-l1-2-1
+0x18002f4e0	api-ms-win-core-winrt-l1-1-0
+0x18002f520	api-ms-win-core-xstate-l2-1-0
+0x18002f560	api-ms-win-rtcore-ntuser-window-l1-1-0
+0x18002f5b0	api-ms-win-security-systemfunctions-l1-1-0
+0x18002f610	ext-ms-win-kernel32-package-current-l1-1-0
+0x18002f670	ext-ms-win-ntuser-dialogbox-l1-1-0
+0x18002f6c0	ext-ms-win-ntuser-windowstation-l1-1-0
+0x18002f710	advapi32
+0x18002f728	kernel32
+0x18002f740	user32
+0x18002f758	FlsAlloc
+0x18002f770	FlsFree
+0x18002f780	FlsGetValue
+0x18002f798	FlsSetValue
+0x18002f7b0	GetCurrentPackageId
+0x18002f7c8	GetSystemTimePreciseAsFileTime
+0x18002f7f0	InitializeCriticalSectionEx
+0x18002f818	LCMapStringEx
+0x18002f830	LocaleNameToLCID
+0x18002f868	ja-JP
+0x18002f878	zh-CN
+0x18002f888	ko-KR
+0x18002f898	zh-TW
+0x180030280	1#INF
+0x180030288	1#QNAN
+0x180030290	1#SNAN
+0x180030298	1#IND
+0x180031358	de-DE
+0x1800314d8	sl-SI
+0x1800315e0	hi-IN
+0x180031678	bn-IN
+0x180031688	pa-IN
+0x1800316a8	ta-IN
+0x1800316b8	te-IN
+0x1800316c8	kn-IN
+0x1800316f8	sa-IN
+0x1800317a8	de-CH
+0x180031828	sr-SP-Latn
+0x180031868	se-SE
+0x1800318d0	de-AT
+0x180031910	sr-SP-Cyrl
+0x180031998	fr-CH
+0x1800319e8	de-LI
+0x180031a28	bs-BA-Latn
+0x180031a90	sr-BA-Latn
+0x180032cb0	bn-in
+0x180032cc0	bs-ba-latn
+0x180032d18	de-at
+0x180032d28	de-ch
+0x180032d38	de-de
+0x180032d48	de-li
+0x180032ff8	fr-ch
+0x180033068	hi-in
+0x180033128	kn-in
+0x180033258	pa-in
+0x1800332e8	sa-in
+0x180033318	se-se
+0x180033338	sl-si
+0x1800333d0	sr-ba-latn
+0x1800333e8	sr-sp-cyrl
+0x180033400	sr-sp-latn
+0x180033458	ta-in
+0x180033468	te-in
+0x180035030	log10
+0x180035050	CONOUT$
+0x1800375a8	.rdata
+0x1800376a0	.edata
+0x180037700	.data
+0x180037730	.pdata
+0x18003b3d0	QQPinyinTSF.dll
+0x18003b3e0	DllCanUnloadNow
+0x18003b3f0	DllGetClassObject
+0x18003b402	DllRegisterServer
+0x18003b414	DllUnregisterServer
+0x18003ba12	HeapDestroy
+0x18003ba20	HeapAlloc
+0x18003ba2c	HeapReAlloc
+0x18003ba3a	HeapFree
+0x18003ba46	HeapSize
+0x18003ba52	GetProcessHeap
+0x18003ba64	RaiseException
+0x18003ba76	GetLastError
+0x18003ba86	InitializeCriticalSectionAndSpinCount
+0x18003baae	DeleteCriticalSection
+0x18003bac6	LockResource
+0x18003bad6	GetProcAddress
+0x18003bae8	LocalFree
+0x18003baf4	GetCurrentProcess
+0x18003bb08	GetCurrentThread
+0x18003bb1c	LoadResource
+0x18003bb2c	SizeofResource
+0x18003bb3e	GetFileSize
+0x18003bb4c	WriteFile
+0x18003bb58	ReadFile
+0x18003bb64	SetFilePointer
+0x18003bb76	CloseHandle
+0x18003bb84	FormatMessageW
+0x18003bb96	GetModuleHandleW
+0x18003bbaa	FindResourceW
+0x18003bbba	FindResourceExW
+0x18003bbcc	GetPrivateProfileStringW
+0x18003bbe8	CreateFileW
+0x18003bbf6	GetVersionExW
+0x18003bc06	GetCPInfo
+0x18003bc12	MultiByteToWideChar
+0x18003bc28	WideCharToMultiByte
+0x18003bc3e	GetModuleFileNameW
+0x18003bc54	TerminateProcess
+0x18003bc68	GetFileTime
+0x18003bc76	DeleteFileW
+0x18003bc84	lstrlenW
+0x18003bc90	GetCurrentProcessId
+0x18003bca6	ProcessIdToSessionId
+0x18003bcbe	EnterCriticalSection
+0x18003bcd6	LeaveCriticalSection
+0x18003bcee	FreeLibrary
+0x18003bcfc	SetLastError
+0x18003bd0c	LoadLibraryW
+0x18003bd1c	GetModuleHandleA
+0x18003bd30	GetSystemDirectoryW
+0x18003bd46	GetSystemTimeAsFileTime
+0x18003bd60	FindClose
+0x18003bd6c	CreateDirectoryW
+0x18003bd80	GetFileAttributesW
+0x18003bd96	FindFirstFileW
+0x18003bda8	FindNextFileW
+0x18003bdb8	RtlLookupFunctionEntry
+0x18003bdd2	RtlVirtualUnwind
+0x18003bde6	RtlCaptureContext
+0x18003bdfa	VirtualQuery
+0x18003be0a	SetUnhandledExceptionFilter
+0x18003be28	GetCurrentThreadId
+0x18003be3e	IsDebuggerPresent
+0x18003be52	GetLocalTime
+0x18003be62	lstrcpyW
+0x18003be6c	KERNEL32.dll
+0x18003be7c	SendMessageW
+0x18003be8c	PostMessageW
+0x18003be9c	GetKeyState
+0x18003beaa	GetKeyboardState
+0x18003bebe	LoadImageW
+0x18003becc	CreateWindowExW
+0x18003bede	IsWindow
+0x18003beea	DestroyWindow
+0x18003befa	GetFocus
+0x18003bf06	ToUnicode
+0x18003bf12	MapVirtualKeyW
+0x18003bf24	GetWindowRect
+0x18003bf34	GetCaretPos
+0x18003bf42	ScreenToClient
+0x18003bf54	SetWindowLongPtrW
+0x18003bf68	GetParent
+0x18003bf74	GetWindowThreadProcessId
+0x18003bf90	GetGUIThreadInfo
+0x18003bfa4	RealGetWindowClassW
+0x18003bfba	wvsprintfW
+0x18003bfc6	USER32.dll
+0x18003bfd4	RegCloseKey
+0x18003bfe2	RegOpenKeyExW
+0x18003bff2	RegQueryValueExW
+0x18003c006	RegCreateKeyExW
+0x18003c018	RegSetValueExW
+0x18003c02a	RegDeleteKeyW
+0x18003c03a	RegEnumKeyExW
+0x18003c04a	RegOpenKeyW
+0x18003c058	LookupAccountNameW
+0x18003c06e	ConvertSidToStringSidW
+0x18003c086	ADVAPI32.dll
+0x18003c096	ShellExecuteW
+0x18003c0a6	SHFileOperationW
+0x18003c0ba	SHCreateDirectoryExW
+0x18003c0d2	SHGetSpecialFolderPathW
+0x18003c0ea	SHELL32.dll
+0x18003c0f8	CoCreateInstance
+0x18003c10c	CoInitialize
+0x18003c11c	CoUninitialize
+0x18003c12c	ole32.dll
+0x18003c136	OLEAUT32.dll
+0x18003c146	PathFileExistsW
+0x18003c156	SHLWAPI.dll
+0x18003c164	GetFileVersionInfoSizeW
+0x18003c17e	GetFileVersionInfoW
+0x18003c194	VerQueryValueW
+0x18003c1a4	VERSION.dll
+0x18003c1b2	WTSQuerySessionInformationW
+0x18003c1d0	WTSFreeMemory
+0x18003c1de	WTSAPI32.dll
+0x18003c1ee	ImmLockIMC
+0x18003c1fc	ImmUnlockIMC
+0x18003c20c	ImmLockIMCC
+0x18003c21a	ImmUnlockIMCC
+0x18003c22a	ImmCreateContext
+0x18003c23e	ImmDestroyContext
+0x18003c252	ImmSetOpenStatus
+0x18003c264	IMM32.dll
+0x18003c270	QueryPerformanceCounter
+0x18003c28a	TlsAlloc
+0x18003c296	TlsGetValue
+0x18003c2a4	TlsSetValue
+0x18003c2b2	TlsFree
+0x18003c2bc	OutputDebugStringW
+0x18003c2d2	UnhandledExceptionFilter
+0x18003c2ee	IsProcessorFeaturePresent
+0x18003c30a	GetStartupInfoW
+0x18003c31c	InitializeSListHead
+0x18003c332	RtlUnwindEx
+0x18003c340	RtlPcToFileHeader
+0x18003c354	InterlockedFlushSList
+0x18003c36c	EncodePointer
+0x18003c37c	LoadLibraryExW
+0x18003c38e	ExitProcess
+0x18003c39c	GetModuleHandleExW
+0x18003c3b2	GetModuleFileNameA
+0x18003c3c8	GetACP
+0x18003c3d2	GetStdHandle
+0x18003c3e2	GetFileType
+0x18003c3f0	GetStringTypeW
+0x18003c402	LCMapStringW
+0x18003c412	FindFirstFileExA
+0x18003c426	FindNextFileA
+0x18003c436	IsValidCodePage
+0x18003c448	GetOEMCP
+0x18003c454	GetCommandLineA
+0x18003c466	GetCommandLineW
+0x18003c478	GetEnvironmentStringsW
+0x18003c492	FreeEnvironmentStringsW
+0x18003c4ac	SetStdHandle
+0x18003c4bc	GetConsoleCP
+0x18003c4cc	GetConsoleMode
+0x18003c4de	SetFilePointerEx
+0x18003c4f2	FlushFileBuffers
+0x18003c506	WriteConsoleW
+0x18003d140	;<=>?@ABCDWXdefghijklmnv
+0x18003d7da	abcdefghijklmnopqrstuvwxyz
+0x18003d7fa	ABCDEFGHIJKLMNOPQRSTUVWXYZ
+0x18003da20	            
+0x18003db01	abcdefghijklmnopqrstuvwxyz
+0x18003db21	ABCDEFGHIJKLMNOPQRSTUVWXYZ
+0x18003dcb0	.?AVCWin32Heap@ATL@@
+0x18003dcd8	.?AUIAtlMemMgr@ATL@@
+0x18003dd00	.?AUIAtlStringMgr@ATL@@
+0x18003dd28	.?AVCAtlStringMgr@ATL@@
+0x18003dd50	.?AVCAtlException@ATL@@
+0x18003dd78	.?AUIUnknown@@
+0x18003dd98	.?AUITfCompartmentEventSink@@
+0x18003ddc8	.?AVCCompartmentEventSink@@
+0x18003ddf8	.?AUITfDisplayAttributeInfo@@
+0x18003de28	.?AVCDisplayAttributeInfo@@
+0x18003de58	.?AVCDisplayAttributeInfoInput@@
+0x18003de90	.?AVCDisplayAttributeInfoConverted@@
+0x18003dec8	.?AUITfEditSession@@
+0x18003def0	.?AVCEditSessionBase@@
+0x18003df18	.?AVCEndCompositionEditSession@@
+0x18003df50	.?AUIEnumTfDisplayAttributeInfo@@
+0x18003df88	.?AVCEnumDisplayAttributeInfo@@
+0x18003dfc0	.?AV<lambda_9facf146b97e790960909aa6d195204c>@@
+0x18003e000	.?AV<lambda_fa93325320cd183fd427e9132df0857f>@@
+0x18003e040	.?AV?$_Func_base@_NAEBU_WIN32_FIND_DATAW@@@std@@
+0x18003e090	.?AV?$_Func_impl_no_alloc@V<lambda_fa93325320cd183fd427e9132df0857f>@@_NAEBU_WIN32_FIND_DATAW@@@std@@
+0x18003e110	.?AV?$_Func_impl_no_alloc@V<lambda_9facf146b97e790960909aa6d195204c>@@_NAEBU_WIN32_FIND_DATAW@@@std@@
+0x18003e188	.?AVCTSGetTextExtentEditSession@@
+0x18003e1c0	.?AVCKeyHandlerEditSession@@
+0x18003e1f0	.?AUITfSource@@
+0x18003e210	.?AUITfLangBarItem@@
+0x18003e238	.?AUITfLangBarItemButton@@
+0x18003e268	.?AVCLangBarItemButton@@
+0x18003e298	.?AUIClassFactory@@
+0x18003e2c0	.?AVCClassFactory@@
+0x18003e2e8	.?AVCStartCompositionEditSession@@
+0x18003e320	.?AUITfThreadMgrEventSink@@
+0x18003e350	.?AUITfCompositionSink@@
+0x18003e380	.?AUITfTextEditSink@@
+0x18003e3a8	.?AUITfFunction@@
+0x18003e3d0	.?AUITfFunctionProvider@@
+0x18003e400	.?AUITfKeyEventSink@@
+0x18003e428	.?AUITfThreadFocusSink@@
+0x18003e458	.?AUITfTextInputProcessor@@
+0x18003e488	.?AUITfTextInputProcessorEx@@
+0x18003e4b8	.?AUITfDisplayAttributeProvider@@
+0x18003e4f0	.?AUITfFnConfigure@@
+0x18003e518	.?AUITfFnGetPreferredTouchKeyboardLayout@@
+0x18003e558	.?AVCTextService@@
+0x18003e580	.?AVt_editSessionInputKey@@
+0x18003e5b0	.?AUITfTextLayoutSink@@
+0x18003e5d8	.?AVCTfTextLayoutSink@@
+0x18003e600	.?AUITfUIElement@@
+0x18003e628	.?AUITfCandidateListUIElement@@
+0x18003e658	.?AUITfCandidateListUIElementBehavior@@
+0x18003e690	.?AVCTSCandidate@@
+0x18003e6b8	.?AUFileIterator@Toollib@@
+0x18003e6e8	.?AVFileIO@Toollib@@
+0x18003e710	.?AVTextFileReader@Toollib@@
+0x18003e740	.?AVTextFileWriter@Toollib@@
+0x18003e770	.D
+0x18003e788	._W
+0x18003e7a0	.?AVbad_alloc@std@@
+0x18003e7c8	.?AVexception@std@@
+0x18003e7f0	.?AVlogic_error@std@@
+0x18003e818	.?AVlength_error@std@@
+0x18003e840	.?AVout_of_range@std@@
+0x18003e868	.?AVbad_function_call@std@@
+0x18003e898	.?AVtype_info@@
+0x18003e8b8	.?AVbad_array_new_length@std@@
+0x18003e8e8	.?AV_com_error@@
+0x18003e910	.?AVbad_exception@std@@
+0x180079a3a	StringFileInfo
+0x180079a5e	080404b0
+0x180079a76	Comments
+0x180079a88	2021-09-27 10:35:22
+0x180079ab6	CompanyName
+0x180079ad0	Sogou
+0x180079ae2	FileDescription
+0x180079b04	QQ五笔输入法
+0x180079b1a	FileVersion
+0x180079b34	2.4.629.400
+0x180079b52	InternalName
+0x180079b6c	QQWubi Input Method Editor
+0x180079baa	LegalCopyright
+0x180079bc8	Copyright © 2007-2020 Sogou Inc. All Rights Reserved.
+0x180079c3a	OriginalFilename
+0x180079c5c	QQWUBI.IME
+0x180079c7a	ProductName
+0x180079c94	QQ五笔输入法
+0x180079caa	ProductVersion
+0x180079cc8	2.4.629.400
+0x180079ce6	VarFileInfo
+0x180079d06	Translation
+0x180079f00	<?xml version='1.0' encoding='UTF-8' standalone='yes'?>\n<assembly xmlns='urn:schemas-microsoft-com:asm.v1' manifestVersion='1.0'>\n  <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">\n    <security>\n      <requestedPrivileges>\n        <requestedExecutionLevel level='asInvoker' uiAccess='false' />\n      </requestedPrivileges>\n    </security>\n  </trustInfo>\n</assembly>\n

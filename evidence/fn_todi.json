@@ -1,0 +1,1910 @@
+{
+    "evidence_id":  "ev_6511a03eaace00f0c7efc74db00e4e5d78ae63e2db44a5d941631017b9b4e790",
+    "subject":  {
+                    "name":  "C:\\Windows\\System32\\IME\\QQWubiTSF\\QQWubi.ime",
+                    "digest":  {
+                                   "sha256":  "be8fa6ee8f7267fc34eff69c11859464d26a43577e5789d75d35c32670f88686"
+                               },
+                    "format":  "pe",
+                    "architecture":  "x86_64",
+                    "local_path":  "C:\\Windows\\System32\\IME\\QQWubiTSF\\QQWubi.ime"
+                },
+    "provider":  {
+                     "id":  "ghidra",
+                     "name":  "Ghidra",
+                     "version":  "12.1.4"
+                 },
+    "analysis_profile":  {
+                             "provider":  {
+                                              "id":  "ghidra",
+                                              "name":  "Ghidra",
+                                              "version":  "12.1.4"
+                                          },
+                             "parameters":  {
+                                                "target_kind":  "executable",
+                                                "target_format":  "pe",
+                                                "executable_role":  "shared-library",
+                                                "managed":  false,
+                                                "native_aot_metadata":  {
+                                                                            "contract_revision":  "rtr-9.1-x64-pe-read-only-v3",
+                                                                            "source_bytes":  134217728,
+                                                                            "work_units":  67108864,
+                                                                            "working_memory_bytes":  67108864,
+                                                                            "report_bytes":  4194304
+                                                                        },
+                                                "architecture":  "x86_64",
+                                                "available_architectures":  [
+                                                                                "x86_64"
+                                                                            ],
+                                                "import_mode":  "ephemeral-source-immutable",
+                                                "annotation_policy":  "atomic-function-entry-metadata-v1",
+                                                "load_image_observations":  "source-mappings-entry-context-v2",
+                                                "function_body_evidence":  "complete-inclusive-ranges-v1",
+                                                "function_references":  "complete-body-and-entry-reference-manager-v2",
+                                                "string_inventory_evidence":  "defined-data-coverage-v1",
+                                                "location_resolution":  "explicit-address-exact-entry-symbol-first-v3",
+                                                "instruction_flow_evidence":  "decoded-return-pcode-v1",
+                                                "function_boundary_observations":  "ghidra-terminal-call-limitations-v1",
+                                                "no_return_repair":  "disabled-windows-p0",
+                                                "process_launch":  "official-headless-script-v1",
+                                                "jump_table_evidence":  "typed-case-default-blocks-v1",
+                                                "decompiler_jump_loads":  true,
+                                                "loader":  "auto-from-header",
+                                                "language_id":  "auto-from-header",
+                                                "compiler_spec_id":  "auto-default",
+                                                "analyzer_preset":  "ghidra-default"
+                                            },
+                             "digest":  "90e13888e18b7d587414bb259f5e3dc44a7c9293bdf290ad8c459be524747d9f"
+                         },
+    "predicate_type":  "rea.analysis",
+    "operation":  "analyze_function",
+    "parameters":  {
+                       "procedure":  "ImeToAsciiEx"
+                   },
+    "raw_result":  {
+                       "value":  {
+                                     "procedure":  {
+                                                       "address":  "0x180002473",
+                                                       "name":  "ImeToAsciiEx",
+                                                       "classification":  {
+                                                                              "external":  false,
+                                                                              "thunk":  true,
+                                                                              "thunk_target":  "0x1800635c0",
+                                                                              "provenance":  "ghidra-function-manager"
+                                                                          },
+                                                       "body":  {
+                                                                    "available":  true,
+                                                                    "provenance":  "ghidra-function-body-address-set",
+                                                                    "ranges":  [
+                                                                                   {
+                                                                                       "start":  "0x180002473",
+                                                                                       "end":  "0x180002477"
+                                                                                   }
+                                                                               ],
+                                                                    "total_bytes":  5,
+                                                                    "span_bytes":  5,
+                                                                    "non_contiguous":  false,
+                                                                    "contains_entry":  true
+                                                                },
+                                                       "signature":  "undefined ImeToAsciiEx()",
+                                                       "locals":  [
+
+                                                                  ]
+                                                   },
+                                     "pseudocode":  "\r\nundefined8\r\nImeToAsciiEx(undefined4 param_1,undefined4 param_2,undefined8 param_3,undefined8 param_4,\r\n            undefined4 param_5,longlong param_6)\r\n\r\n{\r\n  undefined8 uVar1;\r\n  \r\n                    /* 0x2473  16  ImeToAsciiEx */\r\n  if (param_6 == 0) {\r\n    uVar1 = 0;\r\n  }\r\n  else {\r\n    DAT_1805b9308 = 1;\r\n    uVar1 = thunk_FUN_180078fe0();\r\n    uVar1 = thunk_FUN_1800763e0(uVar1,param_6,param_1,param_2,param_3,param_4,param_5);\r\n  }\r\n  return uVar1;\r\n}\r\n\r\n",
+                                     "assembly":  [
+                                                      "0x180002473: JMP 0x1800635c0"
+                                                  ],
+                                     "comments":  [
+                                                      {
+                                                          "address":  "0x180002473",
+                                                          "kind":  "comment",
+                                                          "text":  "0x2473  16  ImeToAsciiEx"
+                                                      }
+                                                  ],
+                                     "callers":  [
+
+                                                 ],
+                                     "callees":  [
+
+                                                 ],
+                                     "incoming_references":  [
+                                                                 {
+                                                                     "source_address":  "0x1805b49a4",
+                                                                     "target_address":  "0x180002473",
+                                                                     "source_procedure":  null,
+                                                                     "target_procedure":  {
+                                                                                              "address":  "0x180002473",
+                                                                                              "name":  "ImeToAsciiEx",
+                                                                                              "classification":  {
+                                                                                                                     "external":  false,
+                                                                                                                     "thunk":  true,
+                                                                                                                     "thunk_target":  "0x1800635c0",
+                                                                                                                     "provenance":  "ghidra-function-manager"
+                                                                                                                 },
+                                                                                              "body":  {
+                                                                                                           "available":  true,
+                                                                                                           "provenance":  "ghidra-function-body-address-set",
+                                                                                                           "ranges":  [
+                                                                                                                          {
+                                                                                                                              "start":  "0x180002473",
+                                                                                                                              "end":  "0x180002477"
+                                                                                                                          }
+                                                                                                                      ],
+                                                                                                           "total_bytes":  5,
+                                                                                                           "span_bytes":  5,
+                                                                                                           "non_contiguous":  false,
+                                                                                                           "contains_entry":  true
+                                                                                                       }
+                                                                                          },
+                                                                     "kind":  {
+                                                                                  "available":  true,
+                                                                                  "provenance":  "ghidra-reference-manager",
+                                                                                  "type":  "DATA",
+                                                                                  "flow":  false,
+                                                                                  "call":  false,
+                                                                                  "jump":  false,
+                                                                                  "data":  true,
+                                                                                  "read":  false,
+                                                                                  "write":  false,
+                                                                                  "indirect":  false,
+                                                                                  "computed":  false,
+                                                                                  "conditional":  false,
+                                                                                  "terminal":  false,
+                                                                                  "primary":  false,
+                                                                                  "operand_index":  0,
+                                                                                  "external":  false
+                                                                              }
+                                                                 }
+                                                             ],
+                                     "outgoing_references":  [
+                                                                 {
+                                                                     "source_address":  "0x180002473",
+                                                                     "target_address":  "0x1800635c0",
+                                                                     "source_procedure":  {
+                                                                                              "address":  "0x180002473",
+                                                                                              "name":  "ImeToAsciiEx",
+                                                                                              "classification":  {
+                                                                                                                     "external":  false,
+                                                                                                                     "thunk":  true,
+                                                                                                                     "thunk_target":  "0x1800635c0",
+                                                                                                                     "provenance":  "ghidra-function-manager"
+                                                                                                                 },
+                                                                                              "body":  {
+                                                                                                           "available":  true,
+                                                                                                           "provenance":  "ghidra-function-body-address-set",
+                                                                                                           "ranges":  [
+                                                                                                                          {
+                                                                                                                              "start":  "0x180002473",
+                                                                                                                              "end":  "0x180002477"
+                                                                                                                          }
+                                                                                                                      ],
+                                                                                                           "total_bytes":  5,
+                                                                                                           "span_bytes":  5,
+                                                                                                           "non_contiguous":  false,
+                                                                                                           "contains_entry":  true
+                                                                                                       }
+                                                                                          },
+                                                                     "target_procedure":  {
+                                                                                              "address":  "0x1800635c0",
+                                                                                              "name":  "FUN_1800635c0",
+                                                                                              "classification":  {
+                                                                                                                     "external":  false,
+                                                                                                                     "thunk":  false,
+                                                                                                                     "thunk_target":  null,
+                                                                                                                     "provenance":  "ghidra-function-manager"
+                                                                                                                 },
+                                                                                              "body":  {
+                                                                                                           "available":  true,
+                                                                                                           "provenance":  "ghidra-function-body-address-set",
+                                                                                                           "ranges":  [
+                                                                                                                          {
+                                                                                                                              "start":  "0x1800635c0",
+                                                                                                                              "end":  "0x180063635"
+                                                                                                                          }
+                                                                                                                      ],
+                                                                                                           "total_bytes":  118,
+                                                                                                           "span_bytes":  118,
+                                                                                                           "non_contiguous":  false,
+                                                                                                           "contains_entry":  true
+                                                                                                       }
+                                                                                          },
+                                                                     "kind":  {
+                                                                                  "available":  true,
+                                                                                  "provenance":  "ghidra-reference-manager",
+                                                                                  "type":  "UNCONDITIONAL_JUMP",
+                                                                                  "flow":  true,
+                                                                                  "call":  false,
+                                                                                  "jump":  true,
+                                                                                  "data":  false,
+                                                                                  "read":  false,
+                                                                                  "write":  false,
+                                                                                  "indirect":  false,
+                                                                                  "computed":  false,
+                                                                                  "conditional":  false,
+                                                                                  "terminal":  false,
+                                                                                  "primary":  true,
+                                                                                  "operand_index":  0,
+                                                                                  "external":  false
+                                                                              }
+                                                                 }
+                                                             ],
+                                     "referenced_strings":  [
+
+                                                            ],
+                                     "referenced_names":  [
+                                                              {
+                                                                  "address":  "0x1800635c0",
+                                                                  "value":  "FUN_1800635c0",
+                                                                  "source_address":  "0x180002473"
+                                                              }
+                                                          ],
+                                     "basic_blocks":  [
+                                                          {
+                                                              "start":  "0x180002473",
+                                                              "end":  "0x180002478",
+                                                              "successors":  [
+
+                                                                             ]
+                                                          }
+                                                      ],
+                                     "native_api":  {
+                                                        "available":  true,
+                                                        "provenance":  "ghidra-high-function",
+                                                        "signature_source":  "default",
+                                                        "calling_convention":  "__fastcall",
+                                                        "return_type":  {
+                                                                            "role":  "return",
+                                                                            "ordinal":  null,
+                                                                            "name":  null,
+                                                                            "data_type":  "undefined8",
+                                                                            "size_bytes":  8,
+                                                                            "storage":  "RAX:8",
+                                                                            "confidence":  "low",
+                                                                            "evidence":  [
+                                                                                             {
+                                                                                                 "kind":  "signature-source",
+                                                                                                 "source":  "ghidra-function-manager",
+                                                                                                 "detail":  "Function signature source is default."
+                                                                                             },
+                                                                                             {
+                                                                                                 "kind":  "decompiler-type",
+                                                                                                 "source":  "ghidra-high-function",
+                                                                                                 "detail":  "HighFunction recovered data type undefined8."
+                                                                                             }
+                                                                                         ],
+                                                                            "decompiler_artifacts":  [
+                                                                                                         "recovered-signature",
+                                                                                                         "register-or-stack-storage"
+                                                                                                     ]
+                                                                        },
+                                                        "parameters":  [
+                                                                           {
+                                                                               "role":  "parameter",
+                                                                               "ordinal":  0,
+                                                                               "name":  "param_1",
+                                                                               "data_type":  "undefined4",
+                                                                               "size_bytes":  4,
+                                                                               "storage":  "ECX:4",
+                                                                               "confidence":  "low",
+                                                                               "evidence":  [
+                                                                                                {
+                                                                                                    "kind":  "signature-source",
+                                                                                                    "source":  "ghidra-function-manager",
+                                                                                                    "detail":  "Function signature source is default."
+                                                                                                },
+                                                                                                {
+                                                                                                    "kind":  "decompiler-type",
+                                                                                                    "source":  "ghidra-high-function",
+                                                                                                    "detail":  "HighFunction recovered data type undefined4."
+                                                                                                }
+                                                                                            ],
+                                                                               "decompiler_artifacts":  [
+                                                                                                            "recovered-signature",
+                                                                                                            "register-or-stack-storage",
+                                                                                                            "compiler-generated-variable"
+                                                                                                        ]
+                                                                           },
+                                                                           {
+                                                                               "role":  "parameter",
+                                                                               "ordinal":  1,
+                                                                               "name":  "param_2",
+                                                                               "data_type":  "undefined4",
+                                                                               "size_bytes":  4,
+                                                                               "storage":  "EDX:4",
+                                                                               "confidence":  "low",
+                                                                               "evidence":  [
+                                                                                                {
+                                                                                                    "kind":  "signature-source",
+                                                                                                    "source":  "ghidra-function-manager",
+                                                                                                    "detail":  "Function signature source is default."
+                                                                                                },
+                                                                                                {
+                                                                                                    "kind":  "decompiler-type",
+                                                                                                    "source":  "ghidra-high-function",
+                                                                                                    "detail":  "HighFunction recovered data type undefined4."
+                                                                                                }
+                                                                                            ],
+                                                                               "decompiler_artifacts":  [
+                                                                                                            "recovered-signature",
+                                                                                                            "register-or-stack-storage",
+                                                                                                            "compiler-generated-variable"
+                                                                                                        ]
+                                                                           },
+                                                                           {
+                                                                               "role":  "parameter",
+                                                                               "ordinal":  2,
+                                                                               "name":  "param_3",
+                                                                               "data_type":  "undefined8",
+                                                                               "size_bytes":  8,
+                                                                               "storage":  "R8:8",
+                                                                               "confidence":  "low",
+                                                                               "evidence":  [
+                                                                                                {
+                                                                                                    "kind":  "signature-source",
+                                                                                                    "source":  "ghidra-function-manager",
+                                                                                                    "detail":  "Function signature source is default."
+                                                                                                },
+                                                                                                {
+                                                                                                    "kind":  "decompiler-type",
+                                                                                                    "source":  "ghidra-high-function",
+                                                                                                    "detail":  "HighFunction recovered data type undefined8."
+                                                                                                }
+                                                                                            ],
+                                                                               "decompiler_artifacts":  [
+                                                                                                            "recovered-signature",
+                                                                                                            "register-or-stack-storage",
+                                                                                                            "compiler-generated-variable"
+                                                                                                        ]
+                                                                           },
+                                                                           {
+                                                                               "role":  "parameter",
+                                                                               "ordinal":  3,
+                                                                               "name":  "param_4",
+                                                                               "data_type":  "undefined8",
+                                                                               "size_bytes":  8,
+                                                                               "storage":  "R9:8",
+                                                                               "confidence":  "low",
+                                                                               "evidence":  [
+                                                                                                {
+                                                                                                    "kind":  "signature-source",
+                                                                                                    "source":  "ghidra-function-manager",
+                                                                                                    "detail":  "Function signature source is default."
+                                                                                                },
+                                                                                                {
+                                                                                                    "kind":  "decompiler-type",
+                                                                                                    "source":  "ghidra-high-function",
+                                                                                                    "detail":  "HighFunction recovered data type undefined8."
+                                                                                                }
+                                                                                            ],
+                                                                               "decompiler_artifacts":  [
+                                                                                                            "recovered-signature",
+                                                                                                            "register-or-stack-storage",
+                                                                                                            "compiler-generated-variable"
+                                                                                                        ]
+                                                                           },
+                                                                           {
+                                                                               "role":  "parameter",
+                                                                               "ordinal":  4,
+                                                                               "name":  "param_5",
+                                                                               "data_type":  "undefined4",
+                                                                               "size_bytes":  4,
+                                                                               "storage":  "Stack[0x28]:4",
+                                                                               "confidence":  "low",
+                                                                               "evidence":  [
+                                                                                                {
+                                                                                                    "kind":  "signature-source",
+                                                                                                    "source":  "ghidra-function-manager",
+                                                                                                    "detail":  "Function signature source is default."
+                                                                                                },
+                                                                                                {
+                                                                                                    "kind":  "decompiler-type",
+                                                                                                    "source":  "ghidra-high-function",
+                                                                                                    "detail":  "HighFunction recovered data type undefined4."
+                                                                                                }
+                                                                                            ],
+                                                                               "decompiler_artifacts":  [
+                                                                                                            "recovered-signature",
+                                                                                                            "register-or-stack-storage",
+                                                                                                            "compiler-generated-variable"
+                                                                                                        ]
+                                                                           },
+                                                                           {
+                                                                               "role":  "parameter",
+                                                                               "ordinal":  5,
+                                                                               "name":  "param_6",
+                                                                               "data_type":  "longlong",
+                                                                               "size_bytes":  8,
+                                                                               "storage":  "Stack[0x30]:8",
+                                                                               "confidence":  "low",
+                                                                               "evidence":  [
+                                                                                                {
+                                                                                                    "kind":  "signature-source",
+                                                                                                    "source":  "ghidra-function-manager",
+                                                                                                    "detail":  "Function signature source is default."
+                                                                                                },
+                                                                                                {
+                                                                                                    "kind":  "decompiler-type",
+                                                                                                    "source":  "ghidra-high-function",
+                                                                                                    "detail":  "HighFunction recovered data type longlong."
+                                                                                                }
+                                                                                            ],
+                                                                               "decompiler_artifacts":  [
+                                                                                                            "recovered-signature",
+                                                                                                            "register-or-stack-storage",
+                                                                                                            "compiler-generated-variable"
+                                                                                                        ]
+                                                                           }
+                                                                       ],
+                                                        "jump_tables":  [
+
+                                                                        ],
+                                                        "pseudocode":  {
+                                                                           "classification":  "decompiler-generated-non-source",
+                                                                           "compilable":  false
+                                                                       },
+                                                        "decompiler_artifacts":  [
+                                                                                     "recovered-signature",
+                                                                                     "register-and-stack-variables",
+                                                                                     "compiler-generated-control-flow",
+                                                                                     "pointer-arithmetic",
+                                                                                     "pseudocode"
+                                                                                 ],
+                                                        "limitations":  [
+                                                                            "Types and calling conventions are Ghidra decompiler observations, not source declarations.",
+                                                                            "Register variables, compiler-generated blocks, and pointer arithmetic remain decompiler artifacts.",
+                                                                            "Pseudocode is neither original source nor guaranteed to compile."
+                                                                        ]
+                                                    },
+                                     "native_value_flow":  {
+                                                               "available":  true,
+                                                               "provenance":  "ghidra-high-pcode",
+                                                               "operations":  [
+                                                                                  {
+                                                                                      "id":  "0x1800635d5#29",
+                                                                                      "address":  "0x1800635d5",
+                                                                                      "sequence":  29,
+                                                                                      "opcode":  "INT_EQUAL",
+                                                                                      "is_dead":  true,
+                                                                                      "block_membership":  "member",
+                                                                                      "inputs":  [
+                                                                                                     {
+                                                                                                         "kind":  "other",
+                                                                                                         "size_bytes":  8,
+                                                                                                         "location":  "stack:0x30",
+                                                                                                         "constant_hex":  null
+                                                                                                     },
+                                                                                                     {
+                                                                                                         "kind":  "constant",
+                                                                                                         "size_bytes":  8,
+                                                                                                         "location":  null,
+                                                                                                         "constant_hex":  "0"
+                                                                                                     }
+                                                                                                 ],
+                                                                                      "output":  {
+                                                                                                     "kind":  "register",
+                                                                                                     "size_bytes":  1,
+                                                                                                     "location":  "register:0x206",
+                                                                                                     "constant_hex":  null
+                                                                                                 }
+                                                                                  },
+                                                                                  {
+                                                                                      "id":  "0x1800635e6#41",
+                                                                                      "address":  "0x1800635e6",
+                                                                                      "sequence":  41,
+                                                                                      "opcode":  "CBRANCH",
+                                                                                      "is_dead":  true,
+                                                                                      "block_membership":  "member",
+                                                                                      "inputs":  [
+                                                                                                     {
+                                                                                                         "kind":  "address",
+                                                                                                         "size_bytes":  1,
+                                                                                                         "location":  "0x1800635ec",
+                                                                                                         "constant_hex":  null
+                                                                                                     },
+                                                                                                     {
+                                                                                                         "kind":  "register",
+                                                                                                         "size_bytes":  1,
+                                                                                                         "location":  "register:0x206",
+                                                                                                         "constant_hex":  null
+                                                                                                     }
+                                                                                                 ],
+                                                                                      "output":  null
+                                                                                  },
+                                                                                  {
+                                                                                      "id":  "0x1800635e8#134",
+                                                                                      "address":  "0x1800635e8",
+                                                                                      "sequence":  134,
+                                                                                      "opcode":  "COPY",
+                                                                                      "is_dead":  true,
+                                                                                      "block_membership":  "member",
+                                                                                      "inputs":  [
+                                                                                                     {
+                                                                                                         "kind":  "constant",
+                                                                                                         "size_bytes":  8,
+                                                                                                         "location":  null,
+                                                                                                         "constant_hex":  "0"
+                                                                                                     }
+                                                                                                 ],
+                                                                                      "output":  {
+                                                                                                     "kind":  "register",
+                                                                                                     "size_bytes":  8,
+                                                                                                     "location":  "register:0x0",
+                                                                                                     "constant_hex":  null
+                                                                                                 }
+                                                                                  },
+                                                                                  {
+                                                                                      "id":  "0x1800635ea#52",
+                                                                                      "address":  "0x1800635ea",
+                                                                                      "sequence":  52,
+                                                                                      "opcode":  "BRANCH",
+                                                                                      "is_dead":  true,
+                                                                                      "block_membership":  "member",
+                                                                                      "inputs":  [
+                                                                                                     {
+                                                                                                         "kind":  "address",
+                                                                                                         "size_bytes":  1,
+                                                                                                         "location":  "0x180063620",
+                                                                                                         "constant_hex":  null
+                                                                                                     }
+                                                                                                 ],
+                                                                                      "output":  null
+                                                                                  },
+                                                                                  {
+                                                                                      "id":  "0x1800635ec#78",
+                                                                                      "address":  "0x1800635ec",
+                                                                                      "sequence":  78,
+                                                                                      "opcode":  "COPY",
+                                                                                      "is_dead":  true,
+                                                                                      "block_membership":  "member",
+                                                                                      "inputs":  [
+                                                                                                     {
+                                                                                                         "kind":  "constant",
+                                                                                                         "size_bytes":  4,
+                                                                                                         "location":  null,
+                                                                                                         "constant_hex":  "1"
+                                                                                                     }
+                                                                                                 ],
+                                                                                      "output":  {
+                                                                                                     "kind":  "address",
+                                                                                                     "size_bytes":  4,
+                                                                                                     "location":  "0x1805b9308",
+                                                                                                     "constant_hex":  null
+                                                                                                 }
+                                                                                  },
+                                                                                  {
+                                                                                      "id":  "0x1800635f6#81",
+                                                                                      "address":  "0x1800635f6",
+                                                                                      "sequence":  81,
+                                                                                      "opcode":  "CALL",
+                                                                                      "is_dead":  true,
+                                                                                      "block_membership":  "member",
+                                                                                      "inputs":  [
+                                                                                                     {
+                                                                                                         "kind":  "address",
+                                                                                                         "size_bytes":  8,
+                                                                                                         "location":  "0x1800021f8",
+                                                                                                         "constant_hex":  null
+                                                                                                     }
+                                                                                                 ],
+                                                                                      "output":  {
+                                                                                                     "kind":  "register",
+                                                                                                     "size_bytes":  8,
+                                                                                                     "location":  "register:0x0",
+                                                                                                     "constant_hex":  null
+                                                                                                 }
+                                                                                  },
+                                                                                  {
+                                                                                      "id":  "0x1800635f6#195",
+                                                                                      "address":  "0x1800635f6",
+                                                                                      "sequence":  195,
+                                                                                      "opcode":  "INDIRECT",
+                                                                                      "is_dead":  true,
+                                                                                      "block_membership":  "member",
+                                                                                      "inputs":  [
+                                                                                                     {
+                                                                                                         "kind":  "address",
+                                                                                                         "size_bytes":  4,
+                                                                                                         "location":  "0x1805b9308",
+                                                                                                         "constant_hex":  null
+                                                                                                     },
+                                                                                                     {
+                                                                                                         "kind":  "constant",
+                                                                                                         "size_bytes":  4,
+                                                                                                         "location":  null,
+                                                                                                         "constant_hex":  "51"
+                                                                                                     }
+                                                                                                 ],
+                                                                                      "output":  {
+                                                                                                     "kind":  "address",
+                                                                                                     "size_bytes":  4,
+                                                                                                     "location":  "0x1805b9308",
+                                                                                                     "constant_hex":  null
+                                                                                                 }
+                                                                                  },
+                                                                                  {
+                                                                                      "id":  "0x18006361b#105",
+                                                                                      "address":  "0x18006361b",
+                                                                                      "sequence":  105,
+                                                                                      "opcode":  "CALL",
+                                                                                      "is_dead":  true,
+                                                                                      "block_membership":  "member",
+                                                                                      "inputs":  [
+                                                                                                     {
+                                                                                                         "kind":  "address",
+                                                                                                         "size_bytes":  8,
+                                                                                                         "location":  "0x18000793c",
+                                                                                                         "constant_hex":  null
+                                                                                                     },
+                                                                                                     {
+                                                                                                         "kind":  "register",
+                                                                                                         "size_bytes":  8,
+                                                                                                         "location":  "register:0x0",
+                                                                                                         "constant_hex":  null
+                                                                                                     },
+                                                                                                     {
+                                                                                                         "kind":  "other",
+                                                                                                         "size_bytes":  8,
+                                                                                                         "location":  "stack:0x30",
+                                                                                                         "constant_hex":  null
+                                                                                                     },
+                                                                                                     {
+                                                                                                         "kind":  "register",
+                                                                                                         "size_bytes":  4,
+                                                                                                         "location":  "register:0x8",
+                                                                                                         "constant_hex":  null
+                                                                                                     },
+                                                                                                     {
+                                                                                                         "kind":  "register",
+                                                                                                         "size_bytes":  4,
+                                                                                                         "location":  "register:0x10",
+                                                                                                         "constant_hex":  null
+                                                                                                     },
+                                                                                                     {
+                                                                                                         "kind":  "register",
+                                                                                                         "size_bytes":  8,
+                                                                                                         "location":  "register:0x80",
+                                                                                                         "constant_hex":  null
+                                                                                                     },
+                                                                                                     {
+                                                                                                         "kind":  "register",
+                                                                                                         "size_bytes":  8,
+                                                                                                         "location":  "register:0x88",
+                                                                                                         "constant_hex":  null
+                                                                                                     },
+                                                                                                     {
+                                                                                                         "kind":  "other",
+                                                                                                         "size_bytes":  4,
+                                                                                                         "location":  "stack:0x28",
+                                                                                                         "constant_hex":  null
+                                                                                                     }
+                                                                                                 ],
+                                                                                      "output":  {
+                                                                                                     "kind":  "register",
+                                                                                                     "size_bytes":  8,
+                                                                                                     "location":  "register:0x0",
+                                                                                                     "constant_hex":  null
+                                                                                                 }
+                                                                                  },
+                                                                                  {
+                                                                                      "id":  "0x18006361b#196",
+                                                                                      "address":  "0x18006361b",
+                                                                                      "sequence":  196,
+                                                                                      "opcode":  "INDIRECT",
+                                                                                      "is_dead":  true,
+                                                                                      "block_membership":  "member",
+                                                                                      "inputs":  [
+                                                                                                     {
+                                                                                                         "kind":  "address",
+                                                                                                         "size_bytes":  4,
+                                                                                                         "location":  "0x1805b9308",
+                                                                                                         "constant_hex":  null
+                                                                                                     },
+                                                                                                     {
+                                                                                                         "kind":  "constant",
+                                                                                                         "size_bytes":  4,
+                                                                                                         "location":  null,
+                                                                                                         "constant_hex":  "69"
+                                                                                                     }
+                                                                                                 ],
+                                                                                      "output":  {
+                                                                                                     "kind":  "address",
+                                                                                                     "size_bytes":  4,
+                                                                                                     "location":  "0x1805b9308",
+                                                                                                     "constant_hex":  null
+                                                                                                 }
+                                                                                  },
+                                                                                  {
+                                                                                      "id":  "0x180063620#139",
+                                                                                      "address":  "0x180063620",
+                                                                                      "sequence":  139,
+                                                                                      "opcode":  "MULTIEQUAL",
+                                                                                      "is_dead":  true,
+                                                                                      "block_membership":  "member",
+                                                                                      "inputs":  [
+                                                                                                     {
+                                                                                                         "kind":  "register",
+                                                                                                         "size_bytes":  8,
+                                                                                                         "location":  "register:0x0",
+                                                                                                         "constant_hex":  null
+                                                                                                     },
+                                                                                                     {
+                                                                                                         "kind":  "register",
+                                                                                                         "size_bytes":  8,
+                                                                                                         "location":  "register:0x0",
+                                                                                                         "constant_hex":  null
+                                                                                                     }
+                                                                                                 ],
+                                                                                      "output":  {
+                                                                                                     "kind":  "register",
+                                                                                                     "size_bytes":  8,
+                                                                                                     "location":  "register:0x0",
+                                                                                                     "constant_hex":  null
+                                                                                                 }
+                                                                                  },
+                                                                                  {
+                                                                                      "id":  "0x180063620#198",
+                                                                                      "address":  "0x180063620",
+                                                                                      "sequence":  198,
+                                                                                      "opcode":  "MULTIEQUAL",
+                                                                                      "is_dead":  true,
+                                                                                      "block_membership":  "member",
+                                                                                      "inputs":  [
+                                                                                                     {
+                                                                                                         "kind":  "address",
+                                                                                                         "size_bytes":  4,
+                                                                                                         "location":  "0x1805b9308",
+                                                                                                         "constant_hex":  null
+                                                                                                     },
+                                                                                                     {
+                                                                                                         "kind":  "address",
+                                                                                                         "size_bytes":  4,
+                                                                                                         "location":  "0x1805b9308",
+                                                                                                         "constant_hex":  null
+                                                                                                     }
+                                                                                                 ],
+                                                                                      "output":  {
+                                                                                                     "kind":  "address",
+                                                                                                     "size_bytes":  4,
+                                                                                                     "location":  "0x1805b9308",
+                                                                                                     "constant_hex":  null
+                                                                                                 }
+                                                                                  },
+                                                                                  {
+                                                                                      "id":  "0x180063635#77",
+                                                                                      "address":  "0x180063635",
+                                                                                      "sequence":  77,
+                                                                                      "opcode":  "RETURN",
+                                                                                      "is_dead":  true,
+                                                                                      "block_membership":  "member",
+                                                                                      "inputs":  [
+                                                                                                     {
+                                                                                                         "kind":  "constant",
+                                                                                                         "size_bytes":  8,
+                                                                                                         "location":  null,
+                                                                                                         "constant_hex":  "0"
+                                                                                                     },
+                                                                                                     {
+                                                                                                         "kind":  "register",
+                                                                                                         "size_bytes":  8,
+                                                                                                         "location":  "register:0x0",
+                                                                                                         "constant_hex":  null
+                                                                                                     }
+                                                                                                 ],
+                                                                                      "output":  null
+                                                                                  },
+                                                                                  {
+                                                                                      "id":  "0x180063635#197",
+                                                                                      "address":  "0x180063635",
+                                                                                      "sequence":  197,
+                                                                                      "opcode":  "COPY",
+                                                                                      "is_dead":  true,
+                                                                                      "block_membership":  "member",
+                                                                                      "inputs":  [
+                                                                                                     {
+                                                                                                         "kind":  "address",
+                                                                                                         "size_bytes":  4,
+                                                                                                         "location":  "0x1805b9308",
+                                                                                                         "constant_hex":  null
+                                                                                                     }
+                                                                                                 ],
+                                                                                      "output":  {
+                                                                                                     "kind":  "address",
+                                                                                                     "size_bytes":  4,
+                                                                                                     "location":  "0x1805b9308",
+                                                                                                     "constant_hex":  null
+                                                                                                 }
+                                                                                  }
+                                                                              ],
+                                                               "def_use":  [
+                                                                               {
+                                                                                   "definition":  "0x1800635d5#29",
+                                                                                   "use":  "0x1800635e6#41",
+                                                                                   "input_index":  1
+                                                                               },
+                                                                               {
+                                                                                   "definition":  "0x1800635ec#78",
+                                                                                   "use":  "0x1800635f6#195",
+                                                                                   "input_index":  0
+                                                                               },
+                                                                               {
+                                                                                   "definition":  "0x1800635f6#81",
+                                                                                   "use":  "0x18006361b#105",
+                                                                                   "input_index":  1
+                                                                               },
+                                                                               {
+                                                                                   "definition":  "0x1800635f6#195",
+                                                                                   "use":  "0x18006361b#196",
+                                                                                   "input_index":  0
+                                                                               },
+                                                                               {
+                                                                                   "definition":  "0x1800635e8#134",
+                                                                                   "use":  "0x180063620#139",
+                                                                                   "input_index":  0
+                                                                               },
+                                                                               {
+                                                                                   "definition":  "0x18006361b#105",
+                                                                                   "use":  "0x180063620#139",
+                                                                                   "input_index":  1
+                                                                               },
+                                                                               {
+                                                                                   "definition":  "0x18006361b#196",
+                                                                                   "use":  "0x180063620#198",
+                                                                                   "input_index":  1
+                                                                               },
+                                                                               {
+                                                                                   "definition":  "0x180063620#139",
+                                                                                   "use":  "0x180063635#77",
+                                                                                   "input_index":  1
+                                                                               },
+                                                                               {
+                                                                                   "definition":  "0x180063620#198",
+                                                                                   "use":  "0x180063635#197",
+                                                                                   "input_index":  0
+                                                                               }
+                                                                           ],
+                                                               "parameters":  [
+                                                                                  {
+                                                                                      "ordinal":  0,
+                                                                                      "name":  "param_1",
+                                                                                      "data_type":  "/undefined4"
+                                                                                  },
+                                                                                  {
+                                                                                      "ordinal":  1,
+                                                                                      "name":  "param_2",
+                                                                                      "data_type":  "/undefined4"
+                                                                                  },
+                                                                                  {
+                                                                                      "ordinal":  2,
+                                                                                      "name":  "param_3",
+                                                                                      "data_type":  "/undefined8"
+                                                                                  },
+                                                                                  {
+                                                                                      "ordinal":  3,
+                                                                                      "name":  "param_4",
+                                                                                      "data_type":  "/undefined8"
+                                                                                  },
+                                                                                  {
+                                                                                      "ordinal":  4,
+                                                                                      "name":  "param_5",
+                                                                                      "data_type":  "/undefined4"
+                                                                                  },
+                                                                                  {
+                                                                                      "ordinal":  5,
+                                                                                      "name":  "param_6",
+                                                                                      "data_type":  "/longlong"
+                                                                                  }
+                                                                              ],
+                                                               "parameter_uses":  [
+                                                                                      {
+                                                                                          "ordinal":  5,
+                                                                                          "use":  "0x1800635d5#29",
+                                                                                          "input_index":  0
+                                                                                      },
+                                                                                      {
+                                                                                          "ordinal":  5,
+                                                                                          "use":  "0x18006361b#105",
+                                                                                          "input_index":  2
+                                                                                      },
+                                                                                      {
+                                                                                          "ordinal":  0,
+                                                                                          "use":  "0x18006361b#105",
+                                                                                          "input_index":  3
+                                                                                      },
+                                                                                      {
+                                                                                          "ordinal":  1,
+                                                                                          "use":  "0x18006361b#105",
+                                                                                          "input_index":  4
+                                                                                      },
+                                                                                      {
+                                                                                          "ordinal":  2,
+                                                                                          "use":  "0x18006361b#105",
+                                                                                          "input_index":  5
+                                                                                      },
+                                                                                      {
+                                                                                          "ordinal":  3,
+                                                                                          "use":  "0x18006361b#105",
+                                                                                          "input_index":  6
+                                                                                      },
+                                                                                      {
+                                                                                          "ordinal":  4,
+                                                                                          "use":  "0x18006361b#105",
+                                                                                          "input_index":  7
+                                                                                      }
+                                                                                  ],
+                                                               "effects":  [
+                                                                               {
+                                                                                   "operation":  "0x1800635e6#41",
+                                                                                   "kind":  "conditional_branch",
+                                                                                   "operand_input":  null,
+                                                                                   "value_input":  1
+                                                                               },
+                                                                               {
+                                                                                   "operation":  "0x1800635f6#81",
+                                                                                   "kind":  "direct_call",
+                                                                                   "operand_input":  0,
+                                                                                   "value_input":  null
+                                                                               },
+                                                                               {
+                                                                                   "operation":  "0x18006361b#105",
+                                                                                   "kind":  "direct_call",
+                                                                                   "operand_input":  0,
+                                                                                   "value_input":  null
+                                                                               }
+                                                                           ],
+                                                               "truncated":  false,
+                                                               "omitted_operations_lower_bound":  0,
+                                                               "known_omitted_inputs":  0,
+                                                               "known_omitted_edges":  0,
+                                                               "limitations":  [
+                                                                                   "High p-code is decompiler-derived, not original source or runtime behavior. is_dead preserves the Java AST flag; decoded block members can retain that flag, so block_membership separately reports actual syntax-tree membership.",
+                                                                                   "Def-use links do not cross function boundaries and may omit memory aliasing, call side effects, or unresolved indirect flow.",
+                                                                                   "Memory read/write effects include stack and temporary memory operations; they do not identify persistent state or business meaning.",
+                                                                                   "Operation, input, and def-use limits can truncate large functions; inspect truncation, omitted lower bounds, and known omitted counts before drawing conclusions.",
+                                                                                   "Known omitted-edge counts cover links omitted from retained operations; omitted operations may contain additional uncounted links."
+                                                                               ]
+                                                           },
+                                     "limitations":  [
+                                                         "Unresolved computed or indirect flows without target addresses are not represented as reference edges.",
+                                                         "Thunk and external classifications are Ghidra FunctionManager observations; they do not resolve targetless calls.",
+                                                         "Pseudocode and assembly are Ghidra-specific representations, not original source or Hopper-equivalent text.",
+                                                         "Synthetic Ghidra entry-point references without actionable memory sources are omitted."
+                                                     ]
+                                 },
+                       "limitations":  [
+
+                                       ]
+                   },
+    "normalized_result":  {
+                              "procedure":  {
+                                                "address":  "0x180002473",
+                                                "name":  "ImeToAsciiEx",
+                                                "classification":  {
+                                                                       "external":  false,
+                                                                       "thunk":  true,
+                                                                       "thunk_target":  "0x1800635c0",
+                                                                       "provenance":  "ghidra-function-manager"
+                                                                   },
+                                                "body":  {
+                                                             "available":  true,
+                                                             "provenance":  "ghidra-function-body-address-set",
+                                                             "ranges":  [
+                                                                            {
+                                                                                "start":  "0x180002473",
+                                                                                "end":  "0x180002477"
+                                                                            }
+                                                                        ],
+                                                             "total_bytes":  5,
+                                                             "span_bytes":  5,
+                                                             "non_contiguous":  false,
+                                                             "contains_entry":  true
+                                                         },
+                                                "signature":  "undefined ImeToAsciiEx()",
+                                                "locals":  [
+
+                                                           ]
+                                            },
+                              "pseudocode":  "\r\nundefined8\r\nImeToAsciiEx(undefined4 param_1,undefined4 param_2,undefined8 param_3,undefined8 param_4,\r\n            undefined4 param_5,longlong param_6)\r\n\r\n{\r\n  undefined8 uVar1;\r\n  \r\n                    /* 0x2473  16  ImeToAsciiEx */\r\n  if (param_6 == 0) {\r\n    uVar1 = 0;\r\n  }\r\n  else {\r\n    DAT_1805b9308 = 1;\r\n    uVar1 = thunk_FUN_180078fe0();\r\n    uVar1 = thunk_FUN_1800763e0(uVar1,param_6,param_1,param_2,param_3,param_4,param_5);\r\n  }\r\n  return uVar1;\r\n}\r\n\r\n",
+                              "assembly":  [
+                                               "0x180002473: JMP 0x1800635c0"
+                                           ],
+                              "comments":  [
+                                               {
+                                                   "address":  "0x180002473",
+                                                   "kind":  "comment",
+                                                   "text":  "0x2473  16  ImeToAsciiEx"
+                                               }
+                                           ],
+                              "callers":  [
+
+                                          ],
+                              "callees":  [
+
+                                          ],
+                              "incoming_references":  [
+                                                          {
+                                                              "source_address":  "0x1805b49a4",
+                                                              "target_address":  "0x180002473",
+                                                              "source_procedure":  null,
+                                                              "target_procedure":  {
+                                                                                       "address":  "0x180002473",
+                                                                                       "name":  "ImeToAsciiEx",
+                                                                                       "classification":  {
+                                                                                                              "external":  false,
+                                                                                                              "thunk":  true,
+                                                                                                              "thunk_target":  "0x1800635c0",
+                                                                                                              "provenance":  "ghidra-function-manager"
+                                                                                                          },
+                                                                                       "body":  {
+                                                                                                    "available":  true,
+                                                                                                    "provenance":  "ghidra-function-body-address-set",
+                                                                                                    "ranges":  [
+                                                                                                                   {
+                                                                                                                       "start":  "0x180002473",
+                                                                                                                       "end":  "0x180002477"
+                                                                                                                   }
+                                                                                                               ],
+                                                                                                    "total_bytes":  5,
+                                                                                                    "span_bytes":  5,
+                                                                                                    "non_contiguous":  false,
+                                                                                                    "contains_entry":  true
+                                                                                                }
+                                                                                   },
+                                                              "kind":  {
+                                                                           "available":  true,
+                                                                           "provenance":  "ghidra-reference-manager",
+                                                                           "type":  "DATA",
+                                                                           "flow":  false,
+                                                                           "call":  false,
+                                                                           "jump":  false,
+                                                                           "data":  true,
+                                                                           "read":  false,
+                                                                           "write":  false,
+                                                                           "indirect":  false,
+                                                                           "computed":  false,
+                                                                           "conditional":  false,
+                                                                           "terminal":  false,
+                                                                           "primary":  false,
+                                                                           "operand_index":  0,
+                                                                           "external":  false
+                                                                       }
+                                                          }
+                                                      ],
+                              "outgoing_references":  [
+                                                          {
+                                                              "source_address":  "0x180002473",
+                                                              "target_address":  "0x1800635c0",
+                                                              "source_procedure":  {
+                                                                                       "address":  "0x180002473",
+                                                                                       "name":  "ImeToAsciiEx",
+                                                                                       "classification":  {
+                                                                                                              "external":  false,
+                                                                                                              "thunk":  true,
+                                                                                                              "thunk_target":  "0x1800635c0",
+                                                                                                              "provenance":  "ghidra-function-manager"
+                                                                                                          },
+                                                                                       "body":  {
+                                                                                                    "available":  true,
+                                                                                                    "provenance":  "ghidra-function-body-address-set",
+                                                                                                    "ranges":  [
+                                                                                                                   {
+                                                                                                                       "start":  "0x180002473",
+                                                                                                                       "end":  "0x180002477"
+                                                                                                                   }
+                                                                                                               ],
+                                                                                                    "total_bytes":  5,
+                                                                                                    "span_bytes":  5,
+                                                                                                    "non_contiguous":  false,
+                                                                                                    "contains_entry":  true
+                                                                                                }
+                                                                                   },
+                                                              "target_procedure":  {
+                                                                                       "address":  "0x1800635c0",
+                                                                                       "name":  "FUN_1800635c0",
+                                                                                       "classification":  {
+                                                                                                              "external":  false,
+                                                                                                              "thunk":  false,
+                                                                                                              "thunk_target":  null,
+                                                                                                              "provenance":  "ghidra-function-manager"
+                                                                                                          },
+                                                                                       "body":  {
+                                                                                                    "available":  true,
+                                                                                                    "provenance":  "ghidra-function-body-address-set",
+                                                                                                    "ranges":  [
+                                                                                                                   {
+                                                                                                                       "start":  "0x1800635c0",
+                                                                                                                       "end":  "0x180063635"
+                                                                                                                   }
+                                                                                                               ],
+                                                                                                    "total_bytes":  118,
+                                                                                                    "span_bytes":  118,
+                                                                                                    "non_contiguous":  false,
+                                                                                                    "contains_entry":  true
+                                                                                                }
+                                                                                   },
+                                                              "kind":  {
+                                                                           "available":  true,
+                                                                           "provenance":  "ghidra-reference-manager",
+                                                                           "type":  "UNCONDITIONAL_JUMP",
+                                                                           "flow":  true,
+                                                                           "call":  false,
+                                                                           "jump":  true,
+                                                                           "data":  false,
+                                                                           "read":  false,
+                                                                           "write":  false,
+                                                                           "indirect":  false,
+                                                                           "computed":  false,
+                                                                           "conditional":  false,
+                                                                           "terminal":  false,
+                                                                           "primary":  true,
+                                                                           "operand_index":  0,
+                                                                           "external":  false
+                                                                       }
+                                                          }
+                                                      ],
+                              "referenced_strings":  [
+
+                                                     ],
+                              "referenced_names":  [
+                                                       {
+                                                           "address":  "0x1800635c0",
+                                                           "value":  "FUN_1800635c0",
+                                                           "source_address":  "0x180002473"
+                                                       }
+                                                   ],
+                              "basic_blocks":  [
+                                                   {
+                                                       "start":  "0x180002473",
+                                                       "end":  "0x180002478",
+                                                       "successors":  [
+
+                                                                      ]
+                                                   }
+                                               ],
+                              "native_api":  {
+                                                 "available":  true,
+                                                 "provenance":  "ghidra-high-function",
+                                                 "signature_source":  "default",
+                                                 "calling_convention":  "__fastcall",
+                                                 "return_type":  {
+                                                                     "ordinal":  null,
+                                                                     "name":  null,
+                                                                     "data_type":  "undefined8",
+                                                                     "size_bytes":  8,
+                                                                     "storage":  "RAX:8",
+                                                                     "confidence":  "low",
+                                                                     "evidence":  [
+                                                                                      {
+                                                                                          "kind":  "signature-source",
+                                                                                          "source":  "ghidra-function-manager",
+                                                                                          "detail":  "Function signature source is default."
+                                                                                      },
+                                                                                      {
+                                                                                          "kind":  "decompiler-type",
+                                                                                          "source":  "ghidra-high-function",
+                                                                                          "detail":  "HighFunction recovered data type undefined8."
+                                                                                      }
+                                                                                  ],
+                                                                     "decompiler_artifacts":  [
+                                                                                                  "recovered-signature",
+                                                                                                  "register-or-stack-storage"
+                                                                                              ],
+                                                                     "role":  "return"
+                                                                 },
+                                                 "parameters":  [
+                                                                    {
+                                                                        "ordinal":  0,
+                                                                        "name":  "param_1",
+                                                                        "data_type":  "undefined4",
+                                                                        "size_bytes":  4,
+                                                                        "storage":  "ECX:4",
+                                                                        "confidence":  "low",
+                                                                        "evidence":  [
+                                                                                         {
+                                                                                             "kind":  "signature-source",
+                                                                                             "source":  "ghidra-function-manager",
+                                                                                             "detail":  "Function signature source is default."
+                                                                                         },
+                                                                                         {
+                                                                                             "kind":  "decompiler-type",
+                                                                                             "source":  "ghidra-high-function",
+                                                                                             "detail":  "HighFunction recovered data type undefined4."
+                                                                                         }
+                                                                                     ],
+                                                                        "decompiler_artifacts":  [
+                                                                                                     "recovered-signature",
+                                                                                                     "register-or-stack-storage",
+                                                                                                     "compiler-generated-variable"
+                                                                                                 ],
+                                                                        "role":  "parameter"
+                                                                    },
+                                                                    {
+                                                                        "ordinal":  1,
+                                                                        "name":  "param_2",
+                                                                        "data_type":  "undefined4",
+                                                                        "size_bytes":  4,
+                                                                        "storage":  "EDX:4",
+                                                                        "confidence":  "low",
+                                                                        "evidence":  [
+                                                                                         {
+                                                                                             "kind":  "signature-source",
+                                                                                             "source":  "ghidra-function-manager",
+                                                                                             "detail":  "Function signature source is default."
+                                                                                         },
+                                                                                         {
+                                                                                             "kind":  "decompiler-type",
+                                                                                             "source":  "ghidra-high-function",
+                                                                                             "detail":  "HighFunction recovered data type undefined4."
+                                                                                         }
+                                                                                     ],
+                                                                        "decompiler_artifacts":  [
+                                                                                                     "recovered-signature",
+                                                                                                     "register-or-stack-storage",
+                                                                                                     "compiler-generated-variable"
+                                                                                                 ],
+                                                                        "role":  "parameter"
+                                                                    },
+                                                                    {
+                                                                        "ordinal":  2,
+                                                                        "name":  "param_3",
+                                                                        "data_type":  "undefined8",
+                                                                        "size_bytes":  8,
+                                                                        "storage":  "R8:8",
+                                                                        "confidence":  "low",
+                                                                        "evidence":  [
+                                                                                         {
+                                                                                             "kind":  "signature-source",
+                                                                                             "source":  "ghidra-function-manager",
+                                                                                             "detail":  "Function signature source is default."
+                                                                                         },
+                                                                                         {
+                                                                                             "kind":  "decompiler-type",
+                                                                                             "source":  "ghidra-high-function",
+                                                                                             "detail":  "HighFunction recovered data type undefined8."
+                                                                                         }
+                                                                                     ],
+                                                                        "decompiler_artifacts":  [
+                                                                                                     "recovered-signature",
+                                                                                                     "register-or-stack-storage",
+                                                                                                     "compiler-generated-variable"
+                                                                                                 ],
+                                                                        "role":  "parameter"
+                                                                    },
+                                                                    {
+                                                                        "ordinal":  3,
+                                                                        "name":  "param_4",
+                                                                        "data_type":  "undefined8",
+                                                                        "size_bytes":  8,
+                                                                        "storage":  "R9:8",
+                                                                        "confidence":  "low",
+                                                                        "evidence":  [
+                                                                                         {
+                                                                                             "kind":  "signature-source",
+                                                                                             "source":  "ghidra-function-manager",
+                                                                                             "detail":  "Function signature source is default."
+                                                                                         },
+                                                                                         {
+                                                                                             "kind":  "decompiler-type",
+                                                                                             "source":  "ghidra-high-function",
+                                                                                             "detail":  "HighFunction recovered data type undefined8."
+                                                                                         }
+                                                                                     ],
+                                                                        "decompiler_artifacts":  [
+                                                                                                     "recovered-signature",
+                                                                                                     "register-or-stack-storage",
+                                                                                                     "compiler-generated-variable"
+                                                                                                 ],
+                                                                        "role":  "parameter"
+                                                                    },
+                                                                    {
+                                                                        "ordinal":  4,
+                                                                        "name":  "param_5",
+                                                                        "data_type":  "undefined4",
+                                                                        "size_bytes":  4,
+                                                                        "storage":  "Stack[0x28]:4",
+                                                                        "confidence":  "low",
+                                                                        "evidence":  [
+                                                                                         {
+                                                                                             "kind":  "signature-source",
+                                                                                             "source":  "ghidra-function-manager",
+                                                                                             "detail":  "Function signature source is default."
+                                                                                         },
+                                                                                         {
+                                                                                             "kind":  "decompiler-type",
+                                                                                             "source":  "ghidra-high-function",
+                                                                                             "detail":  "HighFunction recovered data type undefined4."
+                                                                                         }
+                                                                                     ],
+                                                                        "decompiler_artifacts":  [
+                                                                                                     "recovered-signature",
+                                                                                                     "register-or-stack-storage",
+                                                                                                     "compiler-generated-variable"
+                                                                                                 ],
+                                                                        "role":  "parameter"
+                                                                    },
+                                                                    {
+                                                                        "ordinal":  5,
+                                                                        "name":  "param_6",
+                                                                        "data_type":  "longlong",
+                                                                        "size_bytes":  8,
+                                                                        "storage":  "Stack[0x30]:8",
+                                                                        "confidence":  "low",
+                                                                        "evidence":  [
+                                                                                         {
+                                                                                             "kind":  "signature-source",
+                                                                                             "source":  "ghidra-function-manager",
+                                                                                             "detail":  "Function signature source is default."
+                                                                                         },
+                                                                                         {
+                                                                                             "kind":  "decompiler-type",
+                                                                                             "source":  "ghidra-high-function",
+                                                                                             "detail":  "HighFunction recovered data type longlong."
+                                                                                         }
+                                                                                     ],
+                                                                        "decompiler_artifacts":  [
+                                                                                                     "recovered-signature",
+                                                                                                     "register-or-stack-storage",
+                                                                                                     "compiler-generated-variable"
+                                                                                                 ],
+                                                                        "role":  "parameter"
+                                                                    }
+                                                                ],
+                                                 "jump_tables":  [
+
+                                                                 ],
+                                                 "pseudocode":  {
+                                                                    "classification":  "decompiler-generated-non-source",
+                                                                    "compilable":  false
+                                                                },
+                                                 "decompiler_artifacts":  [
+                                                                              "recovered-signature",
+                                                                              "register-and-stack-variables",
+                                                                              "compiler-generated-control-flow",
+                                                                              "pointer-arithmetic",
+                                                                              "pseudocode"
+                                                                          ],
+                                                 "limitations":  [
+                                                                     "Types and calling conventions are Ghidra decompiler observations, not source declarations.",
+                                                                     "Register variables, compiler-generated blocks, and pointer arithmetic remain decompiler artifacts.",
+                                                                     "Pseudocode is neither original source nor guaranteed to compile."
+                                                                 ]
+                                             },
+                              "native_value_flow":  {
+                                                        "available":  true,
+                                                        "provenance":  "ghidra-high-pcode",
+                                                        "operations":  [
+                                                                           {
+                                                                               "id":  "0x1800635d5#29",
+                                                                               "address":  "0x1800635d5",
+                                                                               "sequence":  29,
+                                                                               "opcode":  "INT_EQUAL",
+                                                                               "is_dead":  true,
+                                                                               "block_membership":  "member",
+                                                                               "inputs":  [
+                                                                                              {
+                                                                                                  "kind":  "other",
+                                                                                                  "size_bytes":  8,
+                                                                                                  "location":  "stack:0x30",
+                                                                                                  "constant_hex":  null
+                                                                                              },
+                                                                                              {
+                                                                                                  "kind":  "constant",
+                                                                                                  "size_bytes":  8,
+                                                                                                  "location":  null,
+                                                                                                  "constant_hex":  "0"
+                                                                                              }
+                                                                                          ],
+                                                                               "output":  {
+                                                                                              "kind":  "register",
+                                                                                              "size_bytes":  1,
+                                                                                              "location":  "register:0x206",
+                                                                                              "constant_hex":  null
+                                                                                          }
+                                                                           },
+                                                                           {
+                                                                               "id":  "0x1800635e6#41",
+                                                                               "address":  "0x1800635e6",
+                                                                               "sequence":  41,
+                                                                               "opcode":  "CBRANCH",
+                                                                               "is_dead":  true,
+                                                                               "block_membership":  "member",
+                                                                               "inputs":  [
+                                                                                              {
+                                                                                                  "kind":  "address",
+                                                                                                  "size_bytes":  1,
+                                                                                                  "location":  "0x1800635ec",
+                                                                                                  "constant_hex":  null
+                                                                                              },
+                                                                                              {
+                                                                                                  "kind":  "register",
+                                                                                                  "size_bytes":  1,
+                                                                                                  "location":  "register:0x206",
+                                                                                                  "constant_hex":  null
+                                                                                              }
+                                                                                          ],
+                                                                               "output":  null
+                                                                           },
+                                                                           {
+                                                                               "id":  "0x1800635e8#134",
+                                                                               "address":  "0x1800635e8",
+                                                                               "sequence":  134,
+                                                                               "opcode":  "COPY",
+                                                                               "is_dead":  true,
+                                                                               "block_membership":  "member",
+                                                                               "inputs":  [
+                                                                                              {
+                                                                                                  "kind":  "constant",
+                                                                                                  "size_bytes":  8,
+                                                                                                  "location":  null,
+                                                                                                  "constant_hex":  "0"
+                                                                                              }
+                                                                                          ],
+                                                                               "output":  {
+                                                                                              "kind":  "register",
+                                                                                              "size_bytes":  8,
+                                                                                              "location":  "register:0x0",
+                                                                                              "constant_hex":  null
+                                                                                          }
+                                                                           },
+                                                                           {
+                                                                               "id":  "0x1800635ea#52",
+                                                                               "address":  "0x1800635ea",
+                                                                               "sequence":  52,
+                                                                               "opcode":  "BRANCH",
+                                                                               "is_dead":  true,
+                                                                               "block_membership":  "member",
+                                                                               "inputs":  [
+                                                                                              {
+                                                                                                  "kind":  "address",
+                                                                                                  "size_bytes":  1,
+                                                                                                  "location":  "0x180063620",
+                                                                                                  "constant_hex":  null
+                                                                                              }
+                                                                                          ],
+                                                                               "output":  null
+                                                                           },
+                                                                           {
+                                                                               "id":  "0x1800635ec#78",
+                                                                               "address":  "0x1800635ec",
+                                                                               "sequence":  78,
+                                                                               "opcode":  "COPY",
+                                                                               "is_dead":  true,
+                                                                               "block_membership":  "member",
+                                                                               "inputs":  [
+                                                                                              {
+                                                                                                  "kind":  "constant",
+                                                                                                  "size_bytes":  4,
+                                                                                                  "location":  null,
+                                                                                                  "constant_hex":  "1"
+                                                                                              }
+                                                                                          ],
+                                                                               "output":  {
+                                                                                              "kind":  "address",
+                                                                                              "size_bytes":  4,
+                                                                                              "location":  "0x1805b9308",
+                                                                                              "constant_hex":  null
+                                                                                          }
+                                                                           },
+                                                                           {
+                                                                               "id":  "0x1800635f6#81",
+                                                                               "address":  "0x1800635f6",
+                                                                               "sequence":  81,
+                                                                               "opcode":  "CALL",
+                                                                               "is_dead":  true,
+                                                                               "block_membership":  "member",
+                                                                               "inputs":  [
+                                                                                              {
+                                                                                                  "kind":  "address",
+                                                                                                  "size_bytes":  8,
+                                                                                                  "location":  "0x1800021f8",
+                                                                                                  "constant_hex":  null
+                                                                                              }
+                                                                                          ],
+                                                                               "output":  {
+                                                                                              "kind":  "register",
+                                                                                              "size_bytes":  8,
+                                                                                              "location":  "register:0x0",
+                                                                                              "constant_hex":  null
+                                                                                          }
+                                                                           },
+                                                                           {
+                                                                               "id":  "0x1800635f6#195",
+                                                                               "address":  "0x1800635f6",
+                                                                               "sequence":  195,
+                                                                               "opcode":  "INDIRECT",
+                                                                               "is_dead":  true,
+                                                                               "block_membership":  "member",
+                                                                               "inputs":  [
+                                                                                              {
+                                                                                                  "kind":  "address",
+                                                                                                  "size_bytes":  4,
+                                                                                                  "location":  "0x1805b9308",
+                                                                                                  "constant_hex":  null
+                                                                                              },
+                                                                                              {
+                                                                                                  "kind":  "constant",
+                                                                                                  "size_bytes":  4,
+                                                                                                  "location":  null,
+                                                                                                  "constant_hex":  "51"
+                                                                                              }
+                                                                                          ],
+                                                                               "output":  {
+                                                                                              "kind":  "address",
+                                                                                              "size_bytes":  4,
+                                                                                              "location":  "0x1805b9308",
+                                                                                              "constant_hex":  null
+                                                                                          }
+                                                                           },
+                                                                           {
+                                                                               "id":  "0x18006361b#105",
+                                                                               "address":  "0x18006361b",
+                                                                               "sequence":  105,
+                                                                               "opcode":  "CALL",
+                                                                               "is_dead":  true,
+                                                                               "block_membership":  "member",
+                                                                               "inputs":  [
+                                                                                              {
+                                                                                                  "kind":  "address",
+                                                                                                  "size_bytes":  8,
+                                                                                                  "location":  "0x18000793c",
+                                                                                                  "constant_hex":  null
+                                                                                              },
+                                                                                              {
+                                                                                                  "kind":  "register",
+                                                                                                  "size_bytes":  8,
+                                                                                                  "location":  "register:0x0",
+                                                                                                  "constant_hex":  null
+                                                                                              },
+                                                                                              {
+                                                                                                  "kind":  "other",
+                                                                                                  "size_bytes":  8,
+                                                                                                  "location":  "stack:0x30",
+                                                                                                  "constant_hex":  null
+                                                                                              },
+                                                                                              {
+                                                                                                  "kind":  "register",
+                                                                                                  "size_bytes":  4,
+                                                                                                  "location":  "register:0x8",
+                                                                                                  "constant_hex":  null
+                                                                                              },
+                                                                                              {
+                                                                                                  "kind":  "register",
+                                                                                                  "size_bytes":  4,
+                                                                                                  "location":  "register:0x10",
+                                                                                                  "constant_hex":  null
+                                                                                              },
+                                                                                              {
+                                                                                                  "kind":  "register",
+                                                                                                  "size_bytes":  8,
+                                                                                                  "location":  "register:0x80",
+                                                                                                  "constant_hex":  null
+                                                                                              },
+                                                                                              {
+                                                                                                  "kind":  "register",
+                                                                                                  "size_bytes":  8,
+                                                                                                  "location":  "register:0x88",
+                                                                                                  "constant_hex":  null
+                                                                                              },
+                                                                                              {
+                                                                                                  "kind":  "other",
+                                                                                                  "size_bytes":  4,
+                                                                                                  "location":  "stack:0x28",
+                                                                                                  "constant_hex":  null
+                                                                                              }
+                                                                                          ],
+                                                                               "output":  {
+                                                                                              "kind":  "register",
+                                                                                              "size_bytes":  8,
+                                                                                              "location":  "register:0x0",
+                                                                                              "constant_hex":  null
+                                                                                          }
+                                                                           },
+                                                                           {
+                                                                               "id":  "0x18006361b#196",
+                                                                               "address":  "0x18006361b",
+                                                                               "sequence":  196,
+                                                                               "opcode":  "INDIRECT",
+                                                                               "is_dead":  true,
+                                                                               "block_membership":  "member",
+                                                                               "inputs":  [
+                                                                                              {
+                                                                                                  "kind":  "address",
+                                                                                                  "size_bytes":  4,
+                                                                                                  "location":  "0x1805b9308",
+                                                                                                  "constant_hex":  null
+                                                                                              },
+                                                                                              {
+                                                                                                  "kind":  "constant",
+                                                                                                  "size_bytes":  4,
+                                                                                                  "location":  null,
+                                                                                                  "constant_hex":  "69"
+                                                                                              }
+                                                                                          ],
+                                                                               "output":  {
+                                                                                              "kind":  "address",
+                                                                                              "size_bytes":  4,
+                                                                                              "location":  "0x1805b9308",
+                                                                                              "constant_hex":  null
+                                                                                          }
+                                                                           },
+                                                                           {
+                                                                               "id":  "0x180063620#139",
+                                                                               "address":  "0x180063620",
+                                                                               "sequence":  139,
+                                                                               "opcode":  "MULTIEQUAL",
+                                                                               "is_dead":  true,
+                                                                               "block_membership":  "member",
+                                                                               "inputs":  [
+                                                                                              {
+                                                                                                  "kind":  "register",
+                                                                                                  "size_bytes":  8,
+                                                                                                  "location":  "register:0x0",
+                                                                                                  "constant_hex":  null
+                                                                                              },
+                                                                                              {
+                                                                                                  "kind":  "register",
+                                                                                                  "size_bytes":  8,
+                                                                                                  "location":  "register:0x0",
+                                                                                                  "constant_hex":  null
+                                                                                              }
+                                                                                          ],
+                                                                               "output":  {
+                                                                                              "kind":  "register",
+                                                                                              "size_bytes":  8,
+                                                                                              "location":  "register:0x0",
+                                                                                              "constant_hex":  null
+                                                                                          }
+                                                                           },
+                                                                           {
+                                                                               "id":  "0x180063620#198",
+                                                                               "address":  "0x180063620",
+                                                                               "sequence":  198,
+                                                                               "opcode":  "MULTIEQUAL",
+                                                                               "is_dead":  true,
+                                                                               "block_membership":  "member",
+                                                                               "inputs":  [
+                                                                                              {
+                                                                                                  "kind":  "address",
+                                                                                                  "size_bytes":  4,
+                                                                                                  "location":  "0x1805b9308",
+                                                                                                  "constant_hex":  null
+                                                                                              },
+                                                                                              {
+                                                                                                  "kind":  "address",
+                                                                                                  "size_bytes":  4,
+                                                                                                  "location":  "0x1805b9308",
+                                                                                                  "constant_hex":  null
+                                                                                              }
+                                                                                          ],
+                                                                               "output":  {
+                                                                                              "kind":  "address",
+                                                                                              "size_bytes":  4,
+                                                                                              "location":  "0x1805b9308",
+                                                                                              "constant_hex":  null
+                                                                                          }
+                                                                           },
+                                                                           {
+                                                                               "id":  "0x180063635#77",
+                                                                               "address":  "0x180063635",
+                                                                               "sequence":  77,
+                                                                               "opcode":  "RETURN",
+                                                                               "is_dead":  true,
+                                                                               "block_membership":  "member",
+                                                                               "inputs":  [
+                                                                                              {
+                                                                                                  "kind":  "constant",
+                                                                                                  "size_bytes":  8,
+                                                                                                  "location":  null,
+                                                                                                  "constant_hex":  "0"
+                                                                                              },
+                                                                                              {
+                                                                                                  "kind":  "register",
+                                                                                                  "size_bytes":  8,
+                                                                                                  "location":  "register:0x0",
+                                                                                                  "constant_hex":  null
+                                                                                              }
+                                                                                          ],
+                                                                               "output":  null
+                                                                           },
+                                                                           {
+                                                                               "id":  "0x180063635#197",
+                                                                               "address":  "0x180063635",
+                                                                               "sequence":  197,
+                                                                               "opcode":  "COPY",
+                                                                               "is_dead":  true,
+                                                                               "block_membership":  "member",
+                                                                               "inputs":  [
+                                                                                              {
+                                                                                                  "kind":  "address",
+                                                                                                  "size_bytes":  4,
+                                                                                                  "location":  "0x1805b9308",
+                                                                                                  "constant_hex":  null
+                                                                                              }
+                                                                                          ],
+                                                                               "output":  {
+                                                                                              "kind":  "address",
+                                                                                              "size_bytes":  4,
+                                                                                              "location":  "0x1805b9308",
+                                                                                              "constant_hex":  null
+                                                                                          }
+                                                                           }
+                                                                       ],
+                                                        "def_use":  [
+                                                                        {
+                                                                            "definition":  "0x1800635d5#29",
+                                                                            "use":  "0x1800635e6#41",
+                                                                            "input_index":  1
+                                                                        },
+                                                                        {
+                                                                            "definition":  "0x1800635ec#78",
+                                                                            "use":  "0x1800635f6#195",
+                                                                            "input_index":  0
+                                                                        },
+                                                                        {
+                                                                            "definition":  "0x1800635f6#81",
+                                                                            "use":  "0x18006361b#105",
+                                                                            "input_index":  1
+                                                                        },
+                                                                        {
+                                                                            "definition":  "0x1800635f6#195",
+                                                                            "use":  "0x18006361b#196",
+                                                                            "input_index":  0
+                                                                        },
+                                                                        {
+                                                                            "definition":  "0x1800635e8#134",
+                                                                            "use":  "0x180063620#139",
+                                                                            "input_index":  0
+                                                                        },
+                                                                        {
+                                                                            "definition":  "0x18006361b#105",
+                                                                            "use":  "0x180063620#139",
+                                                                            "input_index":  1
+                                                                        },
+                                                                        {
+                                                                            "definition":  "0x18006361b#196",
+                                                                            "use":  "0x180063620#198",
+                                                                            "input_index":  1
+                                                                        },
+                                                                        {
+                                                                            "definition":  "0x180063620#139",
+                                                                            "use":  "0x180063635#77",
+                                                                            "input_index":  1
+                                                                        },
+                                                                        {
+                                                                            "definition":  "0x180063620#198",
+                                                                            "use":  "0x180063635#197",
+                                                                            "input_index":  0
+                                                                        }
+                                                                    ],
+                                                        "effects":  [
+                                                                        {
+                                                                            "operation":  "0x1800635e6#41",
+                                                                            "kind":  "conditional_branch",
+                                                                            "operand_input":  null,
+                                                                            "value_input":  1
+                                                                        },
+                                                                        {
+                                                                            "operation":  "0x1800635f6#81",
+                                                                            "kind":  "direct_call",
+                                                                            "operand_input":  0,
+                                                                            "value_input":  null
+                                                                        },
+                                                                        {
+                                                                            "operation":  "0x18006361b#105",
+                                                                            "kind":  "direct_call",
+                                                                            "operand_input":  0,
+                                                                            "value_input":  null
+                                                                        }
+                                                                    ],
+                                                        "parameters":  [
+                                                                           {
+                                                                               "ordinal":  0,
+                                                                               "name":  "param_1",
+                                                                               "data_type":  "/undefined4"
+                                                                           },
+                                                                           {
+                                                                               "ordinal":  1,
+                                                                               "name":  "param_2",
+                                                                               "data_type":  "/undefined4"
+                                                                           },
+                                                                           {
+                                                                               "ordinal":  2,
+                                                                               "name":  "param_3",
+                                                                               "data_type":  "/undefined8"
+                                                                           },
+                                                                           {
+                                                                               "ordinal":  3,
+                                                                               "name":  "param_4",
+                                                                               "data_type":  "/undefined8"
+                                                                           },
+                                                                           {
+                                                                               "ordinal":  4,
+                                                                               "name":  "param_5",
+                                                                               "data_type":  "/undefined4"
+                                                                           },
+                                                                           {
+                                                                               "ordinal":  5,
+                                                                               "name":  "param_6",
+                                                                               "data_type":  "/longlong"
+                                                                           }
+                                                                       ],
+                                                        "parameter_uses":  [
+                                                                               {
+                                                                                   "ordinal":  5,
+                                                                                   "use":  "0x1800635d5#29",
+                                                                                   "input_index":  0
+                                                                               },
+                                                                               {
+                                                                                   "ordinal":  5,
+                                                                                   "use":  "0x18006361b#105",
+                                                                                   "input_index":  2
+                                                                               },
+                                                                               {
+                                                                                   "ordinal":  0,
+                                                                                   "use":  "0x18006361b#105",
+                                                                                   "input_index":  3
+                                                                               },
+                                                                               {
+                                                                                   "ordinal":  1,
+                                                                                   "use":  "0x18006361b#105",
+                                                                                   "input_index":  4
+                                                                               },
+                                                                               {
+                                                                                   "ordinal":  2,
+                                                                                   "use":  "0x18006361b#105",
+                                                                                   "input_index":  5
+                                                                               },
+                                                                               {
+                                                                                   "ordinal":  3,
+                                                                                   "use":  "0x18006361b#105",
+                                                                                   "input_index":  6
+                                                                               },
+                                                                               {
+                                                                                   "ordinal":  4,
+                                                                                   "use":  "0x18006361b#105",
+                                                                                   "input_index":  7
+                                                                               }
+                                                                           ],
+                                                        "truncated":  false,
+                                                        "omitted_operations_lower_bound":  0,
+                                                        "known_omitted_inputs":  0,
+                                                        "known_omitted_edges":  0,
+                                                        "limitations":  [
+                                                                            "High p-code is decompiler-derived, not original source or runtime behavior. is_dead preserves the Java AST flag; decoded block members can retain that flag, so block_membership separately reports actual syntax-tree membership.",
+                                                                            "Def-use links do not cross function boundaries and may omit memory aliasing, call side effects, or unresolved indirect flow.",
+                                                                            "Memory read/write effects include stack and temporary memory operations; they do not identify persistent state or business meaning.",
+                                                                            "Operation, input, and def-use limits can truncate large functions; inspect truncation, omitted lower bounds, and known omitted counts before drawing conclusions.",
+                                                                            "Known omitted-edge counts cover links omitted from retained operations; omitted operations may contain additional uncounted links."
+                                                                        ]
+                                                    },
+                              "limitations":  [
+                                                  "Unresolved computed or indirect flows without target addresses are not represented as reference edges.",
+                                                  "Thunk and external classifications are Ghidra FunctionManager observations; they do not resolve targetless calls.",
+                                                  "Pseudocode and assembly are Ghidra-specific representations, not original source or Hopper-equivalent text.",
+                                                  "Synthetic Ghidra entry-point references without actionable memory sources are omitted."
+                                              ]
+                          },
+    "confidence":  "observed",
+    "authority":  "shipped-artifact",
+    "environment":  null,
+    "limitations":  [
+                        "The session serves operations only after Ghidra reports default auto-analysis complete; incomplete analysis does not expose partial results.",
+                        "The imported Program and temporary project are ephemeral and deleted on close. Annotation operations edit session database metadata; original executable bytes are never written.",
+                        "Cancelling an active Ghidra request terminates its ephemeral database and discards session annotations. The selected target remains open; the next provider query imports the original artifact again.",
+                        "Default-space addresses use lowercase 0x-prefixed hexadecimal; other address spaces use \u003cpercent-encoded-space\u003e:0x\u003chex\u003e.",
+                        "References cover the complete Ghidra function-body AddressSet and exact entry. Dossier incoming edges omit sources owned by that function; procedure_references also retains those internal edges.",
+                        "The dossier combines Ghidra FunctionManager, Listing, ReferenceManager, BasicBlockModel, and decompiler observations; provider-specific pseudocode and assembly are not cross-provider text invariants.",
+                        "Resolved reference metadata identifies computed, indirect, external, call, jump, and data edges; unresolved targetless flows remain unknown, and function classifications distinguish thunks and externals.",
+                        "Synthetic Ghidra entry-point references without actionable memory sources are omitted.",
+                        "The Java bridge serializes one function request per Program and lets each decompilation run until it completes or the caller cancels.",
+                        "Windows Ghidra P0 accepts approved native x86 and x86-64 PE applications and DLLs; managed, hostile, sensitive, and mutable-path targets are unsupported.",
+                        "The Windows bridge uses authenticated IPv4 loopback because Node path-based IPC does not expose Java AF_UNIX sockets; the endpoint file contains no bearer token.",
+                        "Windows sessions require the matching packaged Windows x64 native addon, local NTFS targets and runtimes, and Windows 10 or later. Native handles enforce path admission, private DACLs, and Job Object ownership automatically."
+                    ],
+    "locations":  [
+
+                  ],
+    "evidence_links":  [
+
+                       ]
+}

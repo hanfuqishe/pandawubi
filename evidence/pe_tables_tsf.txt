@@ -1,0 +1,28 @@
+FILE: C:\WINDOWS\system32\IME\QQWubiTSF\QQWubiTSF.dll
+machine=0x8664 pe32plus=True sections=6
+EXPORTS count=4
+   DllCanUnloadNow
+   DllGetClassObject
+   DllRegisterServer
+   DllUnregisterServer
+IMPORTS
+  [KERNEL32.dll]
+     CreateFileW, GetVersionExW, GetCPInfo, MultiByteToWideChar, WideCharToMultiByte, GetModuleFileNameW, TerminateProcess, GetFileTime, DeleteFileW, lstrlenW, GetCurrentProcessId, ProcessIdToSessionId, EnterCriticalSection, LeaveCriticalSection, FreeLibrary, SetLastError, LoadLibraryW, GetModuleHandleA, GetSystemDirectoryW, GetSystemTimeAsFileTime, FindClose, CreateDirectoryW, GetFileAttributesW, FindFirstFileW, FindNextFileW, RtlLookupFunctionEntry, RtlVirtualUnwind, RtlCaptureContext, VirtualQuery, SetUnhandledExceptionFilter, GetCurrentThreadId, IsDebuggerPresent, GetLocalTime, WriteConsoleW, FlushFileBuffers, SetFilePointerEx, GetConsoleMode, GetConsoleCP, SetStdHandle, FreeEnvironmentStringsW, GetEnvironmentStringsW, GetCommandLineW, GetCommandLineA, GetOEMCP, IsValidCodePage, FindNextFileA, FindFirstFileExA, LCMapStringW, GetPrivateProfileStringW, FindResourceExW, FindResourceW, GetModuleHandleW, FormatMessageW, CloseHandle, SetFilePointer, ReadFile, WriteFile, GetFileSize, SizeofResource, LoadResource, GetCurrentThread, GetCurrentProcess, LocalFree, GetProcAddress, LockResource, GetStringTypeW, GetFileType, GetStdHandle, GetACP, GetModuleFileNameA, GetModuleHandleExW, ExitProcess, LoadLibraryExW, EncodePointer, InterlockedFlushSList, RtlPcToFileHeader, RtlUnwindEx, InitializeSListHead, GetStartupInfoW, IsProcessorFeaturePresent, UnhandledExceptionFilter, OutputDebugStringW, DeleteCriticalSection, InitializeCriticalSectionAndSpinCount, GetLastError, RaiseException, GetProcessHeap, HeapSize, HeapFree, HeapReAlloc, HeapAlloc, HeapDestroy, lstrcpyW, QueryPerformanceCounter, TlsAlloc, TlsGetValue, TlsSetValue, TlsFree
+  [USER32.dll]
+     SendMessageW, PostMessageW, wvsprintfW, RealGetWindowClassW, GetGUIThreadInfo, GetWindowThreadProcessId, GetParent, SetWindowLongPtrW, ScreenToClient, GetCaretPos, GetWindowRect, MapVirtualKeyW, ToUnicode, GetFocus, DestroyWindow, IsWindow, CreateWindowExW, LoadImageW, GetKeyboardState, GetKeyState
+  [ADVAPI32.dll]
+     RegCloseKey, RegOpenKeyExW, RegQueryValueExW, ConvertSidToStringSidW, LookupAccountNameW, RegOpenKeyW, RegEnumKeyExW, RegDeleteKeyW, RegSetValueExW, RegCreateKeyExW
+  [SHELL32.dll]
+     SHFileOperationW, SHCreateDirectoryExW, SHGetSpecialFolderPathW, ShellExecuteW
+  [ole32.dll]
+     CoCreateInstance, CoInitialize, CoUninitialize
+  [OLEAUT32.dll]
+     #2, #6, #4
+  [SHLWAPI.dll]
+     PathFileExistsW
+  [VERSION.dll]
+     VerQueryValueW, GetFileVersionInfoW, GetFileVersionInfoSizeW
+  [WTSAPI32.dll]
+     WTSQuerySessionInformationW, WTSFreeMemory
+  [IMM32.dll]
+     ImmUnlockIMC, ImmLockIMCC, ImmUnlockIMCC, ImmLockIMC, ImmCreateContext, ImmDestroyContext, ImmSetOpenStatus
