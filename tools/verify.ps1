@@ -48,6 +48,9 @@ Check 'english compu' ($out -match 'computer') ''
 "— 英文补全的大小写（Shift/CapsLock 照抄，不再一律小写）—"
 $out = & $cli $dict engcase 2>&1 | Out-String
 Check '大小写照抄输入' ($out -match 'engcase: PASS') 'Shift+AB -> ABOUT、Shift+A+b -> About、混排逐字保留'
+"— 自定义词组取码（五笔规则 + 字的全码）—"
+$out = & $cli $dict phrasecode 2>&1 | Out-String
+Check '词组取码' ($out -match 'phrasecode: PASS') '你好=wqvb · 我们=trwu · 计算机=ytsm · 中华人民共和国=kwwl'
 "— 多词库切换（DictFile）—"
 $iniDict = Join-Path $ws 'build\dict-test.ini'
 [IO.File]::WriteAllText($iniDict, "[Config]`r`nDictFile=dict-qq.bin`r`n", (New-Object System.Text.ASCIIEncoding))

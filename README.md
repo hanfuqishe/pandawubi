@@ -8,7 +8,7 @@
 ## 快速开始
 
 ```powershell
-# 1. 一键验证（构建 + 引擎 + 数据 + TSF 组件 + 状态栏，共 94 项）
+# 1. 一键验证（构建 + 引擎 + 数据 + TSF 组件 + 状态栏，共 95 项）
 powershell -ExecutionPolicy Bypass -File .\tools\verify.ps1
 
 # 2. 注册（需要管理员，二选一）

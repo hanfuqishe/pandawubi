@@ -11,6 +11,7 @@
 #include <msctf.h>
 #include <cstdio>
 #include <string>
+#include <vector>
 
 #ifndef MSFTEDIT_CLASS
 #define MSFTEDIT_CLASS L"RICHEDIT50W"
@@ -24,9 +25,13 @@ static const CLSID CLSID_TF_ThreadMgr_L =
     { 0x529a9e6b, 0x6587, 0x4f23, { 0xab, 0x9e, 0x9c, 0x7d, 0x68, 0x3e, 0x3c, 0x50 } };
 
 static HWND g_main = nullptr, g_edit = nullptr;
-static std::wstring g_script;      // 'a'..'y' = 字母键，' ' = 空格，'!' = Esc
+static std::wstring g_script;      // 见 ParseScript 的记号表
 static size_t g_pos = 0;
 static int g_stage = 0;
+
+// 一个按键步骤：虚拟键 + 需要按住的控制键
+struct Step { WORD vk; bool ctrl; bool shift; wchar_t ch; };
+static std::vector<Step> g_steps;
 
 // 控制台进程创建窗口后常常拿不到前台：用 AttachThreadInput 强制一次
 static void ForceForeground(HWND h) {
@@ -70,13 +75,10 @@ static WORD VkOf(wchar_t ch) {
     }
 }
 
-static void SendOneRaw(wchar_t ch) {
-    const WORD vk = VkOf(ch);
+static void SendOneRaw(WORD vk, wchar_t ch) {
     if (g_ksm) {
         // 正规路径：先问输入法要不要这个键。
-        // 注意本输入法的 OnTestKeyDown 一律回 FALSE（键的最终处置在 OnKeyDown 里决定），
-        // 所以这里不能因为 eaten=0 就跳过 KeyDown——那等于从不经过输入法。
-        // 真实宿主是由 TSF 把按键转给 KeyDown，输入法不要才回落到控件的 WM_CHAR。
+        // 本输入法的 OnTestKeyDown 会按 WantsKey 声明，宿主按声明转给 KeyDown。
         LPARAM lp = 1 | ((LPARAM)MapVirtualKeyW(vk, MAPVK_VK_TO_VSC) << 16);
         BOOL eaten = FALSE;
         HRESULT ht = g_ksm->TestKeyDown(vk, lp, &eaten);
@@ -114,16 +116,64 @@ static void SendOneRaw(wchar_t ch) {
 static void SendOne(wchar_t ch) {
     const bool shift = (ch >= L'A' && ch <= L'Z');
     if (shift) keybd_event(VK_LSHIFT, 0, 0, 0);
-    SendOneRaw(ch);
+    SendOneRaw(VkOf(ch), ch);
     if (shift) keybd_event(VK_LSHIFT, 0, KEYEVENTF_KEYUP, 0);
+}
+
+// 一个步骤：按住需要的 Ctrl/Shift，发这个键，再松开。
+// 输入法用 GetKeyState 读修饰键状态，所以必须真的按下去。
+static void SendStep(const Step& st) {
+    if (st.ctrl)  keybd_event(VK_CONTROL, 0, 0, 0);
+    if (st.shift) keybd_event(VK_LSHIFT, 0, 0, 0);
+    SendOneRaw(st.vk, st.ch);
+    if (st.shift) keybd_event(VK_LSHIFT, 0, KEYEVENTF_KEYUP, 0);
+    if (st.ctrl)  keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, 0);
+}
+
+// 脚本记号：
+//   a..z        字母键（A..Z = 按住 Shift）
+//   ' ' 空格 · ',' '.' ';' '\'' '/' '-' '=' '@' '_' 标点 · '!' Esc
+//   [C] Ctrl+=（自定义词组）   [S] Ctrl+Shift+=（自定义短语）
+//   [L] ←  [D] Del  [E] 回车  [B] 退格  [X] Esc  [H] 单击 Shift（切中英）
+static void ParseScript(const std::wstring& s) {
+    g_steps.clear();
+    for (size_t i = 0; i < s.size();) {
+        if (s[i] == L'[') {
+            const size_t close = s.find(L']', i);
+            if (close == i + 2) {
+                WORD vk = 0;
+                bool ctrl = false, sh = false;
+                switch (s[i + 1]) {
+                case L'C': vk = VK_OEM_PLUS; ctrl = true; break;
+                case L'S': vk = VK_OEM_PLUS; ctrl = true; sh = true; break;
+                case L'L': vk = VK_LEFT; break;
+                case L'D': vk = VK_DELETE; break;
+                case L'E': vk = VK_RETURN; break;
+                case L'B': vk = VK_BACK; break;
+                case L'X': vk = VK_ESCAPE; break;
+                case L'H': vk = VK_SHIFT; break;
+                case L'F': vk = VK_F2; break;
+                default: break;
+                }
+                if (vk) { g_steps.push_back({ vk, ctrl, sh, L' ' }); i = close + 1; continue; }
+            }
+        }
+        const wchar_t ch = s[i];
+        WORD vk = VkOf(ch);
+        bool sh = (ch >= L'A' && ch <= L'Z');
+        if (ch == L'@') { vk = L'2'; sh = true; }        // Shift+2
+        else if (ch == L'_') { vk = VK_OEM_MINUS; sh = true; }
+        g_steps.push_back({ vk, false, sh, ch });
+        ++i;
+    }
 }
 
 static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     switch (msg) {
     case WM_TIMER:
         if (wp == 1) {
-            if (g_pos < g_script.size()) {
-                const bool needFg = (!g_postMode && !g_ksm);
+            if (g_pos < g_steps.size()) {
+                const bool needFg = !g_postMode;
                 if (needFg) ForceForeground(g_main);
                 if (needFg && GetForegroundWindow() != g_main) {
                     HWND fg = GetForegroundWindow();
@@ -139,8 +189,9 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
                     return 0;
                 }
                 SetFocus(g_edit);
-                SendOne(g_script[g_pos]);
-                std::printf("  sent '%c'\n", (char)g_script[g_pos]);
+                SendStep(g_steps[g_pos]);
+                std::printf("  sent vk=0x%02X%s%s\n", g_steps[g_pos].vk,
+                            g_steps[g_pos].ctrl ? " ctrl" : "", g_steps[g_pos].shift ? " shift" : "");
                 ++g_pos;
             } else {
                 KillTimer(hwnd, 1);
@@ -172,6 +223,7 @@ int wmain(int argc, wchar_t** argv) {
         else script = argv[i];
     }
     g_script = script;
+    ParseScript(script);
 
     CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
     // 先让 RichEdit 建立 TSF 文档，再激活输入法；顺序颠倒会拿不到 document manager
@@ -271,9 +323,7 @@ int wmain(int argc, wchar_t** argv) {
         if (dm) dm->Release();
     }
 
-    std::printf("[4] send script: ");
-    for (wchar_t c : g_script) std::printf("'%c' ", (char)c);
-    std::printf("\n");
+    std::printf("[4] send script：%zu 步\n", g_steps.size());
 
     // 先把自己弄到前台并让 RichEdit 建立 TSF 文档：GetFocus 拿不到 document manager 时，
     // 按键根本不会进输入法（表现为 eaten=0、文本就是原样打进去的字母）。

@@ -1,4 +1,4 @@
-﻿#include "wubi_engine.h"
+#include "wubi_engine.h"
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -28,6 +28,80 @@ size_t Utf8CharLen(const std::string& s, size_t i) {
     if ((c & 0xF0) == 0xE0) return 3;
     if ((c & 0xF8) == 0xF0) return 4;
     return 1;
+}
+
+// ---------------------------------------------------------------- 词组取码
+void Dictionary::BuildCharCodes() const {
+    charCodes_.clear();
+    charCodes_.reserve(32768);
+    // 只收单字（一个 UTF-8 字符），并且保留码最长的那个（= 全码，而非简码）
+    auto consider = [this](const std::string& word, const std::string& code) {
+        if (word.empty() || code.empty()) return;
+        if (Utf8CharLen(word, 0) != word.size()) return;   // 多字词不要
+        auto it = charCodes_.find(word);
+        if (it == charCodes_.end() || it->second.size() < code.size()) charCodes_[word] = code;
+    };
+    if (bin_) {
+        for (size_t i = 0; i < binCount_; ++i) {
+            const BinaryRec& r = bin_[i];
+            consider(std::string(binBlob_ + r.wordOff, r.wordLen), std::string(r.code, r.codeLen));
+        }
+    } else {
+        for (const Entry& e : entries_) consider(e.word, e.code);
+    }
+    charCodesBuilt_ = true;
+}
+
+std::string Dictionary::FullCodeOfChar(const std::string& utf8Char) const {
+    if (!charCodesBuilt_) BuildCharCodes();
+    auto it = charCodes_.find(utf8Char);
+    return it == charCodes_.end() ? std::string() : it->second;
+}
+
+std::vector<std::string> Utf8Chars(const std::string& s) {
+    std::vector<std::string> out;
+    size_t i = 0;
+    while (i < s.size()) {
+        const size_t n = Utf8CharLen(s, i);
+        if (n == 0 || i + n > s.size()) break;
+        out.push_back(s.substr(i, n));
+        i += n;
+    }
+    return out;
+}
+
+std::string PhraseCode(const std::string& utf8Word, const Dictionary& dict) {
+    const std::vector<std::string> chars = Utf8Chars(utf8Word);
+    if (chars.size() < 2) return std::string();
+
+    std::vector<std::string> codes;
+    codes.reserve(chars.size());
+    for (const auto& c : chars) {
+        std::string fc = dict.FullCodeOfChar(c);
+        if (fc.empty()) return std::string();      // 有字查不到全码：交给调用方兜底
+        codes.push_back(std::move(fc));
+    }
+
+    // 取第 i 个字的第 k 码（码不够长时退到最后一码，避免越界）
+    auto at = [&codes](size_t i, size_t k) -> char {
+        const std::string& c = codes[i];
+        if (c.empty()) return 'x';
+        return c[k < c.size() ? k : c.size() - 1];
+    };
+
+    const size_t n = codes.size();
+    std::string out;
+    out.reserve(4);
+    if (n == 2) {
+        out += at(0, 0); out += at(0, 1); out += at(1, 0); out += at(1, 1);
+    } else if (n == 3) {
+        out += at(0, 0); out += at(1, 0); out += at(2, 0); out += at(2, 1);
+    } else if (n == 4) {
+        for (size_t i = 0; i < 4; ++i) out += at(i, 0);
+    } else {
+        out += at(0, 0); out += at(1, 0); out += at(2, 0); out += at(n - 1, 0);
+    }
+    return out;
 }
 
 // ---------------------------------------------------------------- Dictionary

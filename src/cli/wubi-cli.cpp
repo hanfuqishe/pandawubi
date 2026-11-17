@@ -356,6 +356,36 @@ int wmain(int argc, wchar_t** argv) {
         std::printf("engcase: %s (%zu cases)\n", bad == 0 ? "PASS" : "FAIL", sizeof(cases) / sizeof(cases[0]));
         return bad == 0 ? 0 : 1;
     }
+    if (cmd == "phrasecode") {
+        // 自定义词组取码：按五笔标准规则 + 字的全码
+        struct T { const wchar_t* word; const wchar_t* want; };
+        const T cases[] = {
+            { L"你好",           L"wqvb" },
+            { L"我们",           L"trwu" },
+            { L"计算机",         L"ytsm" },
+            { L"中华人民共和国", L"kwwl" },
+        };
+        int bad = 0;
+        for (const auto& c : cases) {
+            const std::string u8 = Narrow(c.word);
+            const std::string got = wubi::PhraseCode(u8, dict);
+            std::printf("  %ls -> %s", c.word, got.empty() ? "(none)" : got.c_str());
+            if (!got.empty()) {
+                std::printf("   [");
+                for (const auto& ch : wubi::Utf8Chars(u8)) std::printf(" %s=%s", ch.c_str(), dict.FullCodeOfChar(ch).c_str());
+                std::printf(" ]");
+            }
+            const bool ok = (Narrow(c.want) == got);
+            std::printf("  %s\n", ok ? "OK" : "MISMATCH");
+            if (!ok) ++bad;
+        }
+        if (argc > 3) {   // 额外验证用户给的词
+            const std::string u8 = Narrow(argv[3]);
+            std::printf("  %ls -> %s\n", argv[3], wubi::PhraseCode(u8, dict).c_str());
+        }
+        std::printf("phrasecode: %s (%zu cases)\n", bad == 0 ? "PASS" : "FAIL", sizeof(cases) / sizeof(cases[0]));
+        return bad == 0 ? 0 : 1;
+    }
     if (cmd == "english" && argc > 3) {
         wubi::EnglishDict eng;
         const long long n = eng.Load(L"data\\eng_words.txt");

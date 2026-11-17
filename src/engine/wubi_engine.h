@@ -1,4 +1,4 @@
-﻿// wubi_engine.h —— 五笔输入法核心数据层
+// wubi_engine.h —— 五笔输入法核心数据层
 // 词库: TSV  code <TAB> word <TAB> weight <TAB> source
 #pragma once
 
@@ -78,9 +78,16 @@ public:
     size_t CodeCount() const { return bin_ ? binCount_ : buckets_.size(); }
     size_t EntryCount() const { return bin_ ? binCount_ : entries_.size(); }
 
+    // 单字的「全码」（最长码），用于给自定义词组取码。
+    // 首次调用时扫一遍词库建表（147k 条，几毫秒），之后走哈希。
+    std::string FullCodeOfChar(const std::string& utf8Char) const;
+
 private:
     void IndexOne(Entry&& e);
     void BuildSortedIndex() const;
+    void BuildCharCodes() const;
+    mutable std::unordered_map<std::string, std::string> charCodes_;
+    mutable bool charCodesBuilt_ = false;
 
     std::vector<Entry> entries_;
     std::unordered_map<std::string, std::vector<uint32_t>> buckets_;  // 完全匹配
@@ -191,5 +198,16 @@ private:
 // 工具
 bool IsCodeChar(char c);
 size_t Utf8CharLen(const std::string& s, size_t i);
+
+// 按 UTF-8 拆成单字
+std::vector<std::string> Utf8Chars(const std::string& s);
+
+// 自定义词组取码（五笔标准规则，用每个字的全码）：
+//   2 字词：各取前两码                    你好 -> wq vb
+//   3 字词：前两字各首码 + 第三字前两码    计算机 -> y t sm
+//   4 字词：各取首码                      中华人民共和国(多字) 见下
+//   5 字以上：前三字首码 + 末字首码        中华人民共和国 -> k w w l
+// 任一字查不到全码、或不足 2 字时返回空串。
+std::string PhraseCode(const std::string& utf8Word, const Dictionary& dict);
 
 } // namespace wubi

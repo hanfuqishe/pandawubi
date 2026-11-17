@@ -19,6 +19,7 @@
 #include <olectl.h>
 #include <string>
 #include <vector>
+#include <deque>
 #include <functional>
 #include <mutex>
 #include <new>
@@ -788,6 +789,26 @@ private:
     ITfLangBarItem* m_langBar = nullptr;   // 语言栏按钮（显示自定义图标）
     wubi::DigitPunctGate m_gate;   // 数字后单次半角逗号/句号
 
+    // ---- 自定义词组 / 自定义短语（Ctrl+= / Ctrl+Shift+=）----
+    enum class CustomMode { None, Word, Phrase };
+    CustomMode           m_custom = CustomMode::None;
+    int                  m_customPhase = 0;    // 短语：0=输编码 1=录内容
+    std::string          m_customCode;         // 短语编码（a..y，最多 4）
+    std::string          m_customWord;         // 词组：逐字拼起来的 UTF-8
+    std::vector<std::wstring> m_customChars;   // 词组：字序列（← 取字、Del 删首）
+    std::wstring         m_customText;         // 短语：已录内容
+    bool                 m_customAscii = false; // 短语录入：false=中文（五笔） true=英文（按原样）
+    std::deque<std::wstring> m_recentChars;    // 最近上屏的单字（← 依次回取）
+    void BeginCustomWord(ITfContext* pic);
+    void BeginCustomPhrase(ITfContext* pic);
+    void ExitCustom(ITfContext* pic, bool cancel);
+    bool CustomKey(ITfContext* pic, UINT vk, LPARAM lp, bool shift, BOOL* pfEaten);
+    void RefreshCustomPrompt();
+    void SaveCustomWord(ITfContext* pic);
+    void SaveCustomPhrase(ITfContext* pic);
+    void RememberCommitted(const std::wstring& text);
+    bool CaptureCustomText(const std::wstring& text);   // 短语录制：把上屏内容收进缓冲
+
     // 中英文切换（单击 Shift）与状态提示
     bool m_english   = false;
     bool m_shiftDown = false;
@@ -1115,6 +1136,17 @@ void CTextService::Reset() {
     m_code.clear();
     m_composer.Reset();
     m_candWnd.Hide();
+    // 焦点丢失时把自定义模式也收干净，避免下次输入还停在"等回车保存"的状态
+    if (m_custom != CustomMode::None) {
+        m_custom = CustomMode::None;
+        m_customPhase = 0;
+        m_customCode.clear();
+        m_customText.clear();
+        m_customChars.clear();
+        m_customWord.clear();
+        m_customAscii = false;
+        LogLine(L"Reset: custom mode cleared");
+    }
     if (m_compHost) { m_compHost->Release(); m_compHost = nullptr; }
     if (m_context) { m_context->Release(); m_context = nullptr; }
     if (m_comp) { m_comp->Release(); m_comp = nullptr; }
@@ -1278,6 +1310,8 @@ void CTextService::LoadDataOnce() {
 // 直接插入一段文本（标点、简繁后上屏等），不走组码/候选流程
 HRESULT CTextService::CommitString(ITfContext* pic, const std::wstring& text) {
     if (text.empty()) return S_OK;
+    // 短语录制中：不写文档，先收进缓冲
+    if (CaptureCustomText(text)) return S_OK;
     ITfContext* ctx = pic;
     ctx->AddRef();
     HRESULT hr = DoEdit(ctx, [ctx, &text](TfEditCookie ec) -> HRESULT {
@@ -1308,6 +1342,7 @@ HRESULT CTextService::CommitString(ITfContext* pic, const std::wstring& text) {
         return h;
     });
     ctx->Release();
+    if (SUCCEEDED(hr)) RememberCommitted(text);   // 供"自定义词组"用 ← 回取
     return hr;
 }
 
@@ -1317,6 +1352,13 @@ HRESULT CTextService::CommitText(ITfContext* pic, const std::wstring& textIn,
     if (!m_comp) return E_FAIL;
     std::wstring w = textIn;
     LoadDataOnce();
+    // 短语录制中：候选照样能选，但结果收进缓冲，不写文档
+    if (CaptureCustomText(w)) {
+        if (resetComposer) m_composer.Reset();   // 组码必须收干净，否则下一个字会接在旧码后面
+        m_code.clear();
+        CancelComposition(pic);
+        return S_OK;
+    }
     if (m_tradEnabled && m_trad.Loaded()) w = m_trad.ToTraditional(w);
 
     // 词频自学习：记住这次实际选中的「码 -> 词」，下次同码时它会提前
@@ -1366,6 +1408,7 @@ HRESULT CTextService::CommitText(ITfContext* pic, const std::wstring& textIn,
     });
 
     if (SUCCEEDED(hr) && !w.empty()) m_lastCommit = w;   // 记住上一次上屏的内容
+    if (SUCCEEDED(hr)) RememberCommitted(w);             // 供"自定义词组"用 ← 回取
     if (resetComposer) m_composer.Reset();
     m_code.clear();
     m_candWnd.Hide();
@@ -1481,6 +1524,7 @@ void CTextService::ShowCandidateList(const std::vector<std::wstring>& display) {
     RECT caret = { 0, 0, 0, 0 };
     bool haveCaret = false;
     CEditSession* s = new CEditSession([self, &caret, &haveCaret](TfEditCookie ec) -> HRESULT {
+        if (!self->m_context) return E_FAIL;      // 没在组码时（提示/自定义模式）没有 context
         ITfContextView* view = nullptr;
         if (FAILED(self->m_context->GetActiveView(&view)) || !view) return E_FAIL;
         ITfRange* pRange = nullptr;
@@ -1608,6 +1652,273 @@ void CTextService::EngCancel(ITfContext* pic) {
     m_candWnd.Hide();
 }
 
+// ---------------------------------------------------------------- 自定义词组 / 自定义短语
+static std::string WideToUtf8(const std::wstring& w) {
+    if (w.empty()) return std::string();
+    const int n = WideCharToMultiByte(CP_UTF8, 0, w.c_str(), (int)w.size(), nullptr, 0, nullptr, nullptr);
+    if (n <= 0) return std::string();
+    std::string s((size_t)n, '\0');
+    WideCharToMultiByte(CP_UTF8, 0, w.c_str(), (int)w.size(), &s[0], n, nullptr, nullptr);
+    return s;
+}
+static std::wstring Utf8ToWide(const std::string& s) {
+    if (s.empty()) return std::wstring();
+    const int n = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), (int)s.size(), nullptr, 0);
+    if (n <= 0) return std::wstring();
+    std::wstring w((size_t)n, L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, s.c_str(), (int)s.size(), &w[0], n);
+    return w;
+}
+static std::wstring TruncForPrompt(const std::wstring& s, size_t maxChars) {
+    if (s.size() <= maxChars) return s;
+    return s.substr(0, maxChars) + L"…";
+}
+
+// 追加一行到用户词文件。
+// 为什么不用 SaveUserWords 整表重写：输入法在每个宿主进程里各有一份内存词表，
+// explorer/微信这些进程里的旧副本随时会在 Deactivate 时整表落盘，把刚建好的词冲掉
+// （实测到过：新建的短语在别的进程落盘后消失）。追加只会加行，不会删别人的东西。
+static bool AppendUserWordLine(const std::wstring& path, const std::string& code,
+                               const std::string& word, long long weight) {
+    FILE* fp = nullptr;
+    if (_wfopen_s(&fp, path.c_str(), L"ab") != 0 || !fp) return false;
+    char line[2048];
+    const int n = sprintf_s(line, sizeof(line), "%s\t%s\t%lld\r\n",
+                            code.c_str(), word.c_str(), weight);
+    bool ok = false;
+    if (n > 0 && (size_t)n < sizeof(line)) ok = (fwrite(line, 1, (size_t)n, fp) == (size_t)n);
+    fflush(fp);
+    fclose(fp);
+    return ok;
+}
+
+// 记住刚上屏的字，供"自定义词组"用 ← 逐个回取
+void CTextService::RememberCommitted(const std::wstring& text) {
+    for (wchar_t c : text) {
+        if (c < 0x20) continue;                      // 空格/换行不进词组素材
+        m_recentChars.push_back(std::wstring(1, c));
+        if (m_recentChars.size() > 64) m_recentChars.pop_front();
+    }
+}
+
+// 短语录制期间：本该写到文档里的内容改为收进缓冲，回车时才真正入库
+bool CTextService::CaptureCustomText(const std::wstring& text) {
+    if (m_custom != CustomMode::Phrase || m_customPhase != 1) return false;
+    if (text.empty()) return true;
+    if (m_customText.size() + text.size() > 512) return true;   // 上限保护
+    m_customText += text;
+    RefreshCustomPrompt();
+    return true;
+}
+
+void CTextService::BeginCustomWord(ITfContext* pic) {
+    m_custom = CustomMode::Word;
+    m_customPhase = 0;
+    m_customCode.clear();
+    m_customText.clear();
+    m_customChars.clear();
+    m_customWord.clear();
+    m_customAscii = false;
+    m_engActive = false;
+    m_quickMode = false;
+    m_repeatPending = false;
+    m_letterLabels = false;
+    if (m_comp) CancelComposition(pic);
+    m_candWnd.Hide();
+    RefreshCustomPrompt();
+    LogLine(L"custom word: begin, recent chars=%zu", m_recentChars.size());
+}
+
+void CTextService::BeginCustomPhrase(ITfContext* pic) {
+    m_custom = CustomMode::Phrase;
+    m_customPhase = 0;
+    m_customCode.clear();
+    m_customText.clear();
+    m_customChars.clear();
+    m_customWord.clear();
+    m_customAscii = false;
+    m_engActive = false;
+    m_quickMode = false;
+    m_repeatPending = false;
+    m_letterLabels = false;
+    if (m_comp) CancelComposition(pic);
+    m_candWnd.Hide();
+    RefreshCustomPrompt();
+    LogLine(L"custom phrase: begin");
+}
+
+void CTextService::ExitCustom(ITfContext* pic, bool cancel) {
+    const bool wasWord = (m_custom == CustomMode::Word);
+    m_custom = CustomMode::None;
+    m_customPhase = 0;
+    m_customCode.clear();
+    m_customText.clear();
+    m_customChars.clear();
+    m_customWord.clear();
+    m_customAscii = false;
+    m_letterLabels = false;
+    if (cancel) {
+        if (m_comp) CancelComposition(pic);
+        m_candWnd.Hide();
+    }
+    LogLine(L"custom: exit cancel=%d word=%d", (int)cancel, (int)wasWord);
+}
+
+void CTextService::RefreshCustomPrompt() {
+    std::vector<std::wstring> lines;
+    if (m_custom == CustomMode::Word) {
+        std::wstring shown;
+        for (const auto& c : m_customChars) shown += c;
+        lines.push_back(L"自定义词组：" + (shown.empty() ? std::wstring(L"（按 ← 取字）") : TruncForPrompt(shown, 16)));
+        lines.push_back(L"← 加入前一字 · Del 删首 · 回车保存 · Esc 取消");
+    } else if (m_custom == CustomMode::Phrase && m_customPhase == 0) {
+        lines.push_back(L"自定义短语 · 编码：" +
+                        (m_customCode.empty() ? std::wstring(L"（输入字母）") : Utf8ToWide(m_customCode)));
+        lines.push_back(L"a–y 字母作编码，回车确认 · Esc 取消");
+    } else if (m_custom == CustomMode::Phrase) {
+        lines.push_back(L"编码 " + Utf8ToWide(m_customCode) + L"【" +
+                        ((m_english || m_customAscii) ? L"英文" : L"中文") + L"】内容：" +
+                        (m_customText.empty() ? std::wstring(L"（请输入短语）") : TruncForPrompt(m_customText, 20)));
+        lines.push_back(L"回车保存 · F2 切中英 · Backspace 删除 · Esc 取消");
+    }
+    if (lines.empty()) { m_candWnd.Hide(); return; }
+    m_letterLabels = false;
+    ShowCandidateList(lines);
+}
+
+void CTextService::SaveCustomWord(ITfContext* pic) {
+    if (m_customChars.size() < 2) { FlashStatus(L"至少两个字：按 ← 从刚输入的字里取"); return; }
+    const std::string code = wubi::PhraseCode(m_customWord, g_dict.Get());
+    if (code.empty()) { FlashStatus(L"取码失败：有字查不到全码"); return; }
+
+    g_dict.Get().AddUserWord(code, m_customWord, 0x7FFFFFFF);
+    const bool ok = AppendUserWordLine(GetUserWordsPath(), code, m_customWord, 0x7FFFFFFF);
+    const std::wstring text = Utf8ToWide(m_customWord);
+    const std::wstring flash = L"已加入词组 " + Utf8ToWide(code) + L" → " + TruncForPrompt(text, 12);
+    ExitCustom(pic, false);
+    FlashStatus(flash.c_str());
+    LogLine(L"custom word saved: code=%hs word=%hs ok=%d total=%zu",
+            code.c_str(), m_customWord.c_str(), (int)ok, g_dict.Get().UserWordCount());
+}
+
+void CTextService::SaveCustomPhrase(ITfContext* pic) {
+    if (m_customCode.empty()) { FlashStatus(L"请先输入编码"); return; }
+    if (m_customText.empty()) { FlashStatus(L"内容为空：先输入短语再回车"); return; }
+
+    const std::string u8 = WideToUtf8(m_customText);
+    g_dict.Get().AddUserWord(m_customCode, u8, 0x7FFFFFFF);
+    const bool ok = AppendUserWordLine(GetUserWordsPath(), m_customCode, u8, 0x7FFFFFFF);
+    const std::wstring flash = L"已保存短语 " + Utf8ToWide(m_customCode) + L" → " + TruncForPrompt(m_customText, 12);
+    ExitCustom(pic, false);
+    FlashStatus(flash.c_str());
+    LogLine(L"custom phrase saved: code=%hs len=%zu ok=%d total=%zu",
+            m_customCode.c_str(), m_customText.size(), (int)ok, g_dict.Get().UserWordCount());
+}
+
+// 自定义模式下的按键。返回 true 表示已处理（键要吞掉）
+bool CTextService::CustomKey(ITfContext* pic, UINT vk, LPARAM lp, bool shift, BOOL* pfEaten) {
+    if (m_custom == CustomMode::None) return false;
+    // Ctrl/Alt 组合键照常交给应用（复制/粘贴等），别在自定义模式里被吃掉
+    if ((GetKeyState(VK_CONTROL) & 0x8000) || (GetKeyState(VK_MENU) & 0x8000)) return false;
+
+    if (m_custom == CustomMode::Word) {
+        switch (vk) {
+        case VK_LEFT:   // ← 把上一个上屏的字加进来
+            if (!m_recentChars.empty()) {
+                m_customChars.push_back(m_recentChars.back());
+                m_recentChars.pop_back();
+                for (char c : WideToUtf8(m_customChars.back())) m_customWord.push_back(c);
+            }
+            RefreshCustomPrompt();
+            *pfEaten = TRUE;
+            return true;
+        case VK_DELETE:  // Del 删掉最前面那个字（跳过输错的字）
+            if (!m_customChars.empty()) {
+                m_customChars.erase(m_customChars.begin());
+                m_customWord.clear();
+                for (const auto& c : m_customChars) m_customWord += WideToUtf8(c);
+            }
+            RefreshCustomPrompt();
+            *pfEaten = TRUE;
+            return true;
+        case VK_RETURN: SaveCustomWord(pic); *pfEaten = TRUE; return true;
+        case VK_ESCAPE: ExitCustom(pic, true); *pfEaten = TRUE; return true;
+        default: *pfEaten = TRUE; return true;   // 其它键不落到文档里
+        }
+    }
+
+    // ---- 自定义短语 ----
+    if (m_customPhase == 0) {   // 第一步：指定编码
+        if (vk >= 'A' && vk <= 'Y') {           // 只用五笔键位 a..y
+            if (m_customCode.size() < 4) m_customCode.push_back((char)(vk - 'A' + 'a'));
+            RefreshCustomPrompt();
+            *pfEaten = TRUE;
+            return true;
+        }
+        if (vk == VK_BACK) {
+            if (!m_customCode.empty()) m_customCode.pop_back();
+            RefreshCustomPrompt();
+            *pfEaten = TRUE;
+            return true;
+        }
+        if (vk == VK_RETURN) {
+            if (m_customCode.empty()) { FlashStatus(L"编码不能为空"); *pfEaten = TRUE; return true; }
+            m_customPhase = 1;
+            RefreshCustomPrompt();
+            *pfEaten = TRUE;
+            return true;
+        }
+        if (vk == VK_ESCAPE) { ExitCustom(pic, true); *pfEaten = TRUE; return true; }
+        if (vk == 'Z') FlashStatus(L"z 是五笔保留键，不能作编码");   // 别静默吞掉，给个提示
+        *pfEaten = TRUE;
+        return true;
+    }
+
+    // 第二步：录内容。组码/选词交给正常流程，上屏的文字会被 CaptureCustomText 收进缓冲
+    if (vk == VK_F2) {   // 录入中英切换：英文时按原样收（邮箱/网址），中文时走五笔（地址）
+        m_customAscii = !m_customAscii;
+        RefreshCustomPrompt();
+        *pfEaten = TRUE;
+        return true;
+    }
+    const bool composing = m_comp || m_engActive || m_quickMode || m_repeatPending;
+    if (composing) return false;
+
+    if (vk == VK_RETURN) { SaveCustomPhrase(pic); *pfEaten = TRUE; return true; }
+    if (vk == VK_ESCAPE) { ExitCustom(pic, true); *pfEaten = TRUE; return true; }
+    if (vk == VK_BACK) {   // 缓冲里删一个字
+        if (!m_customText.empty()) {
+            size_t i = m_customText.size() - 1;
+            if (i > 0 && m_customText[i] >= 0xDC00 && m_customText[i] <= 0xDFFF) --i;   // 代理对
+            m_customText.resize(i);
+        }
+        RefreshCustomPrompt();
+        *pfEaten = TRUE;
+        return true;
+    }
+
+    BYTE ks[256];
+    GetKeyboardState(ks);
+    wchar_t buf[8] = { 0 };
+
+    if (m_english || m_customAscii) {
+        // 英文录入：所有可打印键按实际键位收进缓冲（大小写、@ . _ 都照原样）
+        if (ToUnicode(vk, (UINT)lp, ks, buf, 8, 0) == 1 && buf[0] >= 0x20) {
+            CaptureCustomText(std::wstring(1, buf[0]));
+        }
+        *pfEaten = TRUE;
+        return true;
+    }
+    // 中文态：数字与空格按原样收进缓冲（身份证号、地址里的空格）
+    if ((vk >= '0' && vk <= '9') || vk == VK_SPACE) {
+        if (ToUnicode(vk, (UINT)lp, ks, buf, 8, 0) == 1) CaptureCustomText(std::wstring(1, buf[0]));
+        *pfEaten = TRUE;
+        return true;
+    }
+    (void)shift;
+    return false;   // 字母/标点继续走正常流程
+}
+
 void CTextService::SetInputModeCompartments(bool chinese) {
     if (!m_context) { LogLine(L"compartments: no context"); return; }
 
@@ -1710,10 +2021,24 @@ static bool IsPrintableVk(UINT vk) {
 
 // 与 OnKeyDown 同一口径：只在"这个键一定会被吃掉"时才向宿主声明。
 bool CTextService::WantsKey(UINT vk, LPARAM lp) {
+    // 自定义词组/短语模式：几乎所有键都由输入法处理，先声明下来，否则宿主直接自己消化
+    if (m_custom != CustomMode::None) {
+        return vk == VK_LEFT || vk == VK_DELETE || vk == VK_RETURN || vk == VK_ESCAPE ||
+               vk == VK_BACK || vk == VK_SPACE || vk == VK_F2 || (vk >= '0' && vk <= '9') ||
+               IsPrintableVk(vk) || vk == VK_SHIFT || vk == VK_LSHIFT || vk == VK_RSHIFT;
+    }
     if (m_english) return false;                       // 自由英文模式：输入法完全不参与
     const bool ctrl = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
     const bool alt  = (GetKeyState(VK_MENU) & 0x8000) != 0;
-    if (ctrl || alt) return false;                     // 组合键一律交给应用
+    if (alt) return false;
+    if (ctrl) {
+        // Ctrl 组合默认交给应用，但自己的热键要先声明，否则宿主根本不会把 KeyDown 转到输入法：
+        //   Ctrl+= 自定义词组 · Ctrl+Shift+= 自定义短语 · Ctrl+Shift+T/P 简繁/标点
+        if (vk == VK_OEM_PLUS) return true;
+        const bool shift = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
+        if (shift && (vk == 'T' || vk == 'P')) return true;
+        return false;
+    }
 
     if (vk >= 'A' && vk <= 'Z') {
         // 'z' 在没有"上次上屏"时不由输入法处理（OnKeyDown 里同样不吞），别声明
@@ -1778,6 +2103,18 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
         *pfEaten = TRUE;
         return S_OK;
     }
+
+    // Ctrl+= 进入自定义词组；Ctrl+Shift+= （也就是带 Shift 的那个 + 键）进入自定义短语。
+    // 用 VK_OEM_PLUS 判断，所以美式键盘上 Ctrl+= 与 Ctrl+Shift+= 都能触发，靠 Shift 区分。
+    if (ctrl && !alt && vk == VK_OEM_PLUS) {
+        if (m_custom != CustomMode::None) ExitCustom(pic, true);   // 再按一次先退出，避免状态叠加
+        if (shift) BeginCustomPhrase(pic);
+        else       BeginCustomWord(pic);
+        *pfEaten = TRUE;
+        return S_OK;
+    }
+    // 自定义模式里的键优先处理；返回 false 表示交给下面的常规流程（组码/选词）
+    if (CustomKey(pic, vk, lParam, shift, pfEaten)) return S_OK;
 
     // 其它 Ctrl/Alt 组合键一律交还应用：Ctrl+C 复制、Ctrl+V 粘贴、Alt 菜单等。
     // 之前这里不判断修饰键，导致按下 Ctrl+C 时被当成组码 'c' 吞掉。
