@@ -1823,7 +1823,7 @@ void CTextService::RefreshCustomPrompt() {
     for (const auto& c : m_customChars) shown += c;
     std::vector<std::wstring> lines;
     lines.push_back(L"自定义词组：" + (shown.empty() ? std::wstring(L"（按 ← 取字）") : TruncForPrompt(shown, 16)));
-    lines.push_back(L"← 把前一个字加到最前 · Del 删首 · Backspace 删尾 · 回车保存 · Esc 取消");
+    lines.push_back(L"← 添一个字（加到最前）· → 缩一个 · Del 删首 · Backspace 删尾 · 回车保存 · Esc 取消");
     m_letterLabels = false;
     ShowCandidateList(lines);
 }
@@ -1862,7 +1862,17 @@ bool CTextService::CustomKey(ITfContext* pic, UINT vk, LPARAM lp, bool shift, BO
         RefreshCustomPrompt();
         *pfEaten = TRUE;
         return true;
-    case VK_DELETE:  // Del 删掉最前面那个字（跳过输错的字）
+    case VK_RIGHT:   // → 缩一个：把最近取回来的那个字（在最前面）退回上屏队列，← 可以再取
+        if (!m_customChars.empty()) {
+            m_recentChars.push_back(m_customChars.front());
+            m_customChars.erase(m_customChars.begin());
+            m_customWord.clear();
+            for (const auto& c : m_customChars) m_customWord += WideToUtf8(c);
+        }
+        RefreshCustomPrompt();
+        *pfEaten = TRUE;
+        return true;
+    case VK_DELETE:  // Del 删掉最前面那个字（真正丢弃，不回队列）
         if (!m_customChars.empty()) {
             m_customChars.erase(m_customChars.begin());
             m_customWord.clear();
@@ -1990,7 +2000,7 @@ static bool IsPrintableVk(UINT vk) {
 bool CTextService::WantsKey(UINT vk, LPARAM lp) {
     // 自定义词组模式：几乎所有键都由输入法处理，先声明下来，否则宿主直接自己消化
     if (m_customWordMode) {
-        return vk == VK_LEFT || vk == VK_DELETE || vk == VK_RETURN || vk == VK_ESCAPE ||
+        return vk == VK_LEFT || vk == VK_RIGHT || vk == VK_DELETE || vk == VK_RETURN || vk == VK_ESCAPE ||
                vk == VK_BACK || vk == VK_SPACE || (vk >= '0' && vk <= '9') ||
                IsPrintableVk(vk) || vk == VK_SHIFT || vk == VK_LSHIFT || vk == VK_RSHIFT;
     }
