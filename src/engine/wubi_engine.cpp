@@ -18,7 +18,9 @@
 
 namespace wubi {
 
-bool IsCodeChar(char c) { return c >= 'a' && c <= 'y'; }
+// 编码字符：a..z。z 不是五笔码元，但自定义词组/短语常用拼音缩写（dz=地址、sfz=身份证），
+// 所以编码允许 z；系统词库里的码仍然只会是 a..y。
+bool IsCodeChar(char c) { return c >= 'a' && c <= 'z'; }
 
 size_t Utf8CharLen(const std::string& s, size_t i) {
     if (i >= s.size()) return 0;
@@ -253,8 +255,17 @@ std::vector<Candidate> Dictionary::Lookup(std::string_view input, size_t maxCand
     // ---------- 二进制（mmap）模式 ----------
     if (bin_) {
         size_t lo = 0, hi = 0;
-        if (!BinRange(input, lo, hi)) { stats_.exactHits = 0; stats_.prefixHits = 0; return out; }
-
+        if (!BinRange(input, lo, hi)) {
+            // 系统词库里没有这个前缀（例如自定义短语用的 dz / sfz，含 z），
+            // 但用户词可能在：不能直接返回空，否则自定义短语永远打不出来。
+            stats_.exactHits = 0;
+            stats_.prefixHits = 0;
+            CollectUserCandidates(input, out);
+            std::sort(out.begin(), out.end(), [this](const Candidate& a, const Candidate& b) {
+                return BetterCand(a, b);
+            });
+            return out;
+        }
         std::vector<Candidate> exact;
         auto worseFirst = [this](const Candidate& a, const Candidate& b) { return BetterCand(a, b); }; // top = worst (was inverted)
         std::priority_queue<Candidate, std::vector<Candidate>, decltype(worseFirst)> heap(worseFirst);

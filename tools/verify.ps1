@@ -247,6 +247,8 @@ if (Test-Path $qqIni) {
 }
 
 "— 双架构产物 —"
+$phraseExe = Join-Path $ws 'dist\panda-phrase.exe'
+Check 'panda-phrase.exe 存在' (Test-Path $phraseExe) $(if (Test-Path $phraseExe) { "$((Get-Item $phraseExe).Length) bytes" } else { 'missing（自定义短语窗口用）' })
 $x86dll = Join-Path $ws 'dist\panda_tsf32.dll'
 Check 'x86 DLL 存在' (Test-Path $x86dll) $(if (Test-Path $x86dll) { "$((Get-Item $x86dll).Length) bytes" } else { 'missing' })
 if (Test-Path $x86dll) {
