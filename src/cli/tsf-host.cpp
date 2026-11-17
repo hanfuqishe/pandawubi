@@ -153,6 +153,7 @@ static void ParseScript(const std::wstring& s) {
                 case L'X': vk = VK_ESCAPE; break;
                 case L'H': vk = VK_SHIFT; break;
                 case L'F': vk = VK_F2; break;
+                case L'Q': vk = VK_OEM_7; sh = true; break;   // Shift+' = 双引号
                 default: break;
                 }
                 if (vk) { g_steps.push_back({ vk, ctrl, sh, L' ' }); i = close + 1; continue; }
@@ -163,6 +164,11 @@ static void ParseScript(const std::wstring& s) {
         bool sh = (ch >= L'A' && ch <= L'Z');
         if (ch == L'@') { vk = L'2'; sh = true; }        // Shift+2
         else if (ch == L'_') { vk = VK_OEM_MINUS; sh = true; }
+        else if (ch == L':') { vk = VK_OEM_1; sh = true; }      // Shift+;
+        else if (ch == L'"') { vk = VK_OEM_7; sh = true; }      // Shift+'
+        else if (ch == L'?') { vk = VK_OEM_2; sh = true; }      // Shift+/
+        else if (ch == L'<') { vk = VK_OEM_COMMA; sh = true; }  // Shift+,
+        else if (ch == L'>') { vk = VK_OEM_PERIOD; sh = true; } // Shift+.
         g_steps.push_back({ vk, false, sh, ch });
         ++i;
     }

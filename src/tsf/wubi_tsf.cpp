@@ -2054,7 +2054,7 @@ bool CTextService::WantsKey(UINT vk, LPARAM lp) {
                (vk >= '0' && vk <= '9') || vk == VK_OEM_1 || vk == VK_OEM_7 ||
                vk == VK_OEM_MINUS || vk == VK_OEM_PLUS || IsPrintableVk(vk);
     }
-    if (vk == VK_OEM_1) return true;                   // 分号：便捷输入
+    if (vk == VK_OEM_1 && !(GetKeyState(VK_SHIFT) & 0x8000)) return true;   // 分号：便捷输入
 
     if (m_puncEnabled) {                               // 中文标点接管：确实能映射才声明
         LoadDataOnce();
@@ -2324,11 +2324,14 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
             return S_OK;
         }
         if (vk == VK_SPACE || vk == VK_RETURN) { handle(m_composer.SelectBest());             return S_OK; }
-        if (vk >= '1' && vk <= '9')        { handle(m_composer.SelectDigit((int)(vk - '0'))); return S_OK; }
-        if (vk == VK_OEM_1)                { handle(m_composer.SelectDigit(2));                return S_OK; }  // 分号 = 第2候选
-        if (vk == VK_OEM_7)                { handle(m_composer.SelectDigit(3));                return S_OK; }  // 单引号 = 第3候选
-        if (vk == VK_OEM_MINUS)            { handle(m_composer.PrevPage());                    return S_OK; }  // - 上一页
-        if (vk == VK_OEM_PLUS)             { handle(m_composer.NextPage());                    return S_OK; }  // = 下一页
+        // 下面这些是"按住 Shift 就变成另一个符号"的键，必须区分有没有 Shift：
+        //   ; -> :   ' -> "   - -> _   = -> +   1 -> !
+        // 否则 Shift+; 会被当成"选第 2 候选"，冒号怎么都打不出来。
+        if (!shift && vk >= '1' && vk <= '9') { handle(m_composer.SelectDigit((int)(vk - '0'))); return S_OK; }
+        if (!shift && vk == VK_OEM_1)         { handle(m_composer.SelectDigit(2));                return S_OK; }  // 分号 = 第2候选
+        if (!shift && vk == VK_OEM_7)         { handle(m_composer.SelectDigit(3));                return S_OK; }  // 单引号 = 第3候选
+        if (!shift && vk == VK_OEM_MINUS)     { handle(m_composer.PrevPage());                    return S_OK; }  // - 上一页
+        if (!shift && vk == VK_OEM_PLUS)      { handle(m_composer.NextPage());                    return S_OK; }  // = 下一页
         if (vk == VK_ESCAPE)               { handle(m_composer.Escape());                      return S_OK; }
         if (vk == VK_BACK)                 { handle(m_composer.Backspace());                   return S_OK; }
         // 其它符号（非 ; ' , . 与数字）：先把第 1 候选上屏，再输出这个符号。
@@ -2358,8 +2361,8 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
 
     // 无组码（修饰键已在函数开头处理完毕）
 
-    // 分号：进入便捷输入（不是直接出分号）
-    if (vk == VK_OEM_1) {
+    // 分号：进入便捷输入（不是直接出分号）。Shift+; 是冒号，交给下面的标点接管
+    if (vk == VK_OEM_1 && !shift) {
         BeginQuick();
         // 立刻显示一个提示框，让用户知道进入了便捷输入模式
         ShowCandidateList(std::vector<std::wstring>{ L"便捷输入：请输入数字" });
@@ -2369,7 +2372,7 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
     }
 
     // Z 键：进入"重复上次上屏"待定状态（只提示，不写文档；按空格才上屏）
-    if (vk == 'Z' && !m_lastCommit.empty()) {
+    if (vk == 'Z' && !shift && !m_lastCommit.empty()) {
         m_repeatPending = true;
         m_repeatText = m_lastCommit;
         ShowCandidateList(std::vector<std::wstring>{ L"空格重复：" + m_lastCommit });
