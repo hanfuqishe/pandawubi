@@ -1786,6 +1786,13 @@ void CTextService::BeginCustomWord(ITfContext* pic) {
     m_customWordMode = true;
     m_customChars.clear();
     m_customWord.clear();
+    // 默认就把最近输入的两个字带进来（取法同 ←：从队尾取、插到最前，字序才是输入顺序），
+    // 常见情形直接回车即可；要更长的词组继续按 ← 往前取。
+    for (int i = 0; i < 2 && !m_recentChars.empty(); ++i) {
+        m_customChars.insert(m_customChars.begin(), m_recentChars.back());
+        m_recentChars.pop_back();
+    }
+    for (const auto& c : m_customChars) m_customWord += WideToUtf8(c);
     m_engActive = false;
     m_quickMode = false;
     m_repeatPending = false;
@@ -1793,7 +1800,8 @@ void CTextService::BeginCustomWord(ITfContext* pic) {
     if (m_comp) CancelComposition(pic);
     m_candWnd.Hide();
     RefreshCustomPrompt();
-    LogLine(L"custom word: begin, recent chars=%zu", m_recentChars.size());
+    LogLine(L"custom word: begin, auto-took %zu char(s), %zu left in history",
+            m_customChars.size(), m_recentChars.size());
 }
 
 void CTextService::ExitCustom(ITfContext* pic, bool cancel) {
