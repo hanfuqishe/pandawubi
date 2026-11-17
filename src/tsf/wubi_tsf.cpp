@@ -793,13 +793,14 @@ private:
     bool                 m_customWordMode = false;
     std::string          m_customWord;         // 词组：逐字拼起来的 UTF-8
     std::vector<std::wstring> m_customChars;   // 词组：字序列（← 取字、Del 删首）
-    std::deque<std::wstring> m_recentChars;    // 最近上屏的单字（← 依次回取）
+    std::vector<std::wstring> m_recentChars;    // 最近上屏的单字（← 依次回取）
     void BeginCustomWord(ITfContext* pic);
     void ExitCustom(ITfContext* pic, bool cancel);
     bool CustomKey(ITfContext* pic, UINT vk, LPARAM lp, bool shift, BOOL* pfEaten);
     void RefreshCustomPrompt();
     void SaveCustomWord(ITfContext* pic);
     void RememberCommitted(const std::wstring& text);
+    void TrimRecentCharsByDocument(ITfContext* pic);   // 剔除已被删掉的字（宿主能报光标位置时）
     void LaunchPhraseWindow();                 // 启动独立窗口录自定义短语
     void MaybeReloadUserWords();               // 外部新增的词（窗口写的）热加载
     ULONGLONG m_userWordsStamp = 0;
@@ -1681,7 +1682,7 @@ void CTextService::RememberCommitted(const std::wstring& text) {
     for (wchar_t c : text) {
         if (c < 0x20) continue;                      // 空格/换行不进词组素材
         m_recentChars.push_back(std::wstring(1, c));
-        if (m_recentChars.size() > 64) m_recentChars.pop_front();
+        if (m_recentChars.size() > 64) m_recentChars.erase(m_recentChars.begin());
     }
 }
 
@@ -1724,7 +1725,64 @@ void CTextService::MaybeReloadUserWords() {
     LogLine(L"user words reloaded: %lld line(s), total=%zu", n, g_dict.Get().UserWordCount());
 }
 
+// 用文档里"光标之前实际还留着的字"清洗最近上屏队列：
+// 打了「工」「人」「了」，发现「了」打错按退格删掉，再加词组时队列里还留着「了」。
+// 这里读光标前最多 64 个字，从后往前按子序列匹配——对得上的保留，对不上的就是被删掉的。
+// 注意：宿主必须能把光标位置报出来（ITfRangeACP）；报 0 的宿主（例如 RichEdit/记事本）
+// 拿不到可靠位置，就放弃清洗，让用户在词组模式里用 Del/Backspace 手动修。
+void CTextService::TrimRecentCharsByDocument(ITfContext* pic) {
+    if (!pic || m_recentChars.empty()) return;
+
+    const LONG kMax = 64;
+    std::wstring tail;
+    CEditSession* s = new CEditSession([pic, &tail, kMax](TfEditCookie ec) -> HRESULT {
+        TF_SELECTION sel = {};
+        ULONG n = 0;
+        if (FAILED(pic->GetSelection(ec, TF_DEFAULT_SELECTION, 1, &sel, &n)) || n == 0 || !sel.range) return E_FAIL;
+        ITfRangeACP* acp = nullptr;
+        HRESULT hr = sel.range->QueryInterface(IID_ITfRangeACP, (void**)&acp);
+        if (FAILED(hr) || !acp) { sel.range->Release(); return E_FAIL; }
+
+        LONG start = 0, len = 0;
+        hr = acp->GetExtent(&start, &len);
+        const LONG caret = start + len;
+        if (SUCCEEDED(hr) && caret > 0) {
+            const LONG from = (caret > kMax) ? (caret - kMax) : 0;
+            if (SUCCEEDED(acp->SetExtent(from, caret - from))) {
+                wchar_t buf[128] = { 0 };
+                ULONG got = 0;
+                if (SUCCEEDED(sel.range->GetText(ec, 0, buf, (ULONG)kMax, &got))) tail.assign(buf, got);
+            }
+        }
+        acp->Release();
+        sel.range->Release();
+        return S_OK;
+    });
+    HRESULT hrSession = E_FAIL;
+    const HRESULT hrReq = pic->RequestEditSession(m_tid, s, TF_ES_SYNC | TF_ES_READWRITE, &hrSession);
+    s->Release();
+    if (FAILED(hrReq) || FAILED(hrSession)) {
+        LogLine(L"recent chars: session req=0x%08lX session=0x%08lX", (unsigned long)hrReq, (unsigned long)hrSession);
+        return;
+    }
+    if (tail.empty()) {
+        LogLine(L"recent chars: no usable caret, skip trim (%zu kept)", m_recentChars.size());
+        return;
+    }
+
+    std::vector<std::wstring> history = m_recentChars;
+    const size_t dropped = wubi::TrimCharsByText(history, tail);
+    if (dropped == 0) return;
+    if (history.empty()) {   // 一个字都对不上：可能刚换了文档，保守不清空
+        LogLine(L"recent chars: no match, keep %zu", m_recentChars.size());
+        return;
+    }
+    m_recentChars.swap(history);
+    LogLine(L"recent chars: trimmed %zu deleted char(s), %zu left", dropped, m_recentChars.size());
+}
+
 void CTextService::BeginCustomWord(ITfContext* pic) {
+    TrimRecentCharsByDocument(pic);
     m_customWordMode = true;
     m_customChars.clear();
     m_customWord.clear();
@@ -1757,7 +1815,7 @@ void CTextService::RefreshCustomPrompt() {
     for (const auto& c : m_customChars) shown += c;
     std::vector<std::wstring> lines;
     lines.push_back(L"自定义词组：" + (shown.empty() ? std::wstring(L"（按 ← 取字）") : TruncForPrompt(shown, 16)));
-    lines.push_back(L"← 把前一个字加到最前 · Del 删首 · 回车保存 · Esc 取消");
+    lines.push_back(L"← 把前一个字加到最前 · Del 删首 · Backspace 删尾 · 回车保存 · Esc 取消");
     m_letterLabels = false;
     ShowCandidateList(lines);
 }
@@ -1799,6 +1857,15 @@ bool CTextService::CustomKey(ITfContext* pic, UINT vk, LPARAM lp, bool shift, BO
     case VK_DELETE:  // Del 删掉最前面那个字（跳过输错的字）
         if (!m_customChars.empty()) {
             m_customChars.erase(m_customChars.begin());
+            m_customWord.clear();
+            for (const auto& c : m_customChars) m_customWord += WideToUtf8(c);
+        }
+        RefreshCustomPrompt();
+        *pfEaten = TRUE;
+        return true;
+    case VK_BACK:    // Backspace 删掉最后面那个字（最容易打错的通常是最近这个）
+        if (!m_customChars.empty()) {
+            m_customChars.pop_back();
             m_customWord.clear();
             for (const auto& c : m_customChars) m_customWord += WideToUtf8(c);
         }
@@ -1919,6 +1986,10 @@ bool CTextService::WantsKey(UINT vk, LPARAM lp) {
                vk == VK_BACK || vk == VK_SPACE || (vk >= '0' && vk <= '9') ||
                IsPrintableVk(vk) || vk == VK_SHIFT || vk == VK_LSHIFT || vk == VK_RSHIFT;
     }
+    // 注意：退格**不声明**。声明了（TestKeyDown=TRUE）而 OnKeyDown 又不吞，
+    // 有些宿主会直接把这一键丢掉、不再删字（实测 RichEdit 就是如此），属于会砸功能的做法。
+    // 代价是多数宿主不会把退格转给输入法，所以"删掉的字还在最近上屏队列里"这件事
+    // 只能靠 OnKeyDown 里的记账（能在部分宿主生效），见那里的注释。
     if (m_english) return false;                       // 自由英文模式：输入法完全不参与
     const bool ctrl = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
     const bool alt  = (GetKeyState(VK_MENU) & 0x8000) != 0;
@@ -2012,6 +2083,15 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
     }
     // 自定义模式里的键优先处理；返回 false 表示交给下面的常规流程（组码/选词）
     if (CustomKey(pic, vk, lParam, shift, pfEaten)) return S_OK;
+
+    // 退格：不在组码/补全里时这一键是给应用删字的，同时把它从"最近上屏的字"里剔掉——
+    // 否则打错一个字退格删掉后，做自定义词组时它还会被 ← 取回来（字序/内容全错）。
+    if (vk == VK_BACK && !*pfEaten &&
+        !m_comp && !m_engActive && !m_quickMode && !m_repeatPending &&
+        !ctrl && !alt && !m_english && !m_recentChars.empty()) {
+        m_recentChars.pop_back();
+        LogLine(L"recent chars: backspace removed one, %zu left", m_recentChars.size());
+    }
 
     // 其它 Ctrl/Alt 组合键一律交还应用：Ctrl+C 复制、Ctrl+V 粘贴、Alt 菜单等。
     // 之前这里不判断修饰键，导致按下 Ctrl+C 时被当成组码 'c' 吞掉。

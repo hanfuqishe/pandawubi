@@ -872,6 +872,30 @@ bool Transliteration::Load(const std::wstring& path) {
     return true;
 }
 
+// ---------------------------------------------------------------- 上屏字队列清洗
+size_t TrimCharsByText(std::vector<std::wstring>& history, const std::wstring& tail) {
+    if (history.empty() || tail.empty()) return 0;
+
+    std::vector<std::wstring> kept;
+    kept.reserve(history.size());
+    size_t dropped = 0;
+    size_t pos = tail.size();                     // 只在 tail[0..pos) 里往前找
+    for (size_t i = history.size(); i-- > 0;) {
+        const wchar_t want = history[i].empty() ? 0 : history[i][0];
+        size_t hit = pos;
+        while (hit > 0 && tail[hit - 1] != want) --hit;
+        if (hit > 0) {                            // 文档里还在：留下，并把搜索位置往前挪
+            kept.push_back(history[i]);
+            pos = hit - 1;
+        } else {
+            ++dropped;                            // 文档里找不到了：被删掉
+        }
+    }
+    if (!kept.empty()) std::reverse(kept.begin(), kept.end());  // 从后往前收集的，翻回输入顺序
+    history.swap(kept);                                        // 全都对不上时 history 变空，由调用方决定放弃
+    return dropped;
+}
+
 std::wstring Transliteration::ToTraditional(std::wstring_view s) const {
     std::wstring out;
     out.reserve(s.size());

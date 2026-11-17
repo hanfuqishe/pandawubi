@@ -202,6 +202,11 @@ size_t Utf8CharLen(const std::string& s, size_t i);
 // 按 UTF-8 拆成单字
 std::vector<std::string> Utf8Chars(const std::string& s);
 
+// 用"文档里光标前实际还留着的文本"清洗最近上屏的字队列（每个元素是一个字）：
+// 从后往前做子序列匹配——对得上的留下，对不上的就是已经被用户删掉的，丢弃。
+// 返回被丢弃的字数；调用方在 kept 为空（一个字都对不上，多半是换了文档）时应放弃清洗。
+size_t TrimCharsByText(std::vector<std::wstring>& history, const std::wstring& tail);
+
 // 自定义词组取码（五笔标准规则，用每个字的全码）：
 //   2 字词：各取前两码                    你好 -> wq vb
 //   3 字词：前两字各首码 + 第三字前两码    计算机 -> y t sm

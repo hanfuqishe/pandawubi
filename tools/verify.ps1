@@ -51,6 +51,8 @@ Check '大小写照抄输入' ($out -match 'engcase: PASS') 'Shift+AB -> ABOUT�
 "— 自定义词组取码（五笔规则 + 字的全码）—"
 $out = & $cli $dict phrasecode 2>&1 | Out-String
 Check '词组取码' ($out -match 'phrasecode: PASS') '你好=wqvb · 我们=trwu · 计算机=ytsm · 中华人民共和国=kwwl'
+$out = & $cli $dict trimtest 2>&1 | Out-String
+Check '退格删掉的字被剔除' ($out -match 'trimtest: PASS') '队尾/中段删除都能对上，完全对不上时由调用方放弃'
 "— 多词库切换（DictFile）—"
 $iniDict = Join-Path $ws 'build\dict-test.ini'
 [IO.File]::WriteAllText($iniDict, "[Config]`r`nDictFile=dict-qq.bin`r`n", (New-Object System.Text.ASCIIEncoding))

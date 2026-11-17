@@ -356,6 +356,32 @@ int wmain(int argc, wchar_t** argv) {
         std::printf("engcase: %s (%zu cases)\n", bad == 0 ? "PASS" : "FAIL", sizeof(cases) / sizeof(cases[0]));
         return bad == 0 ? 0 : 1;
     }
+    if (cmd == "trimtest") {
+        // 上屏字队列清洗：文档里还留着的字才保留（退格删掉的不算）
+        struct T { std::vector<std::wstring> hist; std::wstring tail; size_t wantDropped; std::wstring wantKept; };
+        const T cases[] = {
+            { { L"工", L"人", L"了" }, L"工人",   1, L"工人"  },   // 末尾「了」被退格删掉
+            { { L"工", L"人" },        L"工人",   0, L"工人"  },   // 没删
+            { { L"工", L"人", L"了", L"啊" }, L"工啊", 2, L"工啊" }, // 中间删掉两个字
+            { { L"工" },               L"工人",   0, L"工"    },   // 文档里更长：不动
+            { { L"工", L"人", L"了" }, L"",       0, L"工人了" },   // 读不到光标：调用方会跳过，函数本身不动
+            { { L"好" },               L"工人",   1, L""      },   // 完全对不上：history 变空，调用方放弃清洗
+        };
+        int bad = 0;
+        for (const auto& c : cases) {
+            std::vector<std::wstring> h = c.hist;
+            size_t dropped = wubi::TrimCharsByText(h, c.tail);
+            std::wstring kept;
+            for (const auto& x : h) kept += x;
+            const bool ok = (dropped == c.wantDropped) && (kept == c.wantKept);
+            std::printf("  %s hist=%zu tail=%zu -> dropped=%zu kept=%zu %s\n",
+                        ok ? "PASS" : "FAIL", c.hist.size(), c.tail.size(), dropped, h.size(),
+                        ok ? "" : "MISMATCH");
+            if (!ok) ++bad;
+        }
+        std::printf("trimtest: %s (%zu cases)\n", bad == 0 ? "PASS" : "FAIL", sizeof(cases) / sizeof(cases[0]));
+        return bad == 0 ? 0 : 1;
+    }
     if (cmd == "phrasecode") {
         // 自定义词组取码：按五笔标准规则 + 字的全码
         struct T { const wchar_t* word; const wchar_t* want; };
