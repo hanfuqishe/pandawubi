@@ -138,47 +138,74 @@ static LRESULT CALLBACK EditProc(HWND h, UINT msg, WPARAM wp, LPARAM lp, UINT_PT
     return DefSubclassProc(h, msg, wp, lp);
 }
 
+// 客户区尺寸（逻辑单位，创建时按 DPI 缩放）
+static const int kClientW = 420;
+static const int kClientH = 262;
+
 static void CreateChildren(HWND hwnd) {
-    const int pad = S(14), rowH = S(24), editH = S(26);
+    const int pad = S(16);
+    const int editH = S(26);
+    const int labelH = S(18);
+    const int w = S(kClientW) - pad * 2;
 
     g_font = CreateFontW(-S(13), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
                          OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
                          DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei UI");
     if (!g_font) g_font = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
 
-    CreateWindowExW(0, L"STATIC", L"编码（a–y，最多 4 位）：",
-                    WS_CHILD | WS_VISIBLE, pad, pad, S(260), S(18), hwnd, nullptr, nullptr, nullptr);
+    int y = pad;
+
+    // 编码
+    HWND lblCode = CreateWindowExW(0, L"STATIC", L"编码",
+                                   WS_CHILD | WS_VISIBLE | SS_LEFT,
+                                   pad, y, S(60), labelH, hwnd, nullptr, nullptr, nullptr);
     g_code = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"",
                              WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL,
-                             pad, pad + S(20), S(140), editH, hwnd, (HMENU)(INT_PTR)ID_CODE, nullptr, nullptr);
+                             pad + S(60), y - S(3), S(120), editH,
+                             hwnd, (HMENU)(INT_PTR)ID_CODE, nullptr, nullptr);
+    SendMessageW(g_code, EM_SETLIMITTEXT, (WPARAM)4, 0);
+    HWND hintCode = CreateWindowExW(0, L"STATIC", L"a–z 字母，最多 4 位",
+                                    WS_CHILD | WS_VISIBLE | SS_LEFT,
+                                    pad + S(60) + S(120) + S(10), y, w - S(190), labelH,
+                                    hwnd, nullptr, nullptr, nullptr);
+    y += editH + S(12);
 
-    CreateWindowExW(0, L"STATIC", L"短语（中文直接打；也可写邮箱、身份证号）：",
-                    WS_CHILD | WS_VISIBLE, pad, pad + S(20) + editH + S(14), S(380), S(18),
-                    hwnd, nullptr, nullptr, nullptr);
+    // 短语
+    HWND lblPhrase = CreateWindowExW(0, L"STATIC", L"短语",
+                                     WS_CHILD | WS_VISIBLE | SS_LEFT,
+                                     pad, y, S(60), labelH, hwnd, nullptr, nullptr, nullptr);
+    const int phraseH = S(96);
     g_phrase = CreateWindowExW(WS_EX_CLIENTEDGE, MSFTEDIT_CLASS, L"",
-                               WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL,
-                               pad, pad + S(20) + editH + S(36), S(380), editH, hwnd, (HMENU)(INT_PTR)ID_PHRASE,
-                               nullptr, nullptr);
+                               WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_MULTILINE |
+                                   ES_AUTOVSCROLL | ES_WANTRETURN,
+                               pad, y + labelH, w, phraseH,
+                               hwnd, (HMENU)(INT_PTR)ID_PHRASE, nullptr, nullptr);
     if (!g_phrase) {   // 极少见：Msftedit 没起来，退回普通 EDIT（中文要靠别的输入法）
         g_phrase = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"",
-                                   WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL,
-                                   pad, pad + S(20) + editH + S(36), S(380), editH, hwnd,
-                                   (HMENU)(INT_PTR)ID_PHRASE, nullptr, nullptr);
+                                   WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_MULTILINE | ES_AUTOVSCROLL,
+                                   pad, y + labelH, w, phraseH,
+                                   hwnd, (HMENU)(INT_PTR)ID_PHRASE, nullptr, nullptr);
     }
+    y += labelH + phraseH + S(8);
 
-    g_hint = CreateWindowExW(0, L"STATIC", L"",
+    // 提示行（校验失败的原因写在这里）
+    g_hint = CreateWindowExW(0, L"STATIC", L"中文直接打（本输入法在框里可用），邮箱/身份证号也能写；回车保存，Esc 取消。z 打头的编码与 Z 重复冲突。",
                              WS_CHILD | WS_VISIBLE | SS_LEFT,
-                             pad, pad + S(20) + editH + S(36) + editH + S(10), S(380), S(34),
-                             hwnd, nullptr, nullptr, nullptr);
+                             pad, y, w, S(34), hwnd, nullptr, nullptr, nullptr);
+    y += S(34) + S(10);
 
-    CreateWindowExW(0, L"BUTTON", L"保存(&S)",
+    // 底部按钮（右对齐）
+    const int btnW = S(92), btnH = S(30);
+    CreateWindowExW(0, L"BUTTON", L"保存",
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_DEFPUSHBUTTON,
-                    S(256), pad + S(20) + editH + S(36), S(64), S(28), hwnd, (HMENU)(INT_PTR)ID_OK, nullptr, nullptr);
+                    pad + w - btnW * 2 - S(10), y, btnW, btnH,
+                    hwnd, (HMENU)(INT_PTR)ID_OK, nullptr, nullptr);
     CreateWindowExW(0, L"BUTTON", L"取消",
                     WS_CHILD | WS_VISIBLE | WS_TABSTOP,
-                    S(328), pad + S(20) + editH + S(36), S(64), S(28), hwnd, (HMENU)(INT_PTR)ID_CANCEL, nullptr, nullptr);
+                    pad + w - btnW, y, btnW, btnH,
+                    hwnd, (HMENU)(INT_PTR)ID_CANCEL, nullptr, nullptr);
 
-    for (HWND h : { g_code, g_phrase, g_hint }) SetFont(h, g_font);
+    for (HWND h : { lblCode, hintCode, lblPhrase, g_hint }) SetFont(h, g_font);
     EnumChildWindows(hwnd, [](HWND h, LPARAM) -> BOOL { SetFont(h, g_font); return TRUE; }, 0);
 
     SetWindowSubclass(g_code, EditProc, 1, 0);
@@ -186,7 +213,6 @@ static void CreateChildren(HWND hwnd) {
 
     SetFocus(g_code);
 }
-
 static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     switch (msg) {
     case WM_CREATE:
@@ -225,6 +251,15 @@ int WINAPI wWinMain(HINSTANCE hSelf, HINSTANCE, LPWSTR, int) {
         return 0;
     }
 
+    // 先声明 DPI 感知：否则 175% 缩放下窗口会被系统位图拉伸，控件也按 96 排版
+    {
+        typedef BOOL (WINAPI* SetCtx)(HANDLE);
+        HMODULE u32 = GetModuleHandleW(L"user32.dll");
+        auto setCtx = u32 ? (SetCtx)GetProcAddress(u32, "SetProcessDpiAwarenessContext") : nullptr;
+        BOOL ok = FALSE;
+        if (setCtx) ok = setCtx((HANDLE)-4);        // PER_MONITOR_AWARE_V2
+        if (!ok) SetProcessDPIAware();
+    }
     g_dpi = BarDpi();
 
     INITCOMMONCONTROLSEX icc = { sizeof(icc), ICC_STANDARD_CLASSES };
@@ -239,20 +274,44 @@ int WINAPI wWinMain(HINSTANCE hSelf, HINSTANCE, LPWSTR, int) {
     wc.lpszClassName = L"PandaWubiPhraseWindow";
     RegisterClassExW(&wc);
 
-    const int w = S(410), h = S(210);
+    const int w = S(kClientW), h = S(kClientH);
     g_hwnd = CreateWindowExW(WS_EX_TOPMOST, L"PandaWubiPhraseWindow", L"自定义短语 —— Panda五笔",
                              WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
                              -32000, -32000, w, h,
                              nullptr, nullptr, hSelf, nullptr);
     if (!g_hwnd) return 1;
 
-    // 居中
+    // 标题栏图标（和状态栏/设置窗共用 dist\panda.ico）
+    {
+        wchar_t self[MAX_PATH] = { 0 };
+        GetModuleFileNameW(nullptr, self, ARRAYSIZE(self));
+        std::wstring dir(self);
+        const size_t slash = dir.find_last_of(L"\\/");
+        if (slash != std::wstring::npos) {
+            dir.erase(slash);
+            const std::wstring icoPath = dir + L"\\panda.ico";
+            HICON hi = (HICON)LoadImageW(nullptr, icoPath.c_str(), IMAGE_ICON, 0, 0,
+                                        LR_LOADFROMFILE | LR_DEFAULTSIZE);
+            if (!hi) hi = (HICON)LoadImageW(nullptr, icoPath.c_str(), IMAGE_ICON, 32, 32, LR_LOADFROMFILE);
+            if (hi) {
+                SendMessageW(g_hwnd, WM_SETICON, ICON_BIG, (LPARAM)hi);
+                SendMessageW(g_hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hi);
+            }
+        }
+    }
+
+    // 居中到工作区，摆好位置再显示（先建在屏幕外，避免闪一下空窗）
     RECT rc = { 0, 0, w, h };
     AdjustWindowRectEx(&rc, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU, FALSE, WS_EX_TOPMOST);
     const int ww = rc.right - rc.left, hh = rc.bottom - rc.top;
-    const int sw = GetSystemMetrics(SM_CXSCREEN), sh = GetSystemMetrics(SM_CYSCREEN);
-    SetWindowPos(g_hwnd, HWND_TOP, (sw - ww) / 2, (sh - hh) / 2, ww, hh, SWP_SHOWWINDOW);
+    RECT work = { 0, 0, GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN) };
+    SystemParametersInfoW(SPI_GETWORKAREA, 0, &work, 0);
+    const int x = work.left + ((work.right - work.left) - ww) / 2;
+    const int y = work.top + ((work.bottom - work.top) - hh) / 2;
+    SetWindowPos(g_hwnd, HWND_TOP, x, y, ww, hh, SWP_NOACTIVATE);
+    ShowWindow(g_hwnd, SW_SHOW);
     SetForegroundWindow(g_hwnd);
+    UpdateWindow(g_hwnd);
 
     MSG msg;
     while (GetMessageW(&msg, nullptr, 0, 0) > 0) {
