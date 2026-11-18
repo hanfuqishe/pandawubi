@@ -215,6 +215,15 @@ powershell -ExecutionPolicy Bypass -File .\tools\hide-stale-bars.ps1 -List    # 
 .\build\tsf-host.exe -send "xxqq"     # 文档空，候选框只剩顶部编码框显示 xxqq
 ```
 
+空码（一个候选都没有）时不会卡住，下面几种操作都会**直接把空码清掉**：
+
+| 操作 | 结果 |
+|---|---|
+| `回车` / `空格` | 空码丢弃，不写任何文字 |
+| 继续打字母 | 丢掉旧码，用这一键重新组码（`xxqqa` → 工） |
+| 打标点 | 丢掉空码，只输出这个标点（`xxqq,` → ，） |
+| `退格` | 照常逐位删码，删到有候选就恢复 |
+
 ## 英文单词补全（Shift+字母）
 
 `Shift+字母` 进入补全模式后，**大小写照抄键盘输入**（Shift 与 CapsLock 相异即为大写），

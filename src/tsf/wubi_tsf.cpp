@@ -2431,7 +2431,8 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
             switch (o.act) {
             case wubi::Composer::Act::Updated:
                 SyncCodeFromComposer();
-                UpdateCompositionText(pic);
+                if (!m_comp) StartComposition(pic, std::wstring());   // 空码被丢弃后重新开组合串
+                else         UpdateCompositionText(pic);
                 RefreshCandidates(pic);
                 *pfEaten = TRUE;
                 break;
@@ -2457,8 +2458,21 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
                 break;
             }
         };
+        // —— 空码（一个候选都没有）不要卡住 ——
+        // 回车/空格：把空码直接清掉（什么都不上屏）；继续打字母：丢掉空码、从这一键重新开始。
+        const bool deadCode = m_composer.Candidates().empty();
+        if (deadCode && (vk == VK_RETURN || vk == VK_SPACE)) {
+            LogLine(L"dead code cleared by Enter/Space (code=%hs)", m_composer.Code().c_str());
+            CancelComposition(pic);
+            *pfEaten = TRUE;
+            return S_OK;
+        }
         wchar_t ch = 0;
         if (IsCodeKey(vk, &ch)) {
+            if (deadCode) {                  // 空码 + 继续输入：扔掉旧码，用这一键重开
+                LogLine(L"dead code dropped, restart with %c (was %hs)", (wchar_t)ch, m_composer.Code().c_str());
+                m_composer.Reset();          // 只重置状态机，组合串留着（本来就是空的）
+            }
             LogLine(L"key(composing) %c", (wchar_t)ch);
             handle(m_composer.TypeCode((char)ch));
             return S_OK;
@@ -2482,7 +2496,8 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
             wchar_t symChar = 0;
             if (ToUnicode(vk, (UINT)lParam, ksSym, &symChar, 1, 0) == 1 &&
                 symChar > 0x20 && symChar < 0x7F) {
-                handle(m_composer.SelectBest());   // 提交 #1 并结束组合串
+                if (deadCode) CancelComposition(pic);   // 空码：先清掉，只输出这个符号
+                else          handle(m_composer.SelectBest());   // 提交 #1 并结束组合串
                 LoadDataOnce();
                 std::wstring outSym;
                 if (m_puncEnabled && m_punc.Map((char)symChar, wubi::PuncMode::ChineseHalf, outSym)) {
