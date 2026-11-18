@@ -146,6 +146,16 @@ Settings MigrateFromQQ(const std::wstring& qqIniPath, bool* found) {
     return s;
 }
 
+// 编码输入框的过滤规则：只保留英文字母，最多 maxLen 位
+std::wstring FilterCode(const std::wstring& in, size_t maxLen) {
+    std::wstring out;
+    for (wchar_t c : in) {
+        if (out.size() >= maxLen) break;
+        if ((c >= L'a' && c <= L'z') || (c >= L'A' && c <= L'Z')) out.push_back(c);
+    }
+    return out;
+}
+
 // ---------------------------------------------------------------- 数据目录
 static const wchar_t* kRegKey = L"Software\\PandaWubi";
 static const wchar_t* kRegVal = L"DataDir";

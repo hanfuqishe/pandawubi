@@ -126,8 +126,41 @@ static void OnSave() {
     DestroyWindow(g_hwnd);
 }
 
-// 两个输入框的子类化：回车=保存，Esc=取消
+// 编码框只留英文字母，最多 4 位（粘贴/输入法一并清洗，规则见 wubi::FilterCode）
+static void SanitizeCode() {
+    wchar_t buf[64] = { 0 };
+    GetWindowTextW(g_code, buf, ARRAYSIZE(buf) - 1);
+    const std::wstring cur(buf);
+    const std::wstring out = wubi::FilterCode(cur, 4);
+    if (out != cur) {
+        SetWindowTextW(g_code, out.c_str());
+        SendMessageW(g_code, EM_SETSEL, (WPARAM)out.size(), (LPARAM)out.size());
+    }
+}
+
+// 两个输入框的子类化：回车=保存，Esc=取消；编码框只收字母
 static LRESULT CALLBACK EditProc(HWND h, UINT msg, WPARAM wp, LPARAM lp, UINT_PTR id, DWORD_PTR) {
+    const bool isCode = (id == 1);     // 1=编码框 2=短语框
+
+    if (msg == WM_GETDLGCODE) {
+        // 多行 RichEdit 默认"要 Tab"（会插入制表符），焦点就出不去了；
+        // 去掉 DLGC_WANTTAB/WANTALLKEYS，让 IsDialogMessage 用 Tab 切换焦点。
+        const LRESULT base = DefSubclassProc(h, msg, wp, lp);
+        if (!isCode) return (base & ~(DLGC_WANTTAB | DLGC_WANTALLKEYS)) | DLGC_WANTCHARS;
+        return base;
+    }
+    if (msg == WM_CHAR && isCode) {
+        const wchar_t c = (wchar_t)wp;
+        if (c < 0x20) return DefSubclassProc(h, msg, wp, lp);        // 退格/回车等控制键放行
+        if (!((c >= L'a' && c <= L'z') || (c >= L'A' && c <= L'Z'))) return 0;   // 只收英文字母
+        if (GetWindowTextLengthW(h) >= 4) return 0;                  // 最多 4 位
+        return DefSubclassProc(h, msg, wp, lp);
+    }
+    if (msg == WM_PASTE && isCode) {
+        const LRESULT r = DefSubclassProc(h, msg, wp, lp);
+        SanitizeCode();
+        return r;
+    }
     if (msg == WM_KEYDOWN) {
         if (wp == VK_RETURN) { PostMessageW(g_hwnd, WM_COMMAND, ID_OK, 0); return 0; }
         if (wp == VK_ESCAPE) { PostMessageW(g_hwnd, WM_COMMAND, ID_CANCEL, 0); return 0; }
@@ -222,10 +255,19 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         return 1;
     }
     case WM_COMMAND:
+        if (LOWORD(wp) == ID_CODE && HIWORD(wp) == EN_CHANGE) {
+            // 不能在 EN_CHANGE 里直接 SetWindowText（重入会让编辑框把自己的文本回滚成空），
+            // 延后到消息循环再清洗：粘贴/输入法/拖放都走这条路。
+            PostMessageW(hwnd, WM_APP + 1, 0, 0);
+            return 0;
+        }
         switch (LOWORD(wp)) {
         case ID_OK:     OnSave(); return 0;
         case ID_CANCEL: DestroyWindow(hwnd); return 0;
         }
+        return 0;
+    case WM_APP + 1:                   // 编码框清洗（延后执行，避免重入）
+        SanitizeCode();
         return 0;
     case WM_CLOSE:
         DestroyWindow(hwnd);

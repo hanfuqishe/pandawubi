@@ -97,6 +97,14 @@ TSF 的输入法目录是机器级的：`ITfInputProcessorProfiles` 读写
 .\build\tsf-host.exe -send "dz "               # -> 窗口里填的那条短语
 ```
 
+## 自定义短语窗口
+
+`Ctrl+Shift+=` 或设置窗口里打开。**Tab / Shift+Tab 在编码框 → 短语框 → 保存 → 取消 之间循环切换焦点**
+（回车=保存，Esc=取消）。
+
+编码框只接受**英文字母**（a–z / A–Z），最多 4 位；数字、标点、汉字都打不进去，
+粘贴/输入法带进来的也会被清掉（`wubi::FilterCode`，CLI 里 `panda-cli <dict> codefilter` 有自测）。
+
 ## 候选窗外观
 
 设置窗口的「候选窗外观」一组里可以调（改完保存，重启宿主程序生效）：

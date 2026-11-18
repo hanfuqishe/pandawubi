@@ -34,6 +34,9 @@ bool SaveSettings(const std::wstring& iniPath, const Settings& s);
 // 从 QQ五笔 的 Config.ini 迁移（键名相同，容忍缺失）
 Settings MigrateFromQQ(const std::wstring& qqIniPath, bool* found);
 
+// 编码输入框的过滤规则：只保留英文字母（a–z / A–Z），最多 maxLen 位
+std::wstring FilterCode(const std::wstring& in, size_t maxLen = 4);
+
 // ---------------------------------------------------------------- 数据目录
 // 设置（config.ini）和自定义词/短语（user.tsv）都放在同一个数据目录里，
 // 用户可以把目录指到网盘同步夹，换机器后指回来就能恢复，不需要自己的服务器。

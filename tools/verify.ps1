@@ -53,6 +53,9 @@ $out = & $cli $dict phrasecode 2>&1 | Out-String
 Check '词组取码' ($out -match 'phrasecode: PASS') '你好=wqvb · 我们=trwu · 计算机=ytsm · 中华人民共和国=kwwl'
 $out = & $cli $dict trimtest 2>&1 | Out-String
 Check '退格删掉的字被剔除' ($out -match 'trimtest: PASS') '队尾/中段删除都能对上，完全对不上时由调用方放弃'
+"— 自定义短语窗口的编码输入框 —"
+$out = & $cli $dict codefilter 2>&1 | Out-String
+Check '编码框只收英文字母' ($out -match 'codefilter: PASS') '数字/标点/汉字被过滤，最多 4 位'
 "— 多词库切换（DictFile）—"
 $iniDict = Join-Path $ws 'build\dict-test.ini'
 [IO.File]::WriteAllText($iniDict, "[Config]`r`nDictFile=dict-qq.bin`r`n", (New-Object System.Text.ASCIIEncoding))

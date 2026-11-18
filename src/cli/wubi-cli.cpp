@@ -331,6 +331,35 @@ int wmain(int argc, wchar_t** argv) {
         std::printf("\n");
         return outWords.empty() ? 1 : 0;
     }
+    if (cmd == "codefilter") {
+        // 自定义短语窗口的编码输入框：只收英文字母，最多 4 位
+        struct C { const wchar_t* in; const wchar_t* want; };
+        const C cases[] = {
+            { L"1a1x",      L"ax"   },   // 数字被丢弃
+            { L"abcdef",    L"abcd" },   // 超长截断
+            { L"A1B2C3D4",  L"ABCD" },   // 大写保留、数字丢弃
+            { L"--dz--",    L"dz"   },   // 标点丢弃
+            { L"wqvb",      L"wqvb" },
+        };
+        int bad = 0;
+        for (const auto& c : cases) {
+            const std::wstring got = wubi::FilterCode(c.in, 4);
+            const bool ok = (got == c.want);
+            std::printf("  %s %-10ls -> %-6ls want %ls\n",
+                        ok ? "PASS" : "FAIL", c.in, got.c_str(), c.want);
+            if (!ok) ++bad;
+        }
+        // 单字符判定：字母放行，其它拒绝
+        const bool allowA = wubi::FilterCode(L"a", 4) == L"a";
+        const bool allowZ = wubi::FilterCode(L"Z", 4) == L"Z";
+        const bool deny1  = wubi::FilterCode(L"1", 4).empty();
+        const bool denyHan = wubi::FilterCode(L"你", 4).empty();
+        std::printf("  %s 单字判定 a/Z 通过, 1/你 被拒\n",
+                    (allowA && allowZ && deny1 && denyHan) ? "PASS" : "FAIL");
+        if (!(allowA && allowZ && deny1 && denyHan)) ++bad;
+        std::printf("codefilter: %s\n", bad == 0 ? "PASS" : "FAIL");
+        return bad == 0 ? 0 : 1;
+    }
     if (cmd == "engcase") {
         // 英文补全的大小写套用：已输入部分照抄实际大小写，未输入部分跟随整体风格
         struct C { const wchar_t* word; const wchar_t* typed; const wchar_t* want; };
