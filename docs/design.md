@@ -1069,6 +1069,8 @@ RegisterCategory: keyboard=0x0 immersive=0x0 systray=0x0
   数字选候选、退格删字母、Esc 取消、其它键先把当前词上屏再放行
 - `EngUpdate` 里 `m_candWnd.SetCode(m_engTyped)`：候选窗顶部小框显示**实际敲入的样子**（含大小写），
   不再是上一段中文组码；上屏/取消时清空，避免下次复用时残留
+- 没有匹配单词时**不隐藏候选窗**：`RecalcAndResize` 支持"只有顶部小框、没有候选行"的布局
+  （宽度按当前输入文本量算，不画翻页箭头和熊猫装饰），`ShowAt` 也不再因为 items 为空而隐藏
 - 便捷输入模式下按字母 → `ExitQuick` + 进英文 + 开始组词
 
 ## 二·三十八、按应用使用不同配置（[app:<exe>]）

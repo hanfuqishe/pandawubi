@@ -408,7 +408,12 @@ void CCandidateWindow::Destroy() {
 
 void CCandidateWindow::RecalcAndResize() {
     Ensure();
-    if (!hwnd_ || items_.empty()) { layout_ = wubi::CandLayout(); width_ = height_ = 0; return; }
+    // 允许"只有顶部小框、没有候选行"的状态：英文模式没匹配到单词时也要显示输入内容
+    if (!hwnd_ || (items_.empty() && code_.empty())) {
+        layout_ = wubi::CandLayout();
+        width_ = height_ = 0;
+        return;
+    }
 
     const UINT dpi = Dpi();
     padX_ = MulDiv(7, (int)dpi, 96);
@@ -449,6 +454,21 @@ void CCandidateWindow::RecalcAndResize() {
         if (!plain_ && i < pinned_.size() && pinned_[i]) w += starW;
         if (w > maxW) maxW = w;
         labels_.push_back(std::move(t));
+    }
+    // 只有顶部小框（没有候选）：宽度按当前输入的文本算，不画装饰图
+    if (items_.empty()) {
+        SIZE cs = { 0, 0 };
+        GetTextExtentPoint32W(dc, code_.c_str(), (int)code_.size(), &cs);
+        SelectObject(dc, old);
+        ReleaseDC(hwnd_, dc);
+        artW_ = 0;
+        width_ = cs.cx + padX_ * 2 + MulDiv(10, (int)dpi, 96);
+        if (width_ < MulDiv(120, (int)dpi, 96)) width_ = MulDiv(120, (int)dpi, 96);
+        height_ = headH_ + padY_ * 2 + MulDiv(6, (int)dpi, 96);
+        layout_ = wubi::CandLayout();
+        layout_.width = width_;
+        layout_.height = height_;
+        return;
     }
     SelectObject(dc, old);
     ReleaseDC(hwnd_, dc);
@@ -495,8 +515,8 @@ void CCandidateWindow::Paint(HDC dc) {
         DeleteObject(br);
     }
 
-    // ---- 右下角：熊猫吃竹子（GDI+，PNG 带 alpha）----
-    if (Gdiplus::Bitmap* art = LoadArtFromResource(3)) {
+    // ---- 右下角：熊猫吃竹子（GDI+，PNG 带 alpha）；只有候选行时才画 ----
+    if (!items_.empty()) if (Gdiplus::Bitmap* art = LoadArtFromResource(3)) {
         const int artSize = artW_ > 0 ? artW_ - MulDiv(6, (int)dpi, 96) : MulDiv(44, (int)dpi, 96);
         Gdiplus::Graphics gfx(dc);
         gfx.SetInterpolationMode(Gdiplus::InterpolationModeHighQualityBicubic);
@@ -548,10 +568,12 @@ void CCandidateWindow::Paint(HDC dc) {
         tr.left += MulDiv(6, (int)dpi, 96);
         DrawTextW(dc, code_.c_str(), -1, &tr, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
 
-        SetTextColor(dc, RGB(GetRValue(textCol_) / 2 + 0x60, GetGValue(textCol_) / 2 + 0x60, GetBValue(textCol_) / 2 + 0x60));
-        RECT ar = hb;
-        ar.right -= MulDiv(6, (int)dpi, 96);
-        DrawTextW(dc, L"\u25C0 \u25B6", -1, &ar, DT_RIGHT | DT_VCENTER | DT_SINGLELINE);
+        if (!items_.empty()) {   // 没有候选时不画翻页箭头（英文模式只显示输入内容）
+            SetTextColor(dc, RGB(GetRValue(textCol_) / 2 + 0x60, GetGValue(textCol_) / 2 + 0x60, GetBValue(textCol_) / 2 + 0x60));
+            RECT ar = hb;
+            ar.right -= MulDiv(6, (int)dpi, 96);
+            DrawTextW(dc, L"\u25C0 \u25B6", -1, &ar, DT_RIGHT | DT_VCENTER | DT_SINGLELINE);
+        }
         y += headH_;
     }
 
@@ -659,7 +681,7 @@ LRESULT CALLBACK CCandidateWindow::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARA
 
 void CCandidateWindow::ShowAt(const RECT& caret) {
     Ensure();
-    if (!hwnd_ || items_.empty()) { Hide(); return; }
+    if (!hwnd_ || (items_.empty() && code_.empty())) { Hide(); return; }
     if (width_ <= 0 || height_ <= 0) RecalcAndResize();
 
     int x = caret.left;
@@ -1695,13 +1717,9 @@ void CTextService::EngUpdate(ITfContext* pic) {
     const double t2 = NowMs();
     m_candWnd.SetPlain(false);
     m_candWnd.SetCode(m_engTyped);   // 候选窗顶部小框显示"实际打出来的样子"（含大小写）
-    if (!disp.empty()) {
-        m_candWnd.SetItems(disp, m_settings.CandVertical != 0);   // 跟随"候选竖排"设置
-        if (QueryCaretRect(m_lastCaret)) m_hasCaret = true;   // 没记录时当场取，避免跑到屏幕左上角
-        m_candWnd.ShowAt(m_lastCaret);
-    } else {
-        m_candWnd.Hide();
-    }
+    m_candWnd.SetItems(disp, m_settings.CandVertical != 0);       // 跟随"候选竖排"设置（可能是空）
+    if (QueryCaretRect(m_lastCaret)) m_hasCaret = true;           // 没记录时当场取，避免跑到屏幕左上角
+    m_candWnd.ShowAt(m_lastCaret);   // 没匹配到单词也照样显示，只是只有顶部小框
     const double t3 = NowMs();
     LogLine(L"eng type %s -> %zu cands (comp=%.1fms suggest=%.1fms show=%.1fms)",
             m_engTyped.c_str(), disp.size(), t1 - t0, t2 - t1, t3 - t2);

@@ -222,6 +222,9 @@ powershell -ExecutionPolicy Bypass -File .\tools\hide-stale-bars.ps1 -List    # 
 
 上屏/取消后顶部小框会清空，不会残留到下一次。
 
+**没匹配到任何单词时，候选框不会消失**，而是只剩顶部小框显示当前输入（不再画翻页箭头和熊猫装饰），
+这样你随时能看清自己敲了什么；一旦继续敲出匹配的字母，候选行会重新出现。
+
 端到端（真实键盘事件，会短暂抢占前台）：
 ```powershell
 .\build\tsf-host.exe -send "Ab "     # -> About
