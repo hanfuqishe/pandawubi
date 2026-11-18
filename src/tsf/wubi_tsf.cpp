@@ -1921,6 +1921,8 @@ static void UpdateIndicatorIconFile(const std::wstring& icoName) {
         if (GetFileAttributesW(userIco.c_str()) == INVALID_FILE_ATTRIBUTES) {
             CreateDirectoryW(userDir.c_str(), nullptr);
             if (GetFileAttributesW(dllIco.c_str()) != INVALID_FILE_ATTRIBUTES) {
+                // 目标可能是只读的（以前装过/被别的工具改成只读），先清属性再拷，否则静默失败
+                SetFileAttributesW(userIco.c_str(), FILE_ATTRIBUTE_NORMAL);
                 CopyFileW(dllIco.c_str(), userIco.c_str(), FALSE);
             }
         }

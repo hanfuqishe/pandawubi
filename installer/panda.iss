@@ -69,25 +69,25 @@ StatusUninstalling=正在卸载 熊猫五笔…
 Name: "desktopicon"; Description: "创建桌面快捷方式（打开设置）"; GroupDescription: "附加任务:"; Flags: unchecked
 
 [Files]
-Source: "{#MyRoot}\dist\panda_tsf.dll";        DestDir: "{app}"; Flags: ignoreversion
-Source: "{#MyRoot}\dist\panda_tsf32.dll";      DestDir: "{app}"; Flags: ignoreversion
-Source: "{#MyRoot}\dist\panda-settings.exe";   DestDir: "{app}"; Flags: ignoreversion
-Source: "{#MyRoot}\dist\panda-phrase.exe";     DestDir: "{app}"; Flags: ignoreversion
-Source: "{#MyRoot}\data\qqwubi86.dict.tsv"; DestDir: "{app}\data"; Flags: ignoreversion
-Source: "{#MyRoot}\data\simp2trad.dat";        DestDir: "{app}\data"; Flags: ignoreversion
-Source: "{#MyRoot}\data\punc.ini";             DestDir: "{app}\data"; Flags: ignoreversion
-Source: "{#MyRoot}\data\eng_words.txt";        DestDir: "{app}\data"; Flags: ignoreversion
+Source: "{#MyRoot}\dist\panda_tsf.dll";        DestDir: "{app}"; Flags: ignoreversion overwritereadonly
+Source: "{#MyRoot}\dist\panda_tsf32.dll";      DestDir: "{app}"; Flags: ignoreversion overwritereadonly
+Source: "{#MyRoot}\dist\panda-settings.exe";   DestDir: "{app}"; Flags: ignoreversion overwritereadonly
+Source: "{#MyRoot}\dist\panda-phrase.exe";     DestDir: "{app}"; Flags: ignoreversion overwritereadonly
+Source: "{#MyRoot}\data\qqwubi86.dict.tsv"; DestDir: "{app}\data"; Flags: ignoreversion overwritereadonly
+Source: "{#MyRoot}\data\simp2trad.dat";        DestDir: "{app}\data"; Flags: ignoreversion overwritereadonly
+Source: "{#MyRoot}\data\punc.ini";             DestDir: "{app}\data"; Flags: ignoreversion overwritereadonly
+Source: "{#MyRoot}\data\eng_words.txt";        DestDir: "{app}\data"; Flags: ignoreversion overwritereadonly
 ; 拼音反查表（Z + 拼音）；没生成时就不打包，功能自动降级
-Source: "{#MyRoot}\data\pinyin.tsv";         DestDir: "{app}\data"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "{#MyRoot}\data\pinyin.tsv";         DestDir: "{app}\data"; Flags: ignoreversion overwritereadonly skipifsourcedoesntexist
 ; 四个主题图标：一份放程序目录，一份放 %LOCALAPPDATA%\PandaWubi（输入指示器只认那里）
-Source: "{#MyRoot}\dist\panda.ico"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#MyRoot}\dist\cat.ico";   DestDir: "{app}"; Flags: ignoreversion
-Source: "{#MyRoot}\dist\dog.ico";   DestDir: "{app}"; Flags: ignoreversion
-Source: "{#MyRoot}\dist\crane.ico"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#MyRoot}\dist\panda.ico"; DestDir: "{localappdata}\PandaWubi"; Flags: ignoreversion
-Source: "{#MyRoot}\dist\cat.ico";   DestDir: "{localappdata}\PandaWubi"; Flags: ignoreversion
-Source: "{#MyRoot}\dist\dog.ico";   DestDir: "{localappdata}\PandaWubi"; Flags: ignoreversion
-Source: "{#MyRoot}\dist\crane.ico"; DestDir: "{localappdata}\PandaWubi"; Flags: ignoreversion
+Source: "{#MyRoot}\dist\panda.ico"; DestDir: "{app}"; Flags: ignoreversion overwritereadonly
+Source: "{#MyRoot}\dist\cat.ico";   DestDir: "{app}"; Flags: ignoreversion overwritereadonly
+Source: "{#MyRoot}\dist\dog.ico";   DestDir: "{app}"; Flags: ignoreversion overwritereadonly
+Source: "{#MyRoot}\dist\crane.ico"; DestDir: "{app}"; Flags: ignoreversion overwritereadonly
+Source: "{#MyRoot}\dist\panda.ico"; DestDir: "{localappdata}\PandaWubi"; Flags: ignoreversion overwritereadonly
+Source: "{#MyRoot}\dist\cat.ico";   DestDir: "{localappdata}\PandaWubi"; Flags: ignoreversion overwritereadonly
+Source: "{#MyRoot}\dist\dog.ico";   DestDir: "{localappdata}\PandaWubi"; Flags: ignoreversion overwritereadonly
+Source: "{#MyRoot}\dist\crane.ico"; DestDir: "{localappdata}\PandaWubi"; Flags: ignoreversion overwritereadonly
 
 [Icons]
 Name: "{group}\熊猫五笔 设置"; Filename: "{app}\panda-settings.exe"
@@ -95,6 +95,10 @@ Name: "{group}\卸载 熊猫五笔"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\熊猫五笔 设置"; Filename: "{app}\panda-settings.exe"; Tasks: desktopicon
 
 [Registry]
+; 清掉"开发期手工 regsvr32"留下的按用户注册：HKCU\Software\Classes 优先于 HKLM，
+; 不清掉的话装完还会继续加载 D:\...\dist 里的开发版 DLL（之前"装了好像没用"就是它）
+Root: HKCU; Subkey: "Software\Classes\CLSID\{{7F3B0C21-9D55-4F0E-B1C2-5A6D8E9F0A11}}"; Flags: deletekey uninsdeletekey
+
 ; 输入法在语言列表里的显示信息（DllRegisterServer 已经写了 CLSID/CTF，这里补 Description/图标/启用）
 Root: HKLM; Subkey: "SOFTWARE\Microsoft\CTF\TIP\{{7F3B0C21-9D55-4F0E-B1C2-5A6D8E9F0A11}\LanguageProfile\0x00000804\{{7F3B0C21-9D55-4F0E-B1C2-5A6D8E9F0A12}"; ValueType: string; ValueName: "Description"; ValueData: "熊猫五笔"; Flags: uninsdeletevalue
 Root: HKLM; Subkey: "SOFTWARE\Microsoft\CTF\TIP\{{7F3B0C21-9D55-4F0E-B1C2-5A6D8E9F0A11}\LanguageProfile\0x00000804\{{7F3B0C21-9D55-4F0E-B1C2-5A6D8E9F0A12}"; ValueType: string; ValueName: "IconFile"; ValueData: "{localappdata}\PandaWubi\panda.ico"; Flags: uninsdeletevalue
