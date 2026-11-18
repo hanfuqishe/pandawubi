@@ -107,6 +107,8 @@ private:
     mutable bool level1Built_ = false;
     // inputLen = 当前输入的码长：1..3（简码）只出单字；4 码（全码）按 一级字/二级字/词/其余 排序
     bool BetterCand(const Candidate& a, const Candidate& b, size_t inputLen = 4) const;
+    // allowWords=false 时只出单字；Lookup 在"过滤后一个候选都没有"时会放开词再查一次
+    std::vector<Candidate> LookupImpl(std::string_view input, size_t maxCandidates, bool allowWords) const;
     void EnsureLevel1() const;
     bool IsLevel1Noise(const Candidate& c, size_t inputLen) const;
     // 1/2/3 码输入时，该码的简码字（精确匹配）必须排第一；
@@ -128,7 +130,7 @@ private:
     // 二进制模式下按码定位区间：返回 [lo, hi)
     bool BinRange(std::string_view prefix, size_t& lo, size_t& hi) const;
     // 二进制模式下用户词不在映射区，需要单独并入候选
-    void CollectUserCandidates(std::string_view code, std::vector<Candidate>& out) const;
+    void CollectUserCandidates(std::string_view code, std::vector<Candidate>& out, bool allowWords) const;
 
 public:
     // 命中统计（供 CLI/自检使用）

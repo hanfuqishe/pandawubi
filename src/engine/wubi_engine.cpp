@@ -269,6 +269,17 @@ inline bool Better(const Candidate& a, const Candidate& b) {
 }
 
 std::vector<Candidate> Dictionary::Lookup(std::string_view input, size_t maxCandidates) const {
+    // 规则：不足四码不出词；但如果"只出单字"一个候选都没有（例如 xky 只匹配到 强度 这类词），
+    // 就放开词再查一次 —— 否则用户看着空列表，其实只剩词可选。
+    if (input.size() < 4) {
+        auto charsOnly = LookupImpl(input, maxCandidates, /*allowWords=*/false);
+        if (!charsOnly.empty()) return charsOnly;
+        return LookupImpl(input, maxCandidates, /*allowWords=*/true);
+    }
+    return LookupImpl(input, maxCandidates, /*allowWords=*/true);
+}
+
+std::vector<Candidate> Dictionary::LookupImpl(std::string_view input, size_t maxCandidates, bool allowWords) const {
     if (maxCandidates == 0) maxCandidates = 1;
     std::vector<Candidate> out;
     if (input.empty()) return out;
@@ -281,7 +292,7 @@ std::vector<Candidate> Dictionary::Lookup(std::string_view input, size_t maxCand
             // 但用户词可能在：不能直接返回空，否则自定义短语永远打不出来。
             stats_.exactHits = 0;
             stats_.prefixHits = 0;
-            CollectUserCandidates(input, out);
+            CollectUserCandidates(input, out, allowWords);
             std::sort(out.begin(), out.end(), [this, &input](const Candidate& a, const Candidate& b) {
                 return BetterCand(a, b, input.size());
             });
@@ -295,7 +306,7 @@ std::vector<Candidate> Dictionary::Lookup(std::string_view input, size_t maxCand
             const BinaryRec& r = bin_[i];
             Candidate c{ std::string(binBlob_ + r.wordOff, r.wordLen),
                          std::string(r.code, r.codeLen), r.weight, (r.flags & 1) != 0 };
-            if (input.size() < 4 && Utf8CharCount(c.word) >= 2) continue;   // 不足四码不出词
+            if (!allowWords && Utf8CharCount(c.word) >= 2) continue;   // 不足四码不出词
             if (r.codeLen == input.size()) {
                 exact.push_back(std::move(c));          // 磁盘顺序已是权重降序
             } else {
@@ -313,7 +324,7 @@ std::vector<Candidate> Dictionary::Lookup(std::string_view input, size_t maxCand
         merged.reserve(exact.size() + pf.size() + 8);
         for (auto& c : exact) merged.push_back(std::move(c));
         for (auto& c : pf)    merged.push_back(std::move(c));
-        CollectUserCandidates(input, merged);   // 用户词不在映射区，必须单独并入
+        CollectUserCandidates(input, merged, allowWords);   // 用户词不在映射区，必须单独并入
         std::sort(merged.begin(), merged.end(), [this, &input](const Candidate& a, const Candidate& b) { return BetterCand(a, b, input.size()); });
         std::unordered_set<std::string> seen;
         std::vector<Candidate> tail;   // mode==2 时把这些沉到末尾
@@ -343,7 +354,7 @@ std::vector<Candidate> Dictionary::Lookup(std::string_view input, size_t maxCand
     if (it != buckets_.end()) {
         for (uint32_t i : it->second) {
             const Entry& e = entries_[i];
-            if (input.size() < 4 && Utf8CharCount(e.word) >= 2) continue;   // 不足四码不出词
+            if (!allowWords && Utf8CharCount(e.word) >= 2) continue;   // 不足四码不出词
             exact.push_back(Candidate{ e.word, e.code, e.weight, e.user });
         }
     }
@@ -361,7 +372,7 @@ std::vector<Candidate> Dictionary::Lookup(std::string_view input, size_t maxCand
         if (e.code.size() <= pfx.size()) continue;
         if (e.code.compare(0, pfx.size(), pfx) != 0) break;
         ++scanned;
-        if (input.size() < 4 && Utf8CharCount(e.word) >= 2) continue;   // 不足四码不出词
+        if (!allowWords && Utf8CharCount(e.word) >= 2) continue;   // 不足四码不出词
         Candidate c{ e.word, e.code, e.weight, e.user };
         if (heap.size() < maxCandidates) heap.push(std::move(c));
         else if (BetterCand(c, heap.top(), input.size())) { heap.pop(); heap.push(std::move(c)); }
@@ -738,6 +749,8 @@ void Dictionary::InsertKeyRepeat(std::string_view input, std::vector<Candidate>&
     Candidate best;
     bool found = false;
     auto consider = [&](Candidate&& c) {
+        // 单键输入只放单字：像 x 的 xxxx 首选是词「幽幽」，按新规则不该出现在简码里
+        if (Utf8CharCount(c.word) >= 2) return;
         if (!found) { best = std::move(c); found = true; return; }
         if (best.user && !c.user) { best = std::move(c); return; }
         if (best.user == c.user && c.weight > best.weight) best = std::move(c);
@@ -882,14 +895,14 @@ bool Dictionary::BetterCand(const Candidate& a, const Candidate& b, size_t input
     return a.word < b.word;
 }
 
-void Dictionary::CollectUserCandidates(std::string_view code, std::vector<Candidate>& out) const {
+void Dictionary::CollectUserCandidates(std::string_view code, std::vector<Candidate>& out, bool allowWords) const {
     for (const auto& kv : userIndex_) {
         const uint32_t idx = kv.second;
         if (idx >= entries_.size()) continue;
         const Entry& e = entries_[idx];
         if (e.code.size() < code.size()) continue;
         if (e.code.compare(0, code.size(), code) != 0) continue;
-        if (code.size() < 4 && Utf8CharCount(e.word) >= 2) continue;   // 不足四码不出词（用户词也一样）
+        if (!allowWords && Utf8CharCount(e.word) >= 2) continue;   // 不足四码不出词（用户词也一样）
         out.push_back(Candidate{ e.word, e.code, e.weight, true });
     }
 }
