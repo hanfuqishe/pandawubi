@@ -6,7 +6,7 @@
 # 这个脚本只是把它们隐藏起来，不杀进程、不碰注册表，随时可以重开。
 #
 # 用法: powershell -ExecutionPolicy Bypass -File .\tools\hide-stale-bars.ps1 [-List]
-param([switch]$List)
+param([switch]$List, [switch]$Close)
 
 $code = @'
 using System;
@@ -15,6 +15,7 @@ public class BarWnd {
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     public static extern IntPtr FindWindowEx(IntPtr parent, IntPtr after, string cls, string win);
     [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int cmd);
+    [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr h, uint msg, IntPtr w, IntPtr l);
     [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
     [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
     [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
@@ -46,7 +47,11 @@ while ($true) {
     }
     if (-not $List) {
         if ($vis) { $hidden++ }
-        $null = [BarWnd]::ShowWindow($h, 0)   # SW_HIDE
+        if ($Close) {
+            $null = [BarWnd]::PostMessage($h, 0x0010, [IntPtr]::Zero, [IntPtr]::Zero)   # WM_CLOSE
+        } else {
+            $null = [BarWnd]::ShowWindow($h, 0)   # SW_HIDE
+        }
     }
 }
 
@@ -55,6 +60,10 @@ if ($rows.Count -gt 0) { $rows | Format-Table -AutoSize | Out-String | Write-Hos
 if ($List) {
     "共 $found 条状态栏窗口（只列出，未改动）"
 } else {
-    "共 $found 条状态栏窗口，已隐藏其中 $hidden 条可见的。"
-    "它们属于仍在运行的旧 DLL 副本；宿主进程重启后会跑新代码，届时只在前台应用里出现 1 条。"
+    if ($Close) {
+        "共 $found 条状态栏窗口，已关闭全部（下一次激活输入法时会按新逻辑只重建 1 条）。"
+    } else {
+        "共 $found 条状态栏窗口，已隐藏其中 $hidden 条可见的。"
+        "它们属于仍在运行的旧 DLL 副本；宿主进程重启后会跑新代码，届时只在前台应用里出现 1 条。"    }
+    "-Close 是更彻底的做法（直接 WM_CLOSE 掉，自愈逻辑会在下次激活时重建一条）。"
 }

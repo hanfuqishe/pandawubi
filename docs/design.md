@@ -1102,6 +1102,36 @@ RegisterCategory: keyboard=0x0 immersive=0x0 systray=0x0
   （宽度按当前输入文本量算，不画翻页箭头和熊猫装饰），`ShowAt` 也不再因为 items 为空而隐藏
 - 便捷输入模式下按字母 → `ExitQuick` + 进英文 + 开始组词
 
+## 二·三十七·五、悬浮状态栏又变多了（第二次复发，根因：跨线程 Destroy）
+
+现象：桌面上又同时挂了 3–5 条「中 简 ，。 ⚙」，其中 explorer 一个进程里就有 5 条。
+
+排查：
+- 每个进程只加载了 1 份 `panda_tsf.dll`（`Process.Modules` 确认），所以不是多份静态变量；
+- 12 条栏窗口的 `GWLP_USERDATA` 全非 0，说明它们不是"USERDATA 被清零的幽灵"，而是真的被
+  `Create()` 建出来的窗口。
+
+根因：`Deactivate()` 很可能跑在**另一个线程**上（TSF 的线程模型），而 `DestroyWindow` 只能在建窗线程调用。
+旧代码的 `Destroy()` 顺序是：
+
+```
+KillTimer → SetWindowLongPtr(USERDATA, 0) → DestroyWindow（失败）→ PostMessage(WM_CLOSE) → hwnd_ = nullptr
+```
+
+一旦 `DestroyWindow` 失败：
+1. `hwnd_` 被置空，但窗口还在 → 下一次 `Activate` 的 `Create()` 看到 `hwnd_ == nullptr` 又建一条；
+2. 计时器已被 `KillTimer`，`WM_CLOSE` 若没被处理，这条窗口就永远留着、也不再自检；
+3. 反复激活/切换 → 一个进程里堆出好几条。
+
+修法：
+- `Deactivate` 不再销毁窗口，只 `Show(false)`；窗口留着，它的 500ms 计时器继续做"前台自检"，
+  切到后台自动隐藏；
+- `Destroy()` 变成线程安全版：不是建窗线程就只隐藏、**不**清 `USERDATA`、**不**把 `hwnd_` 置空；
+- `Create()` 自愈：`hwnd_` 已失效就当作没建；建窗前/建窗后各扫一遍同进程的同类窗口并 `WM_CLOSE`
+  （`CloseStrayBarsInProcess`），保证一个进程最多一条栏。
+
+清理工具：`tools\hide-stale-bars.ps1 -Close`（直接 WM_CLOSE 掉所有残留栏；下次激活会重建一条）。
+
 ## 二·三十八、按应用使用不同配置（[app:<exe>]）
 
 需求：同一个输入法，A 程序用简体、B 程序用繁体（而不是切换输入法本身）。

@@ -26,9 +26,26 @@ static UINT BarDpi() {
     return d ? d : 96;
 }
 
+// 同进程里把"同类但不是我"的状态栏窗口都收掉。
+// 历史原因（旧代码在非建窗线程里 Destroy 失败、把 hwnd_ 置空）会让一个进程里堆出好几条栏，
+// 用户就会看到桌面上同时挂着一排「中 简 ，。 ⚙」。这里每次建窗前先自愈一次。
+static void CloseStrayBarsInProcess(HWND keep) {
+    const DWORD self = GetCurrentProcessId();
+    HWND w = nullptr;
+    while ((w = FindWindowExW(nullptr, w, L"PandaWubiStatusBar", nullptr)) != nullptr) {
+        if (w == keep) continue;
+        DWORD pid = 0;
+        GetWindowThreadProcessId(w, &pid);
+        if (pid != self) continue;
+        PostMessageW(w, WM_CLOSE, 0, 0);   // 默认处理会 DestroyWindow
+    }
+}
+
 void StatusBar::Create(HINSTANCE inst, const std::wstring& iniPath, ClickFn onClick) {
     inst_ = inst;
-    if (hwnd_) return;   // 已创建：Activate 多次调用时不重复建窗
+    if (hwnd_ && IsWindow(hwnd_)) return;   // 已创建：Activate 多次调用时不重复建窗
+    hwnd_ = nullptr;                        // 句柄已失效（被外部关掉/窗口随线程销毁）
+    CloseStrayBarsInProcess(nullptr);       // 先把同进程里的残留栏收干净
     iniPath_ = iniPath;
     onClick_ = std::move(onClick);
 
@@ -49,17 +66,23 @@ void StatusBar::Create(HINSTANCE inst, const std::wstring& iniPath, ClickFn onCl
         WS_EX_TOOLWINDOW | WS_EX_TOPMOST | WS_EX_NOACTIVATE,
         kBarClass, L"", WS_POPUP,
         0, 0, width_, height_, nullptr, nullptr, inst, this);
+    CloseStrayBarsInProcess(hwnd_);   // 万一刚才又冒出一个，一并收掉
 }
 
 void StatusBar::Destroy() {
-    if (hwnd_) {
-        KillTimer(hwnd_, kBarTimer);
-        SetWindowLongPtrW(hwnd_, GWLP_USERDATA, 0);   // 之后到达的消息一律 no-op
-        // 窗口可能不是当前线程建的（同一进程里换了个线程来归还），
-        // 那种情况下 DestroyWindow 会失败，交给宿主线程关。
-        if (!DestroyWindow(hwnd_)) PostMessageW(hwnd_, WM_CLOSE, 0, 0);
-        hwnd_ = nullptr;
+    if (!hwnd_) { want_ = false; return; }
+    // DestroyWindow 只能在建窗的那个线程调用。不是本线程时不要动它：
+    // 既不清 USERDATA 也不把 hwnd_ 置空，否则窗口会变成既不销毁也不自检的幽灵。
+    DWORD ownerTid = GetWindowThreadProcessId(hwnd_, nullptr);
+    if (ownerTid != GetCurrentThreadId()) {
+        want_ = false;
+        ShowWindow(hwnd_, SW_HIDE);
+        return;                 // 交给拥有线程/进程退出时销毁
     }
+    KillTimer(hwnd_, kBarTimer);
+    SetWindowLongPtrW(hwnd_, GWLP_USERDATA, 0);
+    DestroyWindow(hwnd_);
+    hwnd_ = nullptr;
     want_ = false;
 }
 

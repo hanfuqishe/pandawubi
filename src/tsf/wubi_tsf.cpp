@@ -1169,8 +1169,11 @@ STDMETHODIMP CTextService::Deactivate() {
         if (g_barUsers > 0) --g_barUsers;
         usersLeft = g_barUsers;
         if (g_barUsers == 0) {
+            // 只隐藏，不销毁窗口：Deactivate 很可能跑在另一个线程上，那儿 DestroyWindow 会失败，
+            // 旧代码把 hwnd_ 置空 + 把 USERDATA 清零，结果窗口既没销毁、也不再响应计时器，
+            // 变成永久的"幽灵栏"（用户看到好几个悬浮窗就是这么来的）。
+            // 窗口留着还有好处：它的 500ms 计时器会继续在前台自检，切到后台就自动藏起来。
             SharedBar().Show(false);
-            SharedBar().Destroy();
         }
     }
     LogLine(L"Deactivate: tid=%u barUsers=%d", m_tid, usersLeft);
