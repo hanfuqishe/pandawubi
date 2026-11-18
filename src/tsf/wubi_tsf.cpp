@@ -80,21 +80,21 @@ static void EnsureGdiplus() {
 static Gdiplus::Bitmap* g_artCache[16] = { nullptr };
 
 // 底部背景图顶行的平均颜色（= 画面的天空色）。窗口上半部分用它填，和图无缝衔接。
-static COLORREF g_bandSky = RGB(0xF7, 0xF9, 0xFC);
-static int      g_bandSkyFor = 0;      // 已采样过的资源 id
+static COLORREF g_bandSky    = RGB(0xF7, 0xF9, 0xFC);   // 图片左边缘顶部颜色（渐变带用它）
+static COLORREF g_bandSkyBot = RGB(0xF7, 0xF9, 0xFC);   // 图片左边缘底部颜色
+static int      g_bandSkyFor = 0;                        // 已采样过的资源 id
 
+// 图片靠右下对齐时，窗口左边/上边空出来的那块要跟图片"接上"：
+// 取图片左边缘的上、下两个颜色，填成一条竖向渐变，接缝就看不出来了。
 static void SampleBandSky(int id, Gdiplus::Bitmap* bmp) {
     if (!bmp || g_bandSkyFor == id) return;
-    const int w = (int)bmp->GetWidth();
-    if (w <= 0) return;
-    unsigned r = 0, g = 0, b = 0, n = 0;
-    for (int i = 0; i < 24; ++i) {
-        const int x = (int)((long long)i * (w - 1) / 23);
-        Gdiplus::Color c;
-        if (bmp->GetPixel(x, 1, &c) == Gdiplus::Ok) { r += c.GetR(); g += c.GetG(); b += c.GetB(); ++n; }
-    }
-    if (!n) return;
-    g_bandSky = RGB(r / n, g / n, b / n);
+    const int h = (int)bmp->GetHeight();
+    if (h <= 0) return;
+    Gdiplus::Color top, bot;
+    if (bmp->GetPixel(1, 1, &top) != Gdiplus::Ok) return;
+    if (bmp->GetPixel(1, h - 2, &bot) != Gdiplus::Ok) bot = top;
+    g_bandSky    = RGB(top.GetR(), top.GetG(), top.GetB());
+    g_bandSkyBot = RGB(bot.GetR(), bot.GetG(), bot.GetB());
     g_bandSkyFor = id;
 }
 
@@ -556,10 +556,21 @@ void CCandidateWindow::Paint(HDC dc) {
 
     // ---- 背景：用设置里的背景色（原来是写死的淡绿渐变，设置项其实不生效）----
     {
-        HBRUSH br = CreateSolidBrush(bandId_ != 0 ? g_bandSky : bgCol_);
-        RECT all = { 0, 0, W, H };
-        FillRect(dc, &all, br);
-        DeleteObject(br);
+        if (bandId_ != 0) {
+            // 竖向渐变：上边接图片左沿的顶部颜色，下边接底部颜色
+            Gdiplus::Graphics gfx(dc);
+            Gdiplus::RectF rr(0.0f, 0.0f, (Gdiplus::REAL)W, (Gdiplus::REAL)H);
+            Gdiplus::LinearGradientBrush lg(rr,
+                Gdiplus::Color(255, GetRValue(g_bandSky), GetGValue(g_bandSky), GetBValue(g_bandSky)),
+                Gdiplus::Color(255, GetRValue(g_bandSkyBot), GetGValue(g_bandSkyBot), GetBValue(g_bandSkyBot)),
+                Gdiplus::LinearGradientModeVertical);
+            gfx.FillRectangle(&lg, rr);
+        } else {
+            HBRUSH br = CreateSolidBrush(bgCol_);
+            RECT all = { 0, 0, W, H };
+            FillRect(dc, &all, br);
+            DeleteObject(br);
+        }
     }
 
     // ---- 底部风景条（丹顶鹤主题）：整幅图不抠，等比缩放到铺满条带，右对齐 + 底对齐 ----
@@ -580,6 +591,12 @@ void CCandidateWindow::Paint(HDC dc) {
             const Gdiplus::REAL top = (Gdiplus::REAL)H - dh;
             gfx.DrawImage(band, Gdiplus::RectF(left, top, dw, dh),
                           0.0f, 0.0f, iw, ih, Gdiplus::UnitPixel, nullptr);
+
+            // 图片上盖一层很淡的白纱：文字压在画面上（比如熊猫的黑手臂）也能看清
+            {
+                Gdiplus::SolidBrush veil(Gdiplus::Color(66, 255, 255, 255));
+                gfx.FillRectangle(&veil, Gdiplus::RectF(left, top, dw, dh));
+            }
 
             // 上沿再糊一层"天空色 → 透明"的渐变，把图片的起始边抹平（图片自身的天色有细微纹理，
             // 光靠背景同色还是会看出一条线）；横向不够宽时左边也糊一条。
@@ -1716,13 +1733,15 @@ void CTextService::ApplySettings() {
     const bool colorsAreDefault = (m_settings.CandBgColor == 0xF7F9FC &&
                                    m_settings.CandTextColor == 0x202028 &&
                                    m_settings.CandBorderColor == 0xA8CDA8);
-    const bool useThemeColors = colorsAreDefault && (themeCrane || themeCat);
+    const bool themePanda = (m_settings.Theme != L"cat" && m_settings.Theme != L"dog" && m_settings.Theme != L"crane");
+    const bool useThemeColors = colorsAreDefault && (themeCrane || themeCat || themePanda);
     COLORREF bgRef = toRef(m_settings.CandBgColor);
     COLORREF txRef = toRef(m_settings.CandTextColor);
     COLORREF bdRef = toRef(m_settings.CandBorderColor);
     if (useThemeColors) {
-        if (themeCrane) { bgRef = RGB(0xD3, 0xE9, 0xE6); txRef = RGB(0x24, 0x36, 0x32); bdRef = RGB(0x8F, 0xB8, 0xB0); }
-        else            { bgRef = RGB(0xE8, 0xF3, 0xFC); txRef = RGB(0x25, 0x30, 0x29); bdRef = RGB(0xA5, 0xC3, 0x9E); }
+        if (themeCrane)      { bgRef = RGB(0xD3, 0xE9, 0xE6); txRef = RGB(0x24, 0x36, 0x32); bdRef = RGB(0x8F, 0xB8, 0xB0); }
+        else if (themeCat)   { bgRef = RGB(0xE8, 0xF3, 0xFC); txRef = RGB(0x25, 0x30, 0x29); bdRef = RGB(0xA5, 0xC3, 0x9E); }
+        else                 { bgRef = RGB(0xF2, 0xF6, 0xEC); txRef = RGB(0x24, 0x33, 0x26); bdRef = RGB(0xA8, 0xC4, 0x9A); }
     }
     m_candWnd.SetStyle(m_settings.CandFontPt, bgRef,
                        m_settings.CandInset != 0,
@@ -1739,10 +1758,11 @@ void CTextService::ApplySettings() {
     const wchar_t* themeIcon = crane ? L"crane.ico"
                              : dog   ? L"dog.ico"
                              : cat   ? L"cat.ico" : L"panda.ico";
-    // 丹顶鹤 / 狸花猫：整幅图当窗口背景（不抠图），关掉角落小图；
-    //   RCDATA 10 = crane_band.png（鹤）、11 = cat_band.png（猫扑蝴蝶）
-    const int themeBandId = crane ? 10 : (cat ? 11 : 0);
-    const int themeArtId = (themeBandId != 0) ? 0 : (dog ? 6 : 3);   // 3=熊猫 6=田园犬
+    // 熊猫 / 狸花猫 / 丹顶鹤：整幅图当窗口背景（不抠图），关掉角落小图；
+    //   RCDATA 10 = crane_band.png（鹤）、11 = cat_band.png（猫扑蝴蝶）、12 = panda_band.png（熊猫）
+    const bool panda = !cat && !dog && !crane;
+    const int themeBandId = crane ? 10 : (cat ? 11 : (panda ? 12 : 0));
+    const int themeArtId = (themeBandId != 0) ? 0 : 6;   // 6=田园犬的角落小图
     m_candWnd.SetBottomBand(themeBandId, 130);
     m_candWnd.SetArtId(themeArtId);                             // 候选窗右下角装饰图
     SharedBar().SetIconFile(themeIcon);                         // 悬浮栏最左边的 Logo
