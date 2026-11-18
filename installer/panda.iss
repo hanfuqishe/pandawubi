@@ -74,6 +74,10 @@ Source: "{#MyRoot}\dist\panda_tsf32.dll";      DestDir: "{app}"; Flags: ignoreve
 Source: "{#MyRoot}\dist\panda-settings.exe";   DestDir: "{app}"; Flags: ignoreversion overwritereadonly
 Source: "{#MyRoot}\dist\panda-phrase.exe";     DestDir: "{app}"; Flags: ignoreversion overwritereadonly
 Source: "{#MyRoot}\data\qqwubi86.dict.tsv"; DestDir: "{app}\data"; Flags: ignoreversion overwritereadonly
+; 设置里的"词库"下拉框会用到这三份：dict-rime.bin（纯 Rime）/ dict-qq.bin（纯 QQ）/ qqwubi86.dict.tsv（合并）
+; 少了它们，用户 config.ini 里的 DictFile 找不到就会退到合并码表，候选顺序跟着变
+Source: "{#MyRoot}\data\dict-rime.bin";          DestDir: "{app}\data"; Flags: ignoreversion overwritereadonly
+Source: "{#MyRoot}\data\dict-qq.bin";            DestDir: "{app}\data"; Flags: ignoreversion overwritereadonly
 Source: "{#MyRoot}\data\simp2trad.dat";        DestDir: "{app}\data"; Flags: ignoreversion overwritereadonly
 Source: "{#MyRoot}\data\punc.ini";             DestDir: "{app}\data"; Flags: ignoreversion overwritereadonly
 Source: "{#MyRoot}\data\eng_words.txt";        DestDir: "{app}\data"; Flags: ignoreversion overwritereadonly
