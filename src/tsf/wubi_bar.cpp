@@ -1,5 +1,6 @@
 #include "wubi_bar.h"
 #include "ipc.h"
+#include "panda_version.h"
 #include <windowsx.h>   // GET_X_LPARAM / GET_Y_LPARAM
 #include <cstdio>
 
@@ -106,21 +107,20 @@ void StatusBar::SavePos() {
 static int S(int v, int dpi) { return MulDiv(v, dpi, 96); }
 
 void StatusBar::Layout() {
-    // 段：拖动手柄 | 中英 | 简繁 | 标点 | 设置
+    // 段：拖动手柄 | 中英 | 简繁 | 设置
+    // （原来的"全角/半角（中文标点）"段已去掉：需要半角直接切英文模式，这个开关没有意义）
     const int pad  = S(5, dpi_);
     const int grip = S(10, dpi_);
     const int segEN   = S(30, dpi_);
     const int segTrad = S(30, dpi_);
-    const int segPunc = S(30, dpi_);
     const int segSet  = S(26, dpi_);
     height_ = S(26, dpi_);
-    width_  = pad + grip + segEN + segTrad + segPunc + segSet + pad;
+    width_  = pad + grip + segEN + segTrad + segSet + pad;
 
     zones_.clear();
     int x = pad + grip;
     zones_.push_back(RECT{ x, 0, x + segEN, height_ });   x += segEN;
     zones_.push_back(RECT{ x, 0, x + segTrad, height_ }); x += segTrad;
-    zones_.push_back(RECT{ x, 0, x + segPunc, height_ }); x += segPunc;
     zones_.push_back(RECT{ x, 0, x + segSet, height_ });
 }
 
@@ -144,15 +144,33 @@ void StatusBar::Show(bool on) {
     EnsureCreated();
     if (!hwnd_) return;
 
-    // 默认位置：工作区右下角
+    // 位置：优先用存下来的坐标，但必须落在某块屏幕的工作区内。
+    // config.ini 里的旧坐标可能来自别的分辨率/已经拔掉的显示器（实测存过 6136,3091），
+    // 那样悬浮栏就跑到屏幕外，用户以为"没了"。
+    RECT work = { 0, 0, GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN) };
+    SystemParametersInfoW(SPI_GETWORKAREA, 0, &work, 0);
     int x = posX_, y = posY_;
+    if (x >= 0 && y >= 0) {
+        const POINT pt = { x, y };
+        MONITORINFO mi = { sizeof(mi) };
+        HMONITOR mon = MonitorFromPoint(pt, MONITOR_DEFAULTTONULL);
+        if (mon && GetMonitorInfoW(mon, &mi)) {
+            work = mi.rcWork;
+        } else {
+            x = -1; y = -1;          // 不在任何显示器上 -> 回默认
+        }
+    }
     if (x < 0 || y < 0) {
-        RECT work = { 0, 0, 1280, 720 };
-        SystemParametersInfoW(SPI_GETWORKAREA, 0, &work, 0);
         x = work.right - width_ - S(12, dpi_);
         y = work.bottom - height_ - S(12, dpi_);
         posX_ = x; posY_ = y;
     }
+    // 再夹一次，防止只剩一角露在屏幕外
+    if (x + width_ > work.right)  x = work.right - width_;
+    if (y + height_ > work.bottom) y = work.bottom - height_;
+    if (x < work.left) x = work.left;
+    if (y < work.top)  y = work.top;
+    posX_ = x; posY_ = y;
     SetWindowPos(hwnd_, HWND_TOPMOST, x, y, width_, height_, SWP_NOACTIVATE);
     Reconcile();          // 本进程不在前台就先不露头，等计时器/焦点回调
     InvalidateRect(hwnd_, nullptr, TRUE);
@@ -175,11 +193,10 @@ void StatusBar::Reconcile() {
     }
 }
 
-void StatusBar::SetState(bool english, bool trad, bool punc) {
+void StatusBar::SetState(bool english, bool trad) {
     english_ = english;
     trad_ = trad;
-    punc_ = punc;
-    if (hwnd_ && IsWindowVisible(hwnd_)) InvalidateRect(hwnd_, nullptr, TRUE);
+    if (hwnd_ && IsWindowVisible(hwnd_)) InvalidateRect(hwnd_, nullptr, FALSE);
 }
 
 int StatusBar::HitTest(int x) const {
@@ -221,15 +238,14 @@ void StatusBar::Paint(HDC dc) {
                              CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei UI");
     HGDIOBJ oldFont = SelectObject(dc, font);
 
-    const wchar_t* texts[4] = {
+    const wchar_t* texts[3] = {
         english_ ? L"英" : L"中",
         trad_ ? L"繁" : L"简",
-        punc_ ? L"，。" : L",.",
         L"\u2699",
     };
-    const bool active[4] = { english_, trad_, punc_, false };
+    const bool active[3] = { english_, trad_, false };
 
-    for (size_t i = 0; i < zones_.size() && i < 4; ++i) {
+    for (size_t i = 0; i < zones_.size() && i < 3; ++i) {
         RECT r = zones_[i];
         SetTextColor(dc, active[i] ? RGB(200, 70, 40) : RGB(60, 64, 70));
         DrawTextW(dc, texts[i], -1, &r, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
@@ -314,10 +330,9 @@ LRESULT CALLBACK StatusBar::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         HMENU menu = CreatePopupMenu();
         AppendMenuW(menu, MF_STRING | (self->english_ ? 0 : MF_CHECKED), 1, L"中文输入");
         AppendMenuW(menu, MF_STRING | (self->trad_ ? MF_CHECKED : 0), 2, L"简繁输出");
-        AppendMenuW(menu, MF_STRING | (self->punc_ ? MF_CHECKED : 0), 3, L"中文标点");
         AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
-        AppendMenuW(menu, MF_STRING, 4, L"设置...");
-        AppendMenuW(menu, MF_STRING, 5, L"关于 Panda五笔");
+        AppendMenuW(menu, MF_STRING, 3, L"设置...");
+        AppendMenuW(menu, MF_STRING, 4, PANDA_WUBI_VERSION_FULL);
 
         SetForegroundWindow(hwnd);
         const int cmd = (int)TrackPopupMenu(menu, TPM_RETURNCMD | TPM_RIGHTBUTTON,
@@ -325,7 +340,7 @@ LRESULT CALLBACK StatusBar::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         DestroyMenu(menu);
         PostMessageW(hwnd, WM_NULL, 0, 0);
 
-        if (cmd >= 1 && cmd <= 5 && self->onClick_) self->onClick_(cmd - 1);
+        if (cmd >= 1 && cmd <= 4 && self->onClick_) self->onClick_(cmd - 1);
         return 0;
     }
     case WM_MOUSEACTIVATE:

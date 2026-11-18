@@ -29,7 +29,7 @@ public:
     bool Visible() const { return hwnd_ && IsWindowVisible(hwnd_); }
     bool Wanted()  const { return want_; }
 
-    void SetState(bool english, bool trad, bool punc);
+    void SetState(bool english, bool trad);
     void Reposition(int x, int y);
 
 private:
@@ -50,7 +50,7 @@ private:
 
     bool english_ = false;
     bool trad_    = false;
-    bool punc_    = true;
+
 
     int  dpi_ = 96;
     int  width_ = 0;

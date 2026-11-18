@@ -970,7 +970,7 @@ static void RequestSettingsReload();   // 定义见下（需要 CTextService 完
 
 void CTextService::BarSync() {
     if (g_barOwner == this)
-        SharedBar().SetState(m_english, m_tradEnabled, m_puncEnabled);
+        SharedBar().SetState(m_english, m_tradEnabled);
 }
 
 void CTextService::OnBarClick(int idx) {
@@ -978,13 +978,12 @@ void CTextService::OnBarClick(int idx) {
     case 0: m_english = !m_english; SetInputModeCompartments(!m_english); break;   // 中/英
     case 1: m_tradEnabled = !m_tradEnabled; m_settings.TradChinese = m_tradEnabled ? 1 : 0;
             wubi::SaveSettings(GetConfigPath(), m_settings); break;               // 简/繁
-    case 2: m_puncEnabled = !m_puncEnabled; m_settings.EnablePunction = m_puncEnabled ? 1 : 0;
-            wubi::SaveSettings(GetConfigPath(), m_settings); break;               // 标点
-    case 4: {
+    case 2: LaunchSettingsWindow(nullptr); break;                                 // 设置
+    case 3: {
         // 关于
         wchar_t msg[512];
         swprintf_s(msg,
-            L"Panda五笔\n\n构建: %hs %hs\n词库: %ls\n词条: %lld\n\n中/英: 单击 Shift 或点状态栏\n简繁: Ctrl+Shift+T\n标点: Ctrl+Shift+P",
+            L"熊猫五笔 v1.0.0\n\n构建: %hs %hs\n词库: %ls\n词条: %lld\n\n中/英: 单击 Shift 或点状态栏\n简繁: Ctrl+Shift+T\n标点: Ctrl+Shift+P（设置里也可改）",
             __DATE__, __TIME__,
             m_settings.DictFile.c_str(), (long long)g_dict.Get().EntryCount());
         MessageBoxW(nullptr, msg, L"关于 Panda五笔", MB_OK | MB_ICONINFORMATION);
