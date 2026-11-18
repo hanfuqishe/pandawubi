@@ -219,6 +219,26 @@ void StatusBar::HideNow() {
     if (hwnd_) ShowWindow(hwnd_, SW_HIDE);
 }
 
+// 整个桌面只留一条栏：让其它进程的栏自己隐藏（跨进程不能 DestroyWindow，那正是之前炸出幽灵栏的根因）
+void StatusBar::YieldOtherBars() {
+    if (!hwnd_) return;
+    const UINT msg = PandaBarYieldMessage();
+    const DWORD self = GetCurrentProcessId();
+    HWND w = nullptr;
+    while ((w = FindWindowExW(nullptr, w, kBarClass, nullptr)) != nullptr) {
+        if (w == hwnd_) continue;
+        DWORD pid = 0;
+        GetWindowThreadProcessId(w, &pid);
+        if (pid == self) continue;
+        // 两步走：
+        //   1) 先发消息让对方的栏自己隐藏（对方是旧版本 DLL 时不认这条消息）；
+        //   2) 再直接 ShowWindow(SW_HIDE) —— 跨进程隐藏顶层窗口是允许的（**不能**用 DestroyWindow），
+        //      这样连"对方的计时器已经停了、永远不会自己收"的僵尸栏也能压下去。
+        PostMessageW(w, msg, 0, 0);
+        ShowWindow(w, SW_HIDE);
+    }
+}
+
 void StatusBar::Reconcile() {
     if (!hwnd_) return;
     const bool visible = IsWindowVisible(hwnd_) != FALSE;
@@ -226,6 +246,12 @@ void StatusBar::Reconcile() {
     if (wantShow && !visible) {
         ShowWindow(hwnd_, SW_SHOWNOACTIVATE);
         InvalidateRect(hwnd_, nullptr, TRUE);
+        YieldOtherBars();
+        yieldTick_ = 0;
+    } else if (wantShow && visible) {
+        // 每 ~2.5 秒再喊一次：别的进程的栏要是又冒出来（或者它那条是旧版本、不认这条消息之前的），
+        // 能把它们重新压下去；本进程是唯一前台，自己不会被别人压。
+        if (++yieldTick_ >= 5) { yieldTick_ = 0; YieldOtherBars(); }
     } else if (!wantShow && visible) {
         ShowWindow(hwnd_, SW_HIDE);
     }
@@ -321,6 +347,13 @@ LRESULT CALLBACK StatusBar::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     // 设置窗口保存配置后广播的"重新加载设置"消息（RegisterWindowMessage，跨进程可用）
     if (msg == PandaReloadMessage()) {
         if (self && self->onReload_) self->onReload_();
+        return 0;
+    }
+
+    // 别的进程的悬浮栏刚刚显示了：本进程的栏先让位（只隐藏，不动 want_，
+    // 等本进程重新成为前台时它会自己再出来）
+    if (msg == PandaBarYieldMessage()) {
+        ShowWindow(hwnd, SW_HIDE);
         return 0;
     }
 

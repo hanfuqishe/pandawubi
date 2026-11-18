@@ -85,7 +85,7 @@ static Gdiplus::Bitmap* g_artCache[16] = { nullptr };
 // 左边缘上面 70% 是接近纯白的淡出，只有底部才泛绿，两点线性插值会把中间插成绿色。
 static COLORREF            g_bandSky    = RGB(0xF7, 0xF9, 0xFC);  // 图片左上角的颜色
 static int                 g_bandSkyFor = 0;                      // 已处理过的资源 id
-static Gdiplus::Bitmap*    g_bandCol    = nullptr;                // 图片"最左一列"（1 x h）
+
 
 // 图片靠右下对齐时，左边空出来的那块直接把图片最左一列横向拉过去 —— 和原图完全连贯。
 static void SampleBandSky(int id, Gdiplus::Bitmap* bmp) {
@@ -95,18 +95,6 @@ static void SampleBandSky(int id, Gdiplus::Bitmap* bmp) {
     Gdiplus::Color c0;
     if (bmp->GetPixel(0, 0, &c0) == Gdiplus::Ok) g_bandSky = RGB(c0.GetR(), c0.GetG(), c0.GetB());
 
-    Gdiplus::Bitmap* col = new Gdiplus::Bitmap(1, h, PixelFormat32bppPARGB);
-    if (col && col->GetLastStatus() == Gdiplus::Ok) {
-        for (int y = 0; y < h; ++y) {
-            Gdiplus::Color c;
-            if (bmp->GetPixel(0, y, &c) != Gdiplus::Ok) continue;
-            col->SetPixel(0, y, c);
-        }
-        delete g_bandCol;
-        g_bandCol = col;
-    } else {
-        delete col;
-    }
     g_bandSkyFor = id;
 }
 

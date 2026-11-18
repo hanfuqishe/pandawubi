@@ -8,3 +8,10 @@ inline UINT PandaReloadMessage() {
     static const UINT msg = RegisterWindowMessageW(L"PandaWubi.ReloadSettings");
     return msg;
 }
+// 悬浮栏"让位"消息：整个桌面只允许一条可见的栏。
+// 谁把自己那条显示出来，就广播这条消息给**别的进程**的栏，让它们自行隐藏
+// （跨进程不能直接 DestroyWindow —— 那正是之前炸出十几条幽灵栏的根因）。
+inline UINT PandaBarYieldMessage() {
+    static const UINT msg = RegisterWindowMessageW(L"PandaWubi.BarYield");
+    return msg;
+}

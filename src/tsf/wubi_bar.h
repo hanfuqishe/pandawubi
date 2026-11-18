@@ -38,6 +38,7 @@ private:
     static LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
     void EnsureCreated();
     void Reconcile();      // 计时器：want_ && 前台 → 显示，否则隐藏
+    void YieldOtherBars(); // 让其它进程的悬浮栏隐藏（全系统只留一条）
     void Layout();
     void Paint(HDC dc);
     int  HitTest(int x) const;
@@ -67,6 +68,7 @@ private:
     POINT dragOffset_ = { 0, 0 };
     int   posX_ = -1, posY_ = -1;   // -1 = 默认位置（右下角）
     bool  want_ = false;            // 本会话是否要这条栏（不因临时失焦而清除）
+    int   yieldTick_ = 0;           // 可见期间周期性再"喊话"让别的栏让位的计数
 };
 
 } // namespace wubi

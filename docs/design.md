@@ -1239,6 +1239,24 @@ KillTimer → SetWindowLongPtr(USERDATA, 0) → DestroyWindow（失败）→ Pos
 
 实测：竖排（669×634，窗口不再变高）图片贴在下方、文字压在上面且可读，接缝不可见；横排时按高度对齐（不会把画裁掉）。
 
+## 二·三十七·十一、全系统只留一条悬浮栏（跨进程"让位"协议）
+
+现象：TSF 会给每个宿主进程各加载一份 DLL，每份都建一条栏；光靠"非前台就隐藏"不够 ——
+有些宿主的 TSF 线程/计时器停了，那条栏就永远留在桌面上（实测同一个位置叠了 2 条可见，
+其中一条是 DSH Desktop 的僵尸栏，`PostMessage` 过去它根本不 hide，但 `SendMessageTimeout` 回 1，
+说明线程还在、只是跑的是旧 DLL）。
+
+做法（`StatusBar::YieldOtherBars`）：
+- 本进程的栏**显示出来的那一刻**，枚举所有 `PandaWubiStatusBar` 窗口，跳过自己和同进程的；
+- 对每条：先 `PostMessage(PandaBarYieldMessage())`（配对端会自己 `SW_HIDE`，优雅），
+- 再直接 `ShowWindow(w, SW_HIDE)`（跨进程隐藏顶层窗口是允许的；**不能** `DestroyWindow` ——
+  那正是之前炸出十几条幽灵栏的根因）。这样即使对方是旧 DLL、或者计时器已经停了，也能压下去；
+- 可见期间每 5 个计时器 tick（~2.5s）再压一次，防止别人的栏又冒出来；
+- 自己只在"前台窗口属于本进程"时才显示（`ForegroundIsSelf()`），所以两边的判定不会打架。
+
+实测：两个 tsf-host 交替抢前台，任意时刻全系统只有一条栏可见；DSH Desktop 那条旧僵尸栏
+被新进程一压就隐藏了。
+
 ## 二·三十八、按应用使用不同配置（[app:<exe>]）
 
 需求：同一个输入法，A 程序用简体、B 程序用繁体（而不是切换输入法本身）。
