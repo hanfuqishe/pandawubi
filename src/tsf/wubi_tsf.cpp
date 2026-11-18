@@ -984,8 +984,13 @@ public:
                     const std::wstring raw(code.begin(), code.end());
                     if (m_comp && m_context) CancelComposition(m_context);
                     if (!raw.empty()) CommitString(pic, raw);
-                    m_engTyped = raw;                                // 英文模式接着这个前缀，继续打就是整个单词
-                    LogLine(L"shift during compose: committed raw code '%ls' (%zu chars), switch to english",
+                    // 切到"英文直通"：不能把编码留在补全缓冲里 —— 否则下一个字母会进英文补全
+                    // （吃掉按键、弹候选），而不是直接落到文档里。这里全部清干净。
+                    m_engTyped.clear();
+                    m_engActive = false;
+                    m_quickMode = false;
+                    m_zPending = false;
+                    LogLine(L"shift during compose: committed raw code '%ls' (%zu chars), switch to english (pass-through)",
                             raw.c_str(), raw.size());
                 }
                 if (m_comp && m_context) CancelComposition(m_context);
