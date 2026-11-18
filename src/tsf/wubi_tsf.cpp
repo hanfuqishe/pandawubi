@@ -83,26 +83,30 @@ static Gdiplus::Bitmap* g_artCache[16] = { nullptr };
 // 图片靠右下对齐时，窗口左边空出来的那块要跟图片"接上"。
 // 沿图片左边缘取 12 个点做多段渐变 —— 只取上下两点会接不上：比如熊猫那张，
 // 左边缘上面 70% 是接近纯白的淡出，只有底部才泛绿，两点线性插值会把中间插成绿色。
-const int kBandEdgeStops = 12;
-static COLORREF g_bandEdge[kBandEdgeStops];
-static COLORREF g_bandSky    = RGB(0xF7, 0xF9, 0xFC);   // 顶部的那个颜色（渐变带用它）
-static int      g_bandSkyFor = 0;                        // 已采样过的资源 id
+static COLORREF            g_bandSky    = RGB(0xF7, 0xF9, 0xFC);  // 图片左上角的颜色
+static int                 g_bandSkyFor = 0;                      // 已处理过的资源 id
+static Gdiplus::Bitmap*    g_bandCol    = nullptr;                // 图片"最左一列"（1 x h）
 
+// 图片靠右下对齐时，左边空出来的那块直接把图片最左一列横向拉过去 —— 和原图完全连贯。
 static void SampleBandSky(int id, Gdiplus::Bitmap* bmp) {
     if (!bmp || g_bandSkyFor == id) return;
     const int h = (int)bmp->GetHeight();
     if (h <= 0) return;
-    for (int i = 0; i < kBandEdgeStops; ++i) {
-        const int y = (int)((long long)i * (h - 1) / (kBandEdgeStops - 1));
-        unsigned r = 0, g = 0, b = 0, n = 0;
-        for (int x = 1; x <= 4; ++x) {            // 横向取 4 个点压一下噪点
+    Gdiplus::Color c0;
+    if (bmp->GetPixel(0, 0, &c0) == Gdiplus::Ok) g_bandSky = RGB(c0.GetR(), c0.GetG(), c0.GetB());
+
+    Gdiplus::Bitmap* col = new Gdiplus::Bitmap(1, h, PixelFormat32bppPARGB);
+    if (col && col->GetLastStatus() == Gdiplus::Ok) {
+        for (int y = 0; y < h; ++y) {
             Gdiplus::Color c;
-            if (bmp->GetPixel(x, y, &c) == Gdiplus::Ok) { r += c.GetR(); g += c.GetG(); b += c.GetB(); ++n; }
+            if (bmp->GetPixel(0, y, &c) != Gdiplus::Ok) continue;
+            col->SetPixel(0, y, c);
         }
-        if (!n) continue;
-        g_bandEdge[i] = RGB(r / n, g / n, b / n);
+        delete g_bandCol;
+        g_bandCol = col;
+    } else {
+        delete col;
     }
-    g_bandSky = g_bandEdge[0];
     g_bandSkyFor = id;
 }
 
@@ -565,24 +569,10 @@ void CCandidateWindow::Paint(HDC dc) {
     // ---- 背景：用设置里的背景色（原来是写死的淡绿渐变，设置项其实不生效）----
     {
         if (bandId_ != 0) {
-            // 竖向多段渐变：直接跟着图片左边缘的颜色分布走，接缝才对得上
-            Gdiplus::Graphics gfx(dc);
-            Gdiplus::RectF rr(0.0f, 0.0f, (Gdiplus::REAL)W, (Gdiplus::REAL)H);
-            // 分段画（每段一个两端颜色的线性渐变），等效于多段渐变；
-            // 直接用 ColorBlend + SetInterpolationColors 在这个 SDK 头里没有，分段更省事
-            const int segs = kBandEdgeStops - 1;
-            for (int i = 0; i < segs; ++i) {
-                const int y0 = H * i / segs;
-                const int y1 = H * (i + 1) / segs;
-                if (y1 <= y0) continue;
-                const COLORREF ca = g_bandEdge[i], cb = g_bandEdge[i + 1];
-                Gdiplus::RectF seg(0.0f, (Gdiplus::REAL)y0, (Gdiplus::REAL)W, (Gdiplus::REAL)(y1 - y0));
-                Gdiplus::LinearGradientBrush lg(seg,
-                    Gdiplus::Color(255, GetRValue(ca), GetGValue(ca), GetBValue(ca)),
-                    Gdiplus::Color(255, GetRValue(cb), GetGValue(cb), GetBValue(cb)),
-                    Gdiplus::LinearGradientModeVertical);
-                gfx.FillRectangle(&lg, seg);
-            }
+            HBRUSH br0 = CreateSolidBrush(g_bandSky);
+            RECT all0 = { 0, 0, W, H };
+            FillRect(dc, &all0, br0);
+            DeleteObject(br0);
         } else {
             HBRUSH br = CreateSolidBrush(bgCol_);
             RECT all = { 0, 0, W, H };
@@ -607,6 +597,17 @@ void CCandidateWindow::Paint(HDC dc) {
             const Gdiplus::REAL dw = iw * scale, dh = ih * scale;
             const Gdiplus::REAL left = (Gdiplus::REAL)W - dw;
             const Gdiplus::REAL top = (Gdiplus::REAL)H - dh;
+            // 左边空出来的部分：把图片最左一列横向拉伸铺过去（等价于复制那一列像素），
+            // 和原图的淡出完全连贯，比任何插值/渐变都准。
+            if (left > 0 && g_bandCol) {
+                const Gdiplus::InterpolationMode oldMode = gfx.GetInterpolationMode();
+                gfx.SetInterpolationMode(Gdiplus::InterpolationModeNearestNeighbor);
+                gfx.DrawImage(g_bandCol,
+                              Gdiplus::RectF(0.0f, top, left, dh),
+                              0.0f, 0.0f, 1.0f, (Gdiplus::REAL)g_bandCol->GetHeight(),
+                              Gdiplus::UnitPixel, nullptr);
+                gfx.SetInterpolationMode(oldMode);
+            }
             gfx.DrawImage(band, Gdiplus::RectF(left, top, dw, dh),
                           0.0f, 0.0f, iw, ih, Gdiplus::UnitPixel, nullptr);
 
