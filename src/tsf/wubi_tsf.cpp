@@ -279,6 +279,15 @@ public:
     void SetLetterLabels(bool on) { if (letterLabels_ != on) { letterLabels_ = on; RecalcAndResize(); } }
     // 纯文本徽标：不显示序号（用于中/英状态提示，避免被当成候选词）
     void SetPlain(bool on) { if (plain_ != on) { plain_ = on; RecalcAndResize(); } }
+    // 主题「丹顶鹤」：候选窗最下方铺一条整幅风景（不抠图），右对齐 + 底对齐
+    //   id = RCDATA 资源号；capDip = 条带最大高度（像素为宽时按比例算，超过就裁掉上半部分）
+    void SetBottomBand(int id, int capDip) {
+        if (bandId_ == id && bandCapDip_ == capDip) return;
+        bandId_ = id; bandCapDip_ = capDip;
+        if (hwnd_) RecalcAndResize();
+        if (hwnd_) InvalidateRect(hwnd_, nullptr, FALSE);
+    }
+
     // 主题：候选窗右下角装饰图用哪个资源（3=熊猫吃竹子，4=狸花猫）
     void SetArtId(int id) {
         if (artId_ == id) return;
@@ -350,7 +359,10 @@ private:
     bool     inset_  = true;                  // 内框凹陷
     std::wstring face_ = L"Microsoft YaHei UI";   // 字体名
     std::vector<char> pinned_;                    // 1 = 人工锁定，词尾加小星号
-    int      artId_ = 3;                          // 右下角装饰图资源 id（3=熊猫 4=狸花猫）
+    int      artId_ = 3;                          // 右下角装饰图资源 id（3=熊猫 4=狸花猫 0=不画）
+    int      bandId_ = 0;                         // 底部风景条资源 id（0=不画）
+    int      bandCapDip_ = 120;                   // 底部风景条最大高度（逻辑像素）
+    int      bandH_ = 0;                          // 本次布局算出的条带高度（物理像素）
     HFONT    starFont_ = nullptr;                 // 星号用的小字号字体
     COLORREF textCol_   = RGB(0x20, 0x20, 0x28);  // 普通候选字
 
@@ -472,6 +484,7 @@ void CCandidateWindow::RecalcAndResize() {
         SelectObject(dc, old);
         ReleaseDC(hwnd_, dc);
         artW_ = 0;
+        bandH_ = 0;          // 没有候选行时不画底部风景条（也不用留高度）
         width_ = cs.cx + padX_ * 2 + MulDiv(10, (int)dpi, 96);
         if (width_ < MulDiv(120, (int)dpi, 96)) width_ = MulDiv(120, (int)dpi, 96);
         height_ = headH_ + padY_ * 2 + MulDiv(6, (int)dpi, 96);
@@ -496,6 +509,24 @@ void CCandidateWindow::RecalcAndResize() {
     if (width_ < MulDiv(120, (int)dpi, 96)) width_ = MulDiv(120, (int)dpi, 96);
     height_ += MulDiv(4, (int)dpi, 96);
     height_ += MulDiv(18, (int)dpi, 96);          // 给装饰图留出高度
+
+    // 底部风景条：宽度铺满，高度按图片比例算，超过上限就只留最下面那一段
+    bandH_ = 0;
+    if (bandId_ != 0) {
+        int aspectW = 4, aspectH = 1;
+        if (Gdiplus::Bitmap* band = LoadArtFromResource(bandId_)) {
+            aspectW = (int)band->GetWidth();
+            aspectH = (int)band->GetHeight();
+        }
+        if (aspectW <= 0) aspectW = 4;
+        if (aspectH <= 0) aspectH = 1;
+        const int cap = MulDiv(bandCapDip_, (int)dpi, 96);
+        int h = (int)((long long)width_ * aspectH / aspectW);
+        if (h > cap) h = cap;
+        if (h < 0) h = 0;
+        bandH_ = h;
+        height_ += bandH_;
+    }
     layout_.width = width_;
     layout_.height = height_;
 }
@@ -522,6 +553,23 @@ void CCandidateWindow::Paint(HDC dc) {
         RECT all = { 0, 0, W, H };
         FillRect(dc, &all, br);
         DeleteObject(br);
+    }
+
+    // ---- 底部风景条（丹顶鹤主题）：整幅图不抠，等比缩放到铺满条带，右对齐 + 底对齐 ----
+    if (bandH_ > 0 && bandH_ < H) if (Gdiplus::Bitmap* band = LoadArtFromResource(bandId_)) {
+        Gdiplus::Graphics gfx(dc);
+        gfx.SetInterpolationMode(Gdiplus::InterpolationModeHighQualityBicubic);
+        gfx.SetPixelOffsetMode(Gdiplus::PixelOffsetModeHighQuality);
+        const Gdiplus::REAL iw = (Gdiplus::REAL)band->GetWidth();
+        const Gdiplus::REAL ih = (Gdiplus::REAL)band->GetHeight();
+        const Gdiplus::REAL bw = (Gdiplus::REAL)W;
+        const Gdiplus::REAL bh = (Gdiplus::REAL)bandH_;
+        Gdiplus::REAL scale = bw / iw;
+        if (ih * scale < bh) scale = bh / ih;          // 覆盖整条，不留空白
+        const Gdiplus::REAL dw = iw * scale, dh = ih * scale;
+        gfx.DrawImage(band,
+                      Gdiplus::RectF((Gdiplus::REAL)W - dw, (Gdiplus::REAL)H - dh, dw, dh),
+                      0.0f, 0.0f, iw, ih, Gdiplus::UnitPixel, nullptr);
     }
 
     // ---- 右下角：熊猫吃竹子（GDI+，PNG 带 alpha）；只有候选行时才画 ----
@@ -1627,12 +1675,19 @@ static void UpdateIndicatorIconFile(const std::wstring& icoName) {
 void CTextService::ApplySettings() {
     // 设置里存的是 0xRRGGBB（网页习惯），COLORREF 是 0x00BBGGRR，必须换序
     auto toRef = [](int v) { return RGB((v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF); };
-    m_candWnd.SetStyle(m_settings.CandFontPt,
-                       toRef(m_settings.CandBgColor),
+    const bool themeCrane = (m_settings.Theme == L"crane");
+
+    // 丹顶鹤主题：窗口色调跟着那张风景图走（淡薄荷天 + 墨绿字 + 青灰边）。
+    // 只有在用户没改过颜色（还是出厂默认）时才接管，改过就完全尊重用户设置。
+    const bool colorsAreDefault = (m_settings.CandBgColor == 0xF7F9FC &&
+                                   m_settings.CandTextColor == 0x202028 &&
+                                   m_settings.CandBorderColor == 0xA8CDA8);
+    const COLORREF bgRef = (themeCrane && colorsAreDefault) ? RGB(0xD3, 0xE9, 0xE6) : toRef(m_settings.CandBgColor);
+    const COLORREF txRef = (themeCrane && colorsAreDefault) ? RGB(0x24, 0x36, 0x32) : toRef(m_settings.CandTextColor);
+    const COLORREF bdRef = (themeCrane && colorsAreDefault) ? RGB(0x8F, 0xB8, 0xB0) : toRef(m_settings.CandBorderColor);
+    m_candWnd.SetStyle(m_settings.CandFontPt, bgRef,
                        m_settings.CandInset != 0,
-                       m_settings.CandFontFace,
-                       toRef(m_settings.CandTextColor),
-                       toRef(m_settings.CandBorderColor));
+                       m_settings.CandFontFace, txRef, bdRef);
     m_puncEnabled = m_settings.EnablePunction != 0;
     m_tradEnabled = m_settings.TradChinese != 0;
     m_candCount   = m_settings.CandCount;
@@ -1645,7 +1700,9 @@ void CTextService::ApplySettings() {
     const wchar_t* themeIcon = crane ? L"crane.ico"
                              : dog   ? L"dog.ico"
                              : cat   ? L"cat.ico" : L"panda.ico";
-    const int themeArtId = crane ? 8 : (dog ? 6 : (cat ? 4 : 3));   // 3=熊猫 4=狸花猫 6=田园犬 8=丹顶鹤
+    // 丹顶鹤不用角落小图，改成候选窗最下方一条整幅风景（不抠图）
+    const int themeArtId = crane ? 0 : (dog ? 6 : (cat ? 4 : 3));   // 3=熊猫 4=狸花猫 6=田园犬
+    m_candWnd.SetBottomBand(crane ? 10 : 0, 130);                   // 10 = RCDATA crane_band.png
     m_candWnd.SetArtId(themeArtId);                             // 候选窗右下角装饰图
     SharedBar().SetIconFile(themeIcon);                         // 悬浮栏最左边的 Logo
     SharedBar().SetThemeIndex(crane ? 3 : (dog ? 2 : (cat ? 1 : 0)));   // 右键菜单里打勾
