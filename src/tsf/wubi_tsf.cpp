@@ -964,16 +964,39 @@ public:
         if (pfEaten) *pfEaten = FALSE;
         return S_OK;
     }
-    STDMETHODIMP OnKeyUp(ITfContext*, WPARAM wParam, LPARAM, BOOL* pfEaten) override {
+    STDMETHODIMP OnKeyUp(ITfContext* pic, WPARAM wParam, LPARAM, BOOL* pfEaten) override {
         if (pfEaten) *pfEaten = FALSE;
-        LogLine(L"OnKeyUp vk=0x%02X shiftDown=%d shiftUsed=%d", (unsigned)wParam, (int)m_shiftDown, (int)m_shiftUsed);
-        // 单击 Shift（按下期间没按别的键）切换中英文
+        LogLine(L"OnKeyUp vk=0x%02X shiftDown=%d shiftUsed=%d comp=%p code=%hs",
+                (unsigned)wParam, (int)m_shiftDown, (int)m_shiftUsed, (void*)m_comp,
+                m_composer.Code().c_str());
+        // 单击 Shift（按下期间没按别的键）：
+        //   正在组码 → 先把当前编码对应的候选上屏，再切到英文；
+        //   没在组码 → 单纯切换中/英文。
         const UINT vk = (UINT)wParam;
         if (vk == VK_SHIFT || vk == VK_LSHIFT || vk == VK_RSHIFT) {
             if (m_shiftDown && !m_shiftUsed) {
-                m_english = !m_english;
+                const bool composing = (m_comp != nullptr) && (m_context != nullptr) &&
+                                       !m_composer.Code().empty();
+                if (composing && pic) {
+                    const auto o = m_composer.SelectBest();
+                    if (o.act == wubi::Composer::Act::Committed ||
+                        o.act == wubi::Composer::Act::CommitThenContinue) {
+                        CommitText(pic, o.commit, o.commitCode,
+                                   o.act == wubi::Composer::Act::Committed);
+                        LogLine(L"shift during compose: committed %zu char(s) for code=%hs, switch to english",
+                                o.commit.size(), o.commitCode.c_str());
+                    } else {
+                        LogLine(L"shift during compose: nothing to commit (act=%d)", (int)o.act);
+                    }
+                }
                 if (m_comp && m_context) CancelComposition(m_context);
-                LogLine(L"toggle english=%d", (int)m_english);
+                if (composing) {
+                    m_english = true;                 // 组码阶段按 Shift：切到英文
+                    m_candWnd.Hide();
+                } else {
+                    m_english = !m_english;           // 平时：切换中/英
+                }
+                LogLine(L"switch english=%d (composing=%d)", (int)m_english, (int)composing);
                 SetInputModeCompartments(!m_english);
                 FlashStatus(m_english ? L"\u82f1" : L"\u4e2d");
                 BarSync();
