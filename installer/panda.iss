@@ -69,8 +69,8 @@ StatusUninstalling=正在卸载 熊猫五笔…
 Name: "desktopicon"; Description: "创建桌面快捷方式（打开设置）"; GroupDescription: "附加任务:"; Flags: unchecked
 
 [Files]
-Source: "{#MyRoot}\dist\panda_tsf.dll";        DestDir: "{app}"; Flags: ignoreversion overwritereadonly
-Source: "{#MyRoot}\dist\panda_tsf32.dll";      DestDir: "{app}"; Flags: ignoreversion overwritereadonly
+Source: "{#MyRoot}\dist\panda_tsf.dll";        DestDir: "{app}"; Flags: ignoreversion overwritereadonly restartreplace
+Source: "{#MyRoot}\dist\panda_tsf32.dll";      DestDir: "{app}"; Flags: ignoreversion overwritereadonly restartreplace
 Source: "{#MyRoot}\dist\panda-settings.exe";   DestDir: "{app}"; Flags: ignoreversion overwritereadonly
 Source: "{#MyRoot}\dist\panda-phrase.exe";     DestDir: "{app}"; Flags: ignoreversion overwritereadonly
 Source: "{#MyRoot}\data\qqwubi86.dict.tsv"; DestDir: "{app}\data"; Flags: ignoreversion overwritereadonly
@@ -121,6 +121,12 @@ Filename: "{sys}\regsvr32.exe"; Parameters: "/s ""{app}\panda_tsf.dll"""; Status
 Filename: "{syswow64}\regsvr32.exe"; Parameters: "/s ""{app}\panda_tsf32.dll"""; StatusMsg: "正在注册 32 位输入法…"; Flags: runhidden waituntilterminated; Check: IsWin64
 ; 首次安装时生成一份默认配置（已有配置就跳过，设置程序只会补缺失项）
 Filename: "{app}\panda-settings.exe"; Parameters: "/set CandCount=9"; StatusMsg: "写入初始配置…"; Flags: runhidden waituntilterminated; Check: not FileExists(ExpandConstant('{userappdata}\PandaWubi\config.ini'))
+; DllRegisterServer 会把语言配置里的 IconFile 改成 DLL 路径、Description 改成 "Panda五笔"，
+; 而输入指示器只认 .ico 文件 -> 装完语言栏没图标。这里在注册之后把这两项改回来。
+Filename: "{cmd}"; Parameters: "/c reg add ""HKLM\SOFTWARE\Microsoft\CTF\TIP\{{7F3B0C21-9D55-4F0E-B1C2-5A6D8E9F0A11}}\LanguageProfile\0x00000804\{{7F3B0C21-9D55-4F0E-B1C2-5A6D8E9F0A12}}"" /v IconFile /t REG_SZ /d ""{localappdata}\PandaWubi\panda.ico"" /f"; Flags: runhidden waituntilterminated
+Filename: "{cmd}"; Parameters: "/c reg add ""HKLM\SOFTWARE\Microsoft\CTF\TIP\{{7F3B0C21-9D55-4F0E-B1C2-5A6D8E9F0A11}}\LanguageProfile\0x00000804\{{7F3B0C21-9D55-4F0E-B1C2-5A6D8E9F0A12}}"" /v Description /t REG_SZ /d ""熊猫五笔"" /f"; Flags: runhidden waituntilterminated
+Filename: "{cmd}"; Parameters: "/c reg add ""HKCU\Software\Microsoft\CTF\TIP\{{7F3B0C21-9D55-4F0E-B1C2-5A6D8E9F0A11}}\LanguageProfile\0x00000804\{{7F3B0C21-9D55-4F0E-B1C2-5A6D8E9F0A12}}"" /v IconFile /t REG_SZ /d ""{localappdata}\PandaWubi\panda.ico"" /f"; Flags: runhidden waituntilterminated
+Filename: "{cmd}"; Parameters: "/c reg add ""HKCU\Software\Microsoft\CTF\TIP\{{7F3B0C21-9D55-4F0E-B1C2-5A6D8E9F0A11}}\LanguageProfile\0x00000804\{{7F3B0C21-9D55-4F0E-B1C2-5A6D8E9F0A12}}"" /v Description /t REG_SZ /d ""熊猫五笔"" /f"; Flags: runhidden waituntilterminated
 Filename: "{app}\panda-settings.exe"; Description: "打开设置"; Flags: postinstall nowait skipifsilent unchecked
 
 [UninstallRun]
