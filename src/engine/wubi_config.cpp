@@ -66,6 +66,15 @@ Settings LoadSettings(const std::wstring& iniPath, const std::wstring& appExe) {
     s.CandFontPt     = GetInt(iniPath, L"CandFont", s.CandFontPt);
     s.CandBgColor    = GetColor(iniPath, L"CandBgColor", s.CandBgColor);
     s.CandInset      = GetInt(iniPath, L"CandInset", s.CandInset);
+    s.CandTextColor    = GetColor(iniPath, L"CandTextColor", s.CandTextColor);
+    s.CandSelTextColor = GetColor(iniPath, L"CandSelTextColor", s.CandSelTextColor);
+    s.CandSelBgColor   = GetColor(iniPath, L"CandSelBgColor", s.CandSelBgColor);
+    s.CandBorderColor  = GetColor(iniPath, L"CandBorderColor", s.CandBorderColor);
+    {
+        wchar_t fb[128] = { 0 };
+        GetPrivateProfileStringW(L"Config", L"CandFontFace", s.CandFontFace.c_str(), fb, ARRAYSIZE(fb), iniPath.c_str());
+        if (fb[0]) s.CandFontFace = fb;
+    }
     {
         wchar_t db[128] = { 0 };
         GetPrivateProfileStringW(L"Config", L"DictFile", s.DictFile.c_str(), db, ARRAYSIZE(db), iniPath.c_str());
@@ -99,6 +108,18 @@ bool SaveSettings(const std::wstring& iniPath, const Settings& s) {
     PutInt(iniPath, L"Level1Mode", s.Level1Mode);
     PutInt(iniPath, L"CandFont", s.CandFontPt);
     PutInt(iniPath, L"CandInset", s.CandInset);
+    {
+        auto putColor = [&](const wchar_t* key, int v) {
+            wchar_t cb[32];
+            swprintf_s(cb, L"#%06X", (unsigned)(v & 0xFFFFFF));
+            WritePrivateProfileStringW(L"Config", key, cb, iniPath.c_str());
+        };
+        putColor(L"CandTextColor", s.CandTextColor);
+        putColor(L"CandSelTextColor", s.CandSelTextColor);
+        putColor(L"CandSelBgColor", s.CandSelBgColor);
+        putColor(L"CandBorderColor", s.CandBorderColor);
+    }
+    WritePrivateProfileStringW(L"Config", L"CandFontFace", s.CandFontFace.c_str(), iniPath.c_str());
     WritePrivateProfileStringW(L"Config", L"DictFile", s.DictFile.c_str(), iniPath.c_str());
     {
         wchar_t cb[32];

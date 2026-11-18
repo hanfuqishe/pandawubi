@@ -97,6 +97,23 @@ TSF 的输入法目录是机器级的：`ITfInputProcessorProfiles` 读写
 .\build\tsf-host.exe -send "dz "               # -> 窗口里填的那条短语
 ```
 
+## 候选窗外观
+
+设置窗口的「候选窗外观」一组里可以调（改完保存，重启宿主程序生效）：
+
+| 项 | 范围 / 说明 |
+|---|---|
+| 候选个数 | 1–9 |
+| 字号 | 8–24 pt（行高跟着字号自动放大，不会压字） |
+| 字体 | 下拉里是所有已装字体（跳过 `@竖排` 字体），也可以直接输入字体名，比如 `KaiTi`、`Microsoft YaHei UI` |
+| 背景色 / 文字色 / 选中底色 / 选中文字 / 边框色 | `#RRGGBB`，第一候选（选中项）用「选中底色 + 选中文字」画底和高亮 |
+
+对应 ini 键：`CandCount`、`CandFont`（pt）、`CandFontFace`、`CandBgColor`、`CandTextColor`、
+`CandSelBgColor`、`CandSelTextColor`、`CandBorderColor`、`CandInset`、`CandVertical`。
+
+> 注：设置里存的是网页习惯的 `0xRRGGBB`，GDI 的 `COLORREF` 是 `0x00BBGGRR`，
+> 代码里必须换序——之前没换，红蓝是颠倒的（默认色都接近白，所以一直没暴露）。
+
 ## 数据目录（换机/备份）
 
 输入法不自建云端，改为**让用户指定一个目录**，所有"个人数据"都在里面：

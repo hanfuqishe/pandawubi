@@ -266,20 +266,30 @@ public:
     void SetLetterLabels(bool on) { if (letterLabels_ != on) { letterLabels_ = on; RecalcAndResize(); } }
     // 纯文本徽标：不显示序号（用于中/英状态提示，避免被当成候选词）
     void SetPlain(bool on) { if (plain_ != on) { plain_ = on; RecalcAndResize(); } }
-    // 外观：字号(pt) / 背景色 / 内框凹陷
+    // 顶部组码显示
     void SetCode(const std::wstring& c) { code_ = c; if (hwnd_) InvalidateRect(hwnd_, nullptr, TRUE); }
-
-    void SetStyle(int fontPt, COLORREF bg, bool inset) {
-        fontPt_ = fontPt > 6 ? fontPt : 14;
-        bgCol_  = bg;
-        inset_  = inset;
+    // 外观：字体名 / 字号(pt) / 背景色 / 文字色 / 选中文字色 / 选中底色 / 边框色 / 内镶凹陷
+    void SetStyle(int fontPt, COLORREF bg, bool inset,
+                  const std::wstring& face = L"Microsoft YaHei UI",
+                  COLORREF text = RGB(0x20, 0x20, 0x28),
+                  COLORREF selText = RGB(0xFF, 0xFF, 0xFF),
+                  COLORREF selBg = RGB(0x3B, 0x7D, 0xDD),
+                  COLORREF border = RGB(0xA8, 0xCD, 0xA8)) {
+        fontPt_   = fontPt > 6 ? fontPt : 14;
+        bgCol_    = bg;
+        inset_    = inset;
+        face_     = face.empty() ? std::wstring(L"Microsoft YaHei UI") : face;
+        textCol_  = text;
+        selText_  = selText;
+        selBgCol_ = selBg;
+        borderCol_ = border;
         if (font_) { DeleteObject(font_); font_ = nullptr; }
         if (hwnd_) {
             const UINT dpi = Dpi();
             const int h = -MulDiv(fontPt_, (int)dpi, 72);
             font_ = CreateFontW(h, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
                                 DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-                                CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei UI");
+                                CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, face_.c_str());
     if (!art_) art_ = (HBITMAP)LoadImageW(g_hInst, MAKEINTRESOURCEW(2), IMAGE_BITMAP,
                                               0, 0, LR_CREATEDIBSECTION);
         }
@@ -315,6 +325,11 @@ private:
     int      fontPt_ = 14;                    // 字号（pt）
     COLORREF bgCol_  = RGB(0xF7, 0xF9, 0xFC);    // 背景色
     bool     inset_  = true;                  // 内框凹陷
+    std::wstring face_ = L"Microsoft YaHei UI";   // 字体名
+    COLORREF textCol_   = RGB(0x20, 0x20, 0x28);  // 普通候选字
+    COLORREF selText_   = RGB(0xFF, 0xFF, 0xFF);  // 选中文字
+    COLORREF selBgCol_  = RGB(0x3B, 0x7D, 0xDD);  // 选中底色
+    COLORREF borderCol_ = RGB(0xA8, 0xCD, 0xA8);  // 边框
     HBITMAP  art_    = nullptr;               // 右下角熊猫装饰
     std::wstring code_;                       // 顶部显示的组码
     int      headH_  = 0;                     // 顶部框高度
@@ -379,6 +394,16 @@ void CCandidateWindow::RecalcAndResize() {
 
     HDC dc = GetDC(hwnd_);
     HGDIOBJ old = SelectObject(dc, font_);
+    // 行高要跟着字号走：以前写死 20px，字号调大后文字会压在下一行上
+    {
+        TEXTMETRICW tm = {};
+        if (GetTextMetricsW(dc, &tm)) {
+            const int need = (int)tm.tmHeight + MulDiv(8, (int)dpi, 96);
+            if (rowH_ < need) rowH_ = need;
+            const int needHead = (int)tm.tmHeight + MulDiv(10, (int)dpi, 96);
+            if (headH_ > 0 && headH_ < needHead) headH_ = needHead;
+        }
+    }
     labels_.clear();
     int maxW = MulDiv(90, (int)dpi, 96);
     for (size_t i = 0; i < items_.size(); ++i) {
@@ -416,15 +441,11 @@ void CCandidateWindow::Paint(HDC dc) {
     const int W = rc.right, H = rc.bottom;
     const UINT dpi = Dpi();
 
-    // ---- 背景：淡绿 -> 白的竖向渐变 ----
-    for (int y = 0; y < H; ++y) {
-        const int t = H > 1 ? (y * 255 / (H - 1)) : 0;
-        const int r = 238 + (255 - 238) * t / 255;
-        const int g = 249 + (255 - 249) * t / 255;
-        const int b = 236 + (255 - 236) * t / 255;
-        HBRUSH br = CreateSolidBrush(RGB(r, g, b));
-        RECT line = { 0, y, W, y + 1 };
-        FillRect(dc, &line, br);
+    // ---- 背景：用设置里的背景色（原来是写死的淡绿渐变，设置项其实不生效）----
+    {
+        HBRUSH br = CreateSolidBrush(bgCol_);
+        RECT all = { 0, 0, W, H };
+        FillRect(dc, &all, br);
         DeleteObject(br);
     }
 
@@ -448,7 +469,7 @@ void CCandidateWindow::Paint(HDC dc) {
     }
 
     // ---- 外框（淡绿灰）----
-    HPEN border = CreatePen(PS_SOLID, 1, RGB(168, 205, 168));
+    HPEN border = CreatePen(PS_SOLID, 1, borderCol_);
     HGDIOBJ oldPen = SelectObject(dc, border);
     HGDIOBJ oldBrush = SelectObject(dc, GetStockObject(NULL_BRUSH));
     const int radius = MulDiv(6, (int)dpi, 96);
@@ -465,10 +486,10 @@ void CCandidateWindow::Paint(HDC dc) {
     // ---- 顶部：组码 + 翻页箭头 ----
     if (headH_ > 0) {
         RECT hb = { padX_ / 2, y, W - padX_ / 2, y + headH_ - MulDiv(2, (int)dpi, 96) };
-        HBRUSH hbg = CreateSolidBrush(RGB(255, 255, 255));
+        HBRUSH hbg = CreateSolidBrush(bgCol_);
         FillRect(dc, &hb, hbg);
         DeleteObject(hbg);
-        HPEN hp = CreatePen(PS_SOLID, 1, RGB(150, 196, 150));
+        HPEN hp = CreatePen(PS_SOLID, 1, borderCol_);
         HGDIOBJ op = SelectObject(dc, hp);
         HGDIOBJ ob = SelectObject(dc, GetStockObject(NULL_BRUSH));
         RoundRect(dc, hb.left, hb.top, hb.right, hb.bottom, radius, radius);
@@ -476,12 +497,12 @@ void CCandidateWindow::Paint(HDC dc) {
         SelectObject(dc, op);
         DeleteObject(hp);
 
-        SetTextColor(dc, RGB(30, 90, 40));
+        SetTextColor(dc, textCol_);
         RECT tr = hb;
         tr.left += MulDiv(6, (int)dpi, 96);
         DrawTextW(dc, code_.c_str(), -1, &tr, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
 
-        SetTextColor(dc, RGB(120, 160, 120));
+        SetTextColor(dc, RGB(GetRValue(textCol_) / 2 + 0x60, GetGValue(textCol_) / 2 + 0x60, GetBValue(textCol_) / 2 + 0x60));
         RECT ar = hb;
         ar.right -= MulDiv(6, (int)dpi, 96);
         DrawTextW(dc, L"\u25C0 \u25B6", -1, &ar, DT_RIGHT | DT_VCENTER | DT_SINGLELINE);
@@ -493,16 +514,24 @@ void CCandidateWindow::Paint(HDC dc) {
     if (vertical_ || plain_) {
         for (size_t i = 0; i < n; ++i) {
             RECT r = { padX_, y + (int)i * rowH_, W - padX_ - artW_ / 3, y + (int)(i + 1) * rowH_ };
+            const bool sel = (i == 0);
+            if (sel) {                                  // 选中项：底色 + 高亮文字
+                HBRUSH sb = CreateSolidBrush(selBgCol_);
+                RECT sr = { r.left - MulDiv(2, (int)dpi, 96), r.top,
+                            r.right + MulDiv(2, (int)dpi, 96), r.bottom };
+                FillRect(dc, &sr, sb);
+                DeleteObject(sb);
+            }
             const std::wstring& full = labels_[i];
             const size_t dot = full.find(L'.');
             const std::wstring num = (dot == std::wstring::npos) ? std::wstring() : full.substr(0, dot + 1);
             const std::wstring word = (dot == std::wstring::npos) ? full : full.substr(dot + 1);
-            SetTextColor(dc, i == 0 ? RGB(52, 140, 66) : RGB(120, 156, 120));
+            SetTextColor(dc, sel ? selText_ : textCol_);
             RECT nr = r;
             DrawTextW(dc, num.c_str(), -1, &nr, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
             SIZE sn = { 0, 0 };
             GetTextExtentPoint32W(dc, num.c_str(), (int)num.size(), &sn);
-            SetTextColor(dc, i == 0 ? RGB(20, 40, 24) : RGB(48, 56, 50));
+            SetTextColor(dc, sel ? selText_ : textCol_);
             RECT wr = r;
             wr.left += sn.cx;
             DrawTextW(dc, word.c_str(), -1, &wr, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
@@ -511,7 +540,14 @@ void CCandidateWindow::Paint(HDC dc) {
         int x = padX_;
         for (size_t i = 0; i < n; ++i) {
             RECT r = { x, y, x + MulDiv(110, (int)dpi, 96), y + rowH_ };
-            SetTextColor(dc, i == 0 ? RGB(20, 40, 24) : RGB(48, 56, 50));
+            const bool sel = (i == 0);
+            if (sel) {
+                HBRUSH sb = CreateSolidBrush(selBgCol_);
+                RECT sr = { r.left - MulDiv(2, (int)dpi, 96), r.top, r.right, r.bottom };
+                FillRect(dc, &sr, sb);
+                DeleteObject(sb);
+            }
+            SetTextColor(dc, sel ? selText_ : textCol_);
             DrawTextW(dc, labels_[i].c_str(), -1, &r, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
             x += MulDiv(110, (int)dpi, 96);
         }
@@ -932,10 +968,18 @@ STDMETHODIMP CTextService::ActivateEx(ITfThreadMgr* ptim, TfClientId tid, DWORD)
     }
     // 配置：%APPDATA%\PandaWubi\config.ini（键名与 QQ五笔 Config.ini 一致，可直接迁移）
     m_settings   = wubi::LoadSettings(GetConfigPath(), HostAppName());
-    // 候选窗外观众（字号/背景色/凹陷）
+    // 候选窗外观众（字体/字号/背景色/文字色/选中色/边框/凹陷）
+    // 注意：设置里存的是 0xRRGGBB（网页习惯），COLORREF 是 0x00BBGGRR，必须换序，
+    // 否则红蓝会颠倒（以前只设了个近白的背景，所以没暴露出来）。
+    auto toRef = [](int v) { return RGB((v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF); };
     m_candWnd.SetStyle(m_settings.CandFontPt,
-                       (COLORREF)(m_settings.CandBgColor & 0xFFFFFF),
-                       m_settings.CandInset != 0);
+                       toRef(m_settings.CandBgColor),
+                       m_settings.CandInset != 0,
+                       m_settings.CandFontFace,
+                       toRef(m_settings.CandTextColor),
+                       toRef(m_settings.CandSelTextColor),
+                       toRef(m_settings.CandSelBgColor),
+                       toRef(m_settings.CandBorderColor));
     m_puncEnabled = m_settings.EnablePunction != 0;
     m_tradEnabled = m_settings.TradChinese != 0;
     m_candCount   = m_settings.CandCount;
@@ -999,6 +1043,11 @@ STDMETHODIMP CTextService::ActivateEx(ITfThreadMgr* ptim, TfClientId tid, DWORD)
     }
     LogLine(L"app config: exe=%ls trad=%d punc=%d vertical=%d",
             HostAppName().c_str(), (int)m_tradEnabled, (int)m_puncEnabled, m_settings.CandVertical);
+    LogLine(L"cand style: cfg=%s face=%s pt=%d bg=#%06X text=#%06X selBg=#%06X selText=#%06X border=#%06X",
+            GetConfigPath().c_str(), m_settings.CandFontFace.c_str(), m_settings.CandFontPt,
+            m_settings.CandBgColor & 0xFFFFFF, m_settings.CandTextColor & 0xFFFFFF,
+            m_settings.CandSelBgColor & 0xFFFFFF, m_settings.CandSelTextColor & 0xFFFFFF,
+            m_settings.CandBorderColor & 0xFFFFFF);
     // 自绘悬浮状态栏：进程内唯一（见上方 SharedBar 注释），点击转发给当前拥有者
     {
         BarGuardScope guard;
