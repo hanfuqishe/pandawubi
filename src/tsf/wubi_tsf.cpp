@@ -978,16 +978,15 @@ public:
                 const bool composing = (m_comp != nullptr) && (m_context != nullptr) &&
                                        !m_composer.Code().empty();
                 if (composing && pic) {
-                    const auto o = m_composer.SelectBest();
-                    if (o.act == wubi::Composer::Act::Committed ||
-                        o.act == wubi::Composer::Act::CommitThenContinue) {
-                        CommitText(pic, o.commit, o.commitCode,
-                                   o.act == wubi::Composer::Act::Committed);
-                        LogLine(L"shift during compose: committed %zu char(s) for code=%hs, switch to english",
-                                o.commit.size(), o.commitCode.c_str());
-                    } else {
-                        LogLine(L"shift during compose: nothing to commit (act=%d)", (int)o.act);
-                    }
+                    // 用户在半路按 Shift，多半是发现"这一串本来就该是英文"，
+                    // 所以上屏的是**编码本身**（wqvb 就是 wqvb），而不是它对应的汉字。
+                    const std::string code = m_composer.Code();      // 先留住：取消组合会清空 composer
+                    const std::wstring raw(code.begin(), code.end());
+                    if (m_comp && m_context) CancelComposition(m_context);
+                    if (!raw.empty()) CommitString(pic, raw);
+                    m_engTyped = raw;                                // 英文模式接着这个前缀，继续打就是整个单词
+                    LogLine(L"shift during compose: committed raw code '%ls' (%zu chars), switch to english",
+                            raw.c_str(), raw.size());
                 }
                 if (m_comp && m_context) CancelComposition(m_context);
                 if (composing) {
