@@ -26,7 +26,7 @@ cl /nologo /std:c++20 /EHsc /O2 /utf-8 /W3 /Fe:"%~dp0build\tsf-host.exe" "%~dp0s
 echo === settings ===
 cl /nologo /std:c++20 /EHsc /O2 /utf-8 /W3 /DUNICODE /D_UNICODE /Fe:"%~dp0build\panda-settings.exe" "%~dp0src\ui\wubi-settings.cpp" "%~dp0src\engine\wubi_config.cpp" /link /SUBSYSTEM:WINDOWS user32.lib gdi32.lib comctl32.lib advapi32.lib shell32.lib
 echo === phrase window ===
-cl /nologo /std:c++20 /EHsc /O2 /utf-8 /W3 /DUNICODE /D_UNICODE /Fe:"%~dp0build\panda-phrase.exe" "%~dp0src\ui\ppwubi-phrase.cpp" "%~dp0src\engine\wubi_config.cpp" /link /SUBSYSTEM:WINDOWS user32.lib gdi32.lib comctl32.lib advapi32.lib
+cl /nologo /std:c++20 /EHsc /O2 /utf-8 /W3 /DUNICODE /D_UNICODE /Fe:"%~dp0build\panda-phrase.exe" "%~dp0src\ui\ppwubi-phrase.cpp" "%~dp0src\engine\wubi_config.cpp" /link /SUBSYSTEM:WINDOWS user32.lib gdi32.lib comctl32.lib advapi32.lib imm32.lib
 
 echo === qq-oracle ===
 cl /nologo /std:c++20 /EHsc /O2 /utf-8 /W3 /Fe:"%~dp0build\qq-oracle.exe" "%~dp0tools\qq-oracle.cpp" /link user32.lib imm32.lib gdi32.lib msimg32.lib gdiplus.lib

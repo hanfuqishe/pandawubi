@@ -224,6 +224,17 @@ powershell -ExecutionPolicy Bypass -File .\tools\build-setup.ps1 -SkipBuild # �
   想要全中文界面就把 `ChineseSimplified.isl` 放到 `installer\` 并在 `[Languages]` 里加一行）。
 
 > 旧的单文件 `src\ui\panda-setup.cpp`（自己写的资源内嵌安装器）保留作后备，不再走构建脚本。
+## 自定义短语窗口
+
+`Ctrl+Shift+=` 打开独立窗口 `panda-phrase.exe`（编码 + 短语两个输入框）：
+
+- **编码框把输入法摘掉了**（`ImmAssociateContextEx(code, nullptr, 0)`）：直接敲 a–z 就是编码，
+  不用先按 Shift 切英文；
+- 短语框保留输入法，中文可以直接打；
+- 之所以要这样：实测在 `panda-phrase.exe` 这个进程里，TSF **不会**把"纯 Shift 单击"转给我们的
+  key sink（日志里没有任何 `vk=0x10`），所以 Shift 切英文在短语窗口里本来就不可靠。需要英文时
+  用悬浮栏上的「中/英」那一格。
+
 ## 顶字上屏（四码满了继续打）
 
 四个码打满之后**再打一个键**时，会把第 1 候选直接上屏、并用这个键开始下一轮组码（五笔习惯）。

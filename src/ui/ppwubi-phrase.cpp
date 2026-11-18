@@ -13,6 +13,7 @@
 #define _WIN32_WINNT 0x0A00
 #endif
 #include <windows.h>
+#include <imm.h>
 #include <commctrl.h>
 #include "../engine/wubi_config.h"
 #include <cstdio>
@@ -194,6 +195,9 @@ static void CreateChildren(HWND hwnd) {
                              pad + S(60), y - S(3), S(120), editH,
                              hwnd, (HMENU)(INT_PTR)ID_CODE, nullptr, nullptr);
     SendMessageW(g_code, EM_SETLIMITTEXT, (WPARAM)4, 0);
+    // 编码框只收 a–z：把输入法从这里摘掉，直接敲字母就行，不用先按 Shift 切英文。
+    // （短语框保留输入法，那边要能打中文。）
+    ImmAssociateContextEx(g_code, nullptr, 0);
     HWND hintCode = CreateWindowExW(0, L"STATIC", L"a–z 字母，最多 4 位",
                                     WS_CHILD | WS_VISIBLE | SS_LEFT,
                                     pad + S(60) + S(120) + S(10), y, w - S(190), labelH,
