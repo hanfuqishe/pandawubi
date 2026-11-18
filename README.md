@@ -8,6 +8,10 @@
 ## 快速开始
 
 ```powershell
+# 0. 打安装包
+powershell -ExecutionPolicy Bypass -File .\tools\build-setup.ps1
+#    产物：dist\PandaWubi-Setup-<版本>.exe（单文件，安装/卸载都自带）
+
 # 1. 一键验证（构建 + 引擎 + 数据 + TSF 组件 + 状态栏，共 96 项）
 powershell -ExecutionPolicy Bypass -File .\tools\verify.ps1
 
