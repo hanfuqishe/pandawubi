@@ -977,6 +977,7 @@ static wubi::StatusBar& SharedBar() {
 // 并立刻通知当前拥有状态栏的那个实例（如果在本进程）马上生效。
 static volatile LONG g_reloadPending = 0;
 static void RequestSettingsReload();   // 定义见下（需要 CTextService 完整类型）
+static void BroadcastSettingsReload(); // 通知本机所有输入法窗口重读配置
 
 void CTextService::BarSync() {
     if (g_barOwner == this)
@@ -984,6 +985,19 @@ void CTextService::BarSync() {
 }
 
 void CTextService::OnBarClick(int idx) {
+    // 右键菜单里的"主题"子菜单：命令 id 100+n（顺序：熊猫/狸花猫/田园犬/丹顶鹤）
+    if (idx >= 100) {
+        static const wchar_t* kThemes[4] = { L"panda", L"cat", L"dog", L"crane" };
+        const int t = idx - 100;
+        if (t >= 0 && t < 4) {
+            m_settings.Theme = kThemes[t];
+            wubi::SaveSettings(GetConfigPath(), m_settings);
+            ApplySettings();                       // 本进程立刻换图标/装饰图
+            BroadcastSettingsReload();             // 通知其它进程的悬浮栏/候选窗也跟上
+            LogLine(L"theme switched from bar menu: %s", m_settings.Theme.c_str());
+        }
+        return;
+    }
     switch (idx) {
     case 0: m_english = !m_english; SetInputModeCompartments(!m_english); break;   // 中/英
     case 1: m_tradEnabled = !m_tradEnabled; m_settings.TradChinese = m_tradEnabled ? 1 : 0;
@@ -1579,6 +1593,18 @@ void CTextService::EnsureComposer() {
 // 激活时调用一次；config.ini 变过的话，MaybeReloadUserWords() 里会再调一次（即时生效）。
 // 系统输入指示器的图标来自注册表里的 IconFile：改主题后写一次（HKCU 优先，不需要管理员）。
 // 说明：shell 只在加载语言配置时读这个值，所以通常要重启 explorer 或重新登录才看到变化。
+// 通知本机所有输入法窗口重读配置（和设置窗口保存时做的事一样）
+static void BroadcastSettingsReload() {
+    const UINT msg = PandaReloadMessage();
+    const wchar_t* classes[] = { L"PandaWubiStatusBar", L"PandaWubiCandidateWnd" };
+    for (const wchar_t* cls : classes) {
+        HWND h = nullptr;
+        while ((h = FindWindowExW(nullptr, h, cls, nullptr)) != nullptr) {
+            PostMessageW(h, msg, 0, 0);
+        }
+    }
+}
+
 static void UpdateIndicatorIconFile(const std::wstring& icoName) {
     wchar_t dll[MAX_PATH] = { 0 };
     GetModuleFileNameW(g_hInst, dll, ARRAYSIZE(dll) - 1);
@@ -1622,6 +1648,7 @@ void CTextService::ApplySettings() {
     const int themeArtId = crane ? 8 : (dog ? 6 : (cat ? 4 : 3));   // 3=熊猫 4=狸花猫 6=田园犬 8=丹顶鹤
     m_candWnd.SetArtId(themeArtId);                             // 候选窗右下角装饰图
     SharedBar().SetIconFile(themeIcon);                         // 悬浮栏最左边的 Logo
+    SharedBar().SetThemeIndex(crane ? 3 : (dog ? 2 : (cat ? 1 : 0)));   // 右键菜单里打勾
     LogLine(L"theme: %s (art=%d, icon=%s)", m_settings.Theme.c_str(), themeArtId, themeIcon);
     UpdateIndicatorIconFile(themeIcon);   // 系统输入指示器的图标（需重新登录/重启 explorer 才刷新）
     BarSync();

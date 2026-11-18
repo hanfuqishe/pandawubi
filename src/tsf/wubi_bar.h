@@ -30,7 +30,8 @@ public:
     bool Wanted()  const { return want_; }
 
     void SetState(bool english, bool trad);
-    void SetIconFile(const std::wstring& name);   // 主题：panda.ico / cat.ico
+    void SetIconFile(const std::wstring& name);   // 主题：panda.ico / cat.ico / dog.ico / crane.ico
+    void SetThemeIndex(int idx);                  // 当前主题序号（右键菜单打勾用）
     void Reposition(int x, int y);
 
 private:
@@ -54,6 +55,7 @@ private:
     bool trad_    = false;
     HICON icon_   = nullptr;   // 最左边的产品 Logo
     std::wstring iconName_ = L"panda.ico";   // 当前主题的图标文件名
+    int themeIdx_ = 0;                       // 0=熊猫 1=狸花猫 2=田园犬 3=丹顶鹤
 
 
     int  dpi_ = 96;

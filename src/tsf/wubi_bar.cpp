@@ -92,6 +92,9 @@ void StatusBar::Destroy() {
 
 static int S(int v, int dpi);   // 定义在后（DPI 缩放）
 
+// 主题顺序：必须与 TSF 里 OnBarClick 的表、以及 Settings::Theme 的取值顺序一致
+static const wchar_t* kThemeNames[4] = { L"熊猫（默认）", L"狸花猫", L"中华田园犬", L"丹顶鹤" };
+
 // 产品 Logo：和输入法指示器用同一个 panda.ico。
 // 查找顺序与 TSF 那边保持一致：DLL 同目录 panda.ico -> %LOCALAPPDATA%\PandaWubi\panda.ico -> DLL 自带图标。
 void StatusBar::LoadIcon_() {
@@ -240,6 +243,14 @@ void StatusBar::SetIconFile(const std::wstring& name) {
     if (hwnd_) InvalidateRect(hwnd_, nullptr, FALSE);
 }
 
+void StatusBar::SetThemeIndex(int idx) {
+    if (idx < 0) idx = 0;
+    if (idx > 3) idx = 3;
+    if (themeIdx_ == idx) return;
+    themeIdx_ = idx;
+    if (hwnd_) InvalidateRect(hwnd_, nullptr, FALSE);   // 菜单每次弹出时重建，这里只是保持一致
+}
+
 void StatusBar::SetState(bool english, bool trad) {
     english_ = english;
     trad_ = trad;
@@ -379,6 +390,13 @@ LRESULT CALLBACK StatusBar::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         HMENU menu = CreatePopupMenu();
         AppendMenuW(menu, MF_STRING | (self->english_ ? 0 : MF_CHECKED), 1, L"中文输入");
         AppendMenuW(menu, MF_STRING | (self->trad_ ? MF_CHECKED : 0), 2, L"简繁输出");
+        // 主题子菜单：命令 id 100+n 表示"切到第 n 套主题"（顺序与 TSF 里的表一致）
+        HMENU themeMenu = CreatePopupMenu();
+        for (int i = 0; i < 4; ++i) {
+            AppendMenuW(themeMenu, MF_STRING | (self->themeIdx_ == i ? MF_CHECKED : 0),
+                        100 + i, kThemeNames[i]);
+        }
+        AppendMenuW(menu, MF_POPUP, (UINT_PTR)themeMenu, L"主题");
         AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
         AppendMenuW(menu, MF_STRING, 3, L"设置...");
         AppendMenuW(menu, MF_STRING, 4, PANDA_WUBI_VERSION_FULL);
@@ -390,6 +408,7 @@ LRESULT CALLBACK StatusBar::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         PostMessageW(hwnd, WM_NULL, 0, 0);
 
         if (cmd >= 1 && cmd <= 4 && self->onClick_) self->onClick_(cmd - 1);
+        else if (cmd >= 100 && cmd <= 103 && self->onClick_) self->onClick_(cmd);   // 100+n = 切主题
         return 0;
     }
     case WM_MOUSEACTIVATE:
