@@ -611,33 +611,23 @@ void CCandidateWindow::Paint(HDC dc) {
             gfx.DrawImage(band, Gdiplus::RectF(left, top, dw, dh),
                           0.0f, 0.0f, iw, ih, Gdiplus::UnitPixel, nullptr);
 
-            // 图片上盖一层很淡的白纱：文字压在画面上（比如熊猫的黑手臂）也能看清
-            {
-                Gdiplus::SolidBrush veil(Gdiplus::Color(66, 255, 255, 255));
-                gfx.FillRectangle(&veil, Gdiplus::RectF(left, top, dw, dh));
-            }
-
-            // 上沿再糊一层"天空色 → 透明"的渐变，把图片的起始边抹平（图片自身的天色有细微纹理，
-            // 光靠背景同色还是会看出一条线）；横向不够宽时左边也糊一条。
+            // 上沿：只有"图片上方还有空白（宽图贴在下方时）"才需要把接缝糊一下。
+            // 左边**绝对不能再糊渐变** —— 左边是用图片最左一列拉伸出来的，
+            // 在图片左沿上盖一层淡出，就会把图片那一列压淡，两边反而接不上。
             const BYTE sr = GetRValue(g_bandSky), sg = GetGValue(g_bandSky), sb = GetBValue(g_bandSky);
             const Gdiplus::REAL fadeH = (Gdiplus::REAL)MulDiv(22, (int)dpi, 96);
-            if (fadeH > 0 && top + fadeH < (Gdiplus::REAL)H) {
+            if (top > 0 && fadeH > 0 && top + fadeH < (Gdiplus::REAL)H) {
                 Gdiplus::RectF strip(left, top, dw, fadeH);
                 Gdiplus::LinearGradientBrush lg(strip, Gdiplus::Color(255, sr, sg, sb),
                                                 Gdiplus::Color(0, sr, sg, sb),
                                                 Gdiplus::LinearGradientModeVertical);
                 gfx.FillRectangle(&lg, strip);
             }
-            if (left > 0) {
-                const Gdiplus::REAL fadeW = (Gdiplus::REAL)MulDiv(18, (int)dpi, 96);
-                if (fadeW > 0 && left + fadeW < (Gdiplus::REAL)W) {
-                    Gdiplus::RectF vstrip(left, top, fadeW, dh);
-                    Gdiplus::LinearGradientBrush vg(vstrip, Gdiplus::Color(255, sr, sg, sb),
-                                                    Gdiplus::Color(0, sr, sg, sb),
-                                                    Gdiplus::LinearGradientModeHorizontal);
-                    gfx.FillRectangle(&vg, vstrip);
-                }
-            }
+
+            // 整窗一层很淡的白纱：文字压在画面上（比如熊猫的黑手臂）也能看清；
+            // 盖整窗而不是只盖图片，拉伸列与图片被压淡的程度一致，接缝不会因此露出来。
+            Gdiplus::SolidBrush veil(Gdiplus::Color(66, 255, 255, 255));
+            gfx.FillRectangle(&veil, Gdiplus::RectF(0.0f, 0.0f, (Gdiplus::REAL)W, (Gdiplus::REAL)H));
         }
     }
 
