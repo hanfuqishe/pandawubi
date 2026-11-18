@@ -262,7 +262,8 @@ void StatusBar::YieldOtherBars() {
 void StatusBar::Reconcile() {
     if (!hwnd_) return;
     const bool visible = IsWindowVisible(hwnd_) != FALSE;
-    const bool wantShow = want_ && ForegroundIsSelf();
+    // 三个条件同时满足才显示：本进程被要求显示 / 前台窗口属于本进程 / 焦点确实落在能输入文字的控件上
+    const bool wantShow = want_ && ForegroundIsSelf() && docFocus_;
     if (wantShow && !visible) {
         ShowWindow(hwnd_, SW_SHOWNOACTIVATE);
         InvalidateRect(hwnd_, nullptr, TRUE);
@@ -275,6 +276,12 @@ void StatusBar::Reconcile() {
     } else if (!wantShow && visible) {
         ShowWindow(hwnd_, SW_HIDE);
     }
+}
+
+void StatusBar::SetDocFocus(bool on) {
+    if (docFocus_ == on) return;
+    docFocus_ = on;
+    Reconcile();          // 焦点一离开输入框就立刻收起，别等计时器
 }
 
 void StatusBar::SetIconFile(const std::wstring& name) {

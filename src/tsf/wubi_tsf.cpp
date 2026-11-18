@@ -895,6 +895,11 @@ class CTextService;
 static wubi::StatusBar& SharedBar();
 static CTextService* g_barOwner = nullptr;   // 当前拥有这条栏的实例（最近获得焦点的那个）
 static int           g_barUsers = 0;         // 已激活的实例数
+static volatile LONG g_docFocusCount = 0;    // 正处在"有文档焦点"状态的实例数（0 = 焦点不在任何输入框里）
+static volatile LONG g_docFocusEvents = 0;   // 收到过多少次焦点变化（0 = 这个宿主从不汇报，那就别拿它当依据）
+
+// 焦点是否落在某个能输入的控件上：决定悬浮栏要不要显示（定义在 CTextService 之后）
+static void UpdateDocFocusForBar(CTextService* owner);
 
 // 每个 TSF 实例属于各自的线程，激活/退出可能并发：建窗与引用计数必须串行
 struct BarLock {
@@ -988,6 +993,9 @@ public:
 
     // ITfThreadFocusSink：切走应用的一瞬间就把悬浮栏收起来（计时器兜底）
     STDMETHODIMP OnSetThreadFocus() override;
+
+    // 有正在进行的组码时，即使焦点报告离开也不能把栏收掉
+    bool HasComposition() const { return m_comp != nullptr; }
     STDMETHODIMP OnKillThreadFocus() override;
 
 private:
@@ -1057,6 +1065,7 @@ private:
 
     // 中英文切换（单击 Shift）与状态提示
     bool m_english   = false;
+    bool m_docFocused = false;   // 当前是否有"文档焦点"（TSF 的 OnSetFocus 非空）
     bool m_shiftDown = false;
     bool m_shiftUsed = false;
     bool m_statusShown = false;
@@ -1326,7 +1335,12 @@ STDMETHODIMP CTextService::Deactivate() {
     {
         BarGuardScope guard;
         if (g_barOwner == this) g_barOwner = nullptr;
-        if (g_barUsers > 0) --g_barUsers;
+        if (m_docFocused) {
+        m_docFocused = false;
+        InterlockedIncrement(&g_docFocusEvents);
+        if (g_docFocusCount > 0) InterlockedDecrement(&g_docFocusCount);
+    }
+    if (g_barUsers > 0) --g_barUsers;
         usersLeft = g_barUsers;
         if (g_barUsers == 0) {
             // 只隐藏，不销毁窗口：Deactivate 很可能跑在另一个线程上，那儿 DestroyWindow 会失败，
@@ -1377,6 +1391,13 @@ STDMETHODIMP CTextService::Deactivate() {
     return S_OK;
 }
 
+// 焦点是否落在某个能输入的控件上：决定悬浮栏要不要显示
+static void UpdateDocFocusForBar(CTextService* owner) {
+    // 宿主一次焦点事件都没报过：保持"显示"的默认行为，别把栏藏没了
+    if (g_docFocusEvents == 0) return;
+    const bool focused = (g_docFocusCount > 0) || (owner && owner->HasComposition());
+    SharedBar().SetDocFocus(focused);
+}
 STDMETHODIMP CTextService::OnSetFocus(ITfDocumentMgr* pimdFocus, ITfDocumentMgr* pimdPrev) {
     // 曾经的实现无条件 Reset()，会在候选窗或无关焦点事件出现时打断组码。
     // 现在只有“焦点离开所有文档”或“换到另一个文档”才重置。
@@ -1392,6 +1413,19 @@ STDMETHODIMP CTextService::OnSetFocus(ITfDocumentMgr* pimdFocus, ITfDocumentMgr*
     }
     LogLine(L"OnSetFocus: focus=%p prev=%p comp=%p reset=%d",
             (void*)pimdFocus, (void*)pimdPrev, (void*)m_comp, (int)shouldReset);
+
+    // 文档焦点进出：维护进程级计数，让悬浮栏"焦点不在输入框上就收起"
+    {
+        const bool now = (pimdFocus != nullptr);
+        if (now != m_docFocused) {
+            m_docFocused = now;
+            InterlockedIncrement(&g_docFocusEvents);
+            if (now) InterlockedIncrement(&g_docFocusCount);
+            else     InterlockedDecrement(&g_docFocusCount);
+            UpdateDocFocusForBar(this);
+            LogLine(L"doc focus: %d (count=%ld)", (int)now, (long)g_docFocusCount);
+        }
+    }
     if (shouldReset) Reset();
 
     // 焦点变化时把中/英隔间状态同步到新文档：系统指示器通常在焦点变化时重新查询

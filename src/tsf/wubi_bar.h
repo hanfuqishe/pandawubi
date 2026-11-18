@@ -32,6 +32,7 @@ public:
     void SetState(bool english, bool trad);
     void SetIconFile(const std::wstring& name);   // 主题：panda.ico / cat.ico / dog.ico / crane.ico
     void SetThemeIndex(int idx);                  // 当前主题序号（右键菜单打勾用）
+    void SetDocFocus(bool on);                   // 当前有没有"文档输入焦点"（没有就不显示）
     void Reposition(int x, int y);
 
 private:
@@ -69,6 +70,7 @@ private:
     int   posX_ = -1, posY_ = -1;   // -1 = 默认位置（右下角）
     bool  want_ = false;            // 本会话是否要这条栏（不因临时失焦而清除）
     int   yieldTick_ = 0;           // 可见期间周期性再"喊话"让别的栏让位的计数
+    bool  docFocus_ = true;         // TSF 是否正处在某个文档里（false = 焦点不在输入框上）
 };
 
 } // namespace wubi
