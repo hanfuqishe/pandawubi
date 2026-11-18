@@ -2492,6 +2492,8 @@ void CTextService::FlashStatus(const wchar_t* text) {
     }
     if (!m_hasCaret) { LogLine(L"FlashStatus: no caret, skipped"); return; }
     m_candWnd.SetPlain(true);          // 不显示序号，避免被当成候选词
+    // 状态提示（中/英、简繁…）跟组码无关：顶部编码框要清掉，否则会挂着上一个字的编码
+    m_candWnd.SetCode(std::wstring());
     m_candWnd.SetItems({ text }, false);
     m_candWnd.ShowBriefly(m_lastCaret, 700);
     m_statusShown = true;
