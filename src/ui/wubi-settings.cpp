@@ -57,7 +57,7 @@ enum {
     ID_PUNC = 120, ID_TRAD = 121,
     ID_CAND = 130, ID_FONT = 131, ID_BG = 132, ID_INSET = 133, ID_DICT = 134,
     ID_VERT = 135,
-    ID_TXT = 136, ID_BORDER = 139,
+    ID_TXT = 136, ID_BORDER = 139, ID_THEME = 145,
     ID_DATA_DIR = 140, ID_DATA_BROWSE = 141, ID_DATA_DEFAULT = 142, ID_DATA_OPEN = 143,
     ID_FACE = 144,
     ID_SAVE = 200, ID_CANCEL = 201
@@ -139,6 +139,11 @@ static void ReadUiInto(HWND hwnd) {
     readColor(ID_TXT, g_s.CandTextColor);
     readColor(ID_BORDER, g_s.CandBorderColor);
     {
+        HWND cb = GetDlgItem(hwnd, ID_THEME);
+        const int sel = (int)SendMessageW(cb, CB_GETCURSEL, 0, 0);
+        g_s.Theme = (sel == 1) ? L"cat" : L"panda";
+    }
+    {
         HWND cb = GetDlgItem(hwnd, ID_FACE);
         wchar_t face[128] = { 0 };
         GetWindowTextW(cb, face, ARRAYSIZE(face) - 1);
@@ -187,7 +192,7 @@ static void BuildChildren(HWND hwnd) {
     y += 124 + 8;
 
     // 候选窗外观（两列排版）
-    MakeGroup(hwnd, L" 候选窗外观", padX, y, groupW, 146);
+    MakeGroup(hwnd, L" 主题与外观", padX, y, groupW, 172);
     const int cB = inX + 176;          // 第二列起点
     // 行1：候选个数 / 字号
     MakeStatic(hwnd, L"候选个数", inX, y + 24, 64, 20);
@@ -229,7 +234,20 @@ static void BuildChildren(HWND hwnd) {
         SendMessageW(cb, CB_SETCURSEL, (WPARAM)SendMessageW(cb, CB_FINDSTRINGEXACT, (WPARAM)-1, (LPARAM)g_s.CandFontFace.c_str()), 0);
     }
 
-    // 行3/4/5：颜色
+    // 主题：影响悬浮栏 Logo、候选窗右下角装饰图、输入指示器图标
+    MakeStatic(hwnd, L"主题", cB, y + 54, 40, 20);
+    {
+        HWND cb = CreateWindowExW(WS_EX_CLIENTEDGE, L"COMBOBOX", L"",
+                                  WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWNLIST,
+                                  S(cB + 40), S(y + 50), S(150), S(160), hwnd,
+                                  (HMENU)(INT_PTR)ID_THEME, nullptr, nullptr);
+        SendMessageW(cb, WM_SETFONT, (WPARAM)g_font, TRUE);
+        SendMessageW(cb, CB_ADDSTRING, 0, (LPARAM)L"熊猫（默认）");
+        SendMessageW(cb, CB_ADDSTRING, 0, (LPARAM)L"狸花猫");
+        SendMessageW(cb, CB_SETCURSEL, (g_s.Theme == L"cat") ? 1 : 0, 0);
+    }
+
+    // 颜色
     auto makeColor = [&](int x, int yy, const wchar_t* label, int id, int color, int limit) {
         MakeStatic(hwnd, label, x, yy + 4, 64, 20);
         wchar_t cb[16];
@@ -240,12 +258,12 @@ static void BuildChildren(HWND hwnd) {
         SendMessageW(e, WM_SETFONT, (WPARAM)g_font, TRUE);
         SendMessageW(e, EM_SETLIMITTEXT, (WPARAM)limit, 0);
     };
-    makeColor(inX, y + 82, L"背景色",   ID_BG,     g_s.CandBgColor,     7);
-    makeColor(cB,  y + 82, L"文字色",   ID_TXT,    g_s.CandTextColor,   7);
-    makeColor(inX, y + 112, L"边框色",   ID_BORDER, g_s.CandBorderColor, 7);
-    MakeCheck(hwnd, L"内框凹陷", cB, y + 112, 100, ID_INSET, g_s.CandInset != 0, true);
-    MakeCheck(hwnd, L"候选竖排", cB + 104, y + 112, 100, ID_VERT, g_s.CandVertical != 0);
-    y += 146 + 8;
+    makeColor(inX, y + 108, L"背景色",   ID_BG,     g_s.CandBgColor,     7);
+    makeColor(cB,  y + 108, L"文字色",   ID_TXT,    g_s.CandTextColor,   7);
+    makeColor(inX, y + 138, L"边框色",   ID_BORDER, g_s.CandBorderColor, 7);
+    MakeCheck(hwnd, L"内框凹陷", cB, y + 138, 100, ID_INSET, g_s.CandInset != 0, true);
+    MakeCheck(hwnd, L"候选竖排", cB + 104, y + 138, 100, ID_VERT, g_s.CandVertical != 0);
+    y += 172 + 8;
     // 词库
     MakeGroup(hwnd, L" 词库（data 目录）", padX, y, groupW, 58);
     {
@@ -399,7 +417,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 static void MeasureClient(int& w, int& h) {
     w = S(460);
     // 与 BuildChildren 里的累加保持一致
-    h = S(12 + 96 + 8 + 124 + 8 + 146 + 8 + 58 + 8 + 100 + 12 + 30 + 12);
+    h = S(12 + 96 + 8 + 124 + 8 + 172 + 8 + 58 + 8 + 100 + 12 + 30 + 12);
 }
 
 static int RunDialog() {
@@ -443,7 +461,7 @@ static int RunDialog() {
         const size_t slash = dir.find_last_of(L"\\/");
         if (slash != std::wstring::npos) {
             dir.erase(slash);
-            const std::wstring icoPath = dir + L"\\panda.ico";
+            const std::wstring icoPath = dir + (g_s.Theme == L"cat" ? L"\\cat.ico" : L"\\panda.ico");
             HICON hi = (HICON)LoadImageW(nullptr, icoPath.c_str(), IMAGE_ICON, 0, 0,
                                         LR_LOADFROMFILE | LR_DEFAULTSIZE);
             if (!hi) hi = (HICON)LoadImageW(nullptr, icoPath.c_str(), IMAGE_ICON, 32, 32, LR_LOADFROMFILE);
@@ -503,8 +521,8 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, LPWSTR, int) {
             std::printf("Level1Mode=%d SortMode=%d EnablePunction=%d TradChinese=%d CandCount=%d CandVertical=%d InputMode=%d\n",
                         g_s.Level1Mode, g_s.SortMode, g_s.EnablePunction, g_s.TradChinese,
                         g_s.CandCount, g_s.CandVertical, g_s.InputMode);
-            std::printf("CandFontFace=%ls CandFont=%d CandBgColor=#%06X CandTextColor=#%06X CandBorderColor=#%06X CandInset=%d\n",
-                        g_s.CandFontFace.c_str(), g_s.CandFontPt,
+            std::printf("Theme=%ls CandFontFace=%ls CandFont=%d CandBgColor=#%06X CandTextColor=#%06X CandBorderColor=#%06X CandInset=%d\n",
+                        g_s.Theme.c_str(), g_s.CandFontFace.c_str(), g_s.CandFontPt,
                         g_s.CandBgColor & 0xFFFFFF, g_s.CandTextColor & 0xFFFFFF,
                         g_s.CandBorderColor & 0xFFFFFF, g_s.CandInset);
             LocalFree(argv);
@@ -544,6 +562,7 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, LPWSTR, int) {
                 else if (k == L"TradChinese")    { g_s.TradChinese = iv; any = true; }
                 else if (k == L"CandCount")      { g_s.CandCount = iv; any = true; }
                 else if (k == L"CandVertical")   { g_s.CandVertical = iv; any = true; }
+                else if (k == L"Theme")          { g_s.Theme = (v == L"cat") ? L"cat" : L"panda"; any = true; }
             }
             if (!any) { std::printf("no known key\n"); LocalFree(argv); return 2; }
 

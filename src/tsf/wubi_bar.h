@@ -30,6 +30,7 @@ public:
     bool Wanted()  const { return want_; }
 
     void SetState(bool english, bool trad);
+    void SetIconFile(const std::wstring& name);   // 主题：panda.ico / cat.ico
     void Reposition(int x, int y);
 
 private:
@@ -52,6 +53,7 @@ private:
     bool english_ = false;
     bool trad_    = false;
     HICON icon_   = nullptr;   // 最左边的产品 Logo
+    std::wstring iconName_ = L"panda.ico";   // 当前主题的图标文件名
 
 
     int  dpi_ = 96;

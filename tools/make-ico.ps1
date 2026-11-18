@@ -5,7 +5,7 @@
 param(
     [Parameter(Mandatory = $true)][string]$Source,
     [Parameter(Mandatory = $true)][string]$OutFile,
-    [int[]]$Sizes = @(16, 24, 32, 48, 64, 128, 256)
+    [int[]]$Sizes = @(16, 24, 32, 48, 64, 128)
 )
 Add-Type -AssemblyName System.Drawing
 

@@ -74,6 +74,12 @@ Settings LoadSettings(const std::wstring& iniPath, const std::wstring& appExe) {
         if (fb[0]) s.CandFontFace = fb;
     }
     {
+        wchar_t th[32] = { 0 };
+        GetPrivateProfileStringW(L"Config", L"Theme", s.Theme.c_str(), th, ARRAYSIZE(th), iniPath.c_str());
+        if (th[0]) s.Theme = th;
+        if (s.Theme != L"cat") s.Theme = L"panda";     // 未知值一律回默认熊猫
+    }
+    {
         wchar_t db[128] = { 0 };
         GetPrivateProfileStringW(L"Config", L"DictFile", s.DictFile.c_str(), db, ARRAYSIZE(db), iniPath.c_str());
         if (db[0]) s.DictFile = db;
@@ -116,6 +122,7 @@ bool SaveSettings(const std::wstring& iniPath, const Settings& s) {
         putColor(L"CandBorderColor", s.CandBorderColor);
     }
     WritePrivateProfileStringW(L"Config", L"CandFontFace", s.CandFontFace.c_str(), iniPath.c_str());
+    WritePrivateProfileStringW(L"Config", L"Theme", (s.Theme == L"cat" ? L"cat" : L"panda"), iniPath.c_str());
     WritePrivateProfileStringW(L"Config", L"DictFile", s.DictFile.c_str(), iniPath.c_str());
     {
         wchar_t cb[32];

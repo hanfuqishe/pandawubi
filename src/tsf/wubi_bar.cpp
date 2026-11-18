@@ -96,6 +96,7 @@ static int S(int v, int dpi);   // 定义在后（DPI 缩放）
 // 查找顺序与 TSF 那边保持一致：DLL 同目录 panda.ico -> %LOCALAPPDATA%\PandaWubi\panda.ico -> DLL 自带图标。
 void StatusBar::LoadIcon_() {
     if (icon_) return;
+    if (dpi_ <= 0) dpi_ = (int)BarDpi();   // 可能在 Create 之前就被调用（设置主题时）
     const int want = S(18, dpi_);
     wchar_t dll[MAX_PATH] = { 0 };
     GetModuleFileNameW(inst_, dll, ARRAYSIZE(dll) - 1);
@@ -104,7 +105,8 @@ void StatusBar::LoadIcon_() {
     if (slash != std::wstring::npos) dir.erase(slash);
 
     const std::wstring candidates[] = {
-        dir + L"\\panda.ico",
+        dir + L"\\" + iconName_,
+        dir + L"\\panda.ico",      // 主题图标没找到就退回默认熊猫
         std::wstring(),
     };
     for (const auto& path : candidates) {
@@ -224,6 +226,18 @@ void StatusBar::Reconcile() {
     } else if (!wantShow && visible) {
         ShowWindow(hwnd_, SW_HIDE);
     }
+}
+
+void StatusBar::SetIconFile(const std::wstring& name) {
+    if (name == iconName_ && icon_) return;
+    if (name != iconName_) {
+        iconName_ = name;
+        if (icon_) { DestroyIcon(icon_); icon_ = nullptr; }
+        // inst_ 还是空的时候（Create 之前）不能加载：GetModuleFileName(nullptr) 会拿到宿主 exe 的目录，
+        // 那里没有我们的 ico。等 Create() 里再用正确的 DLL 句柄加载。
+        if (inst_) LoadIcon_();
+    }
+    if (hwnd_) InvalidateRect(hwnd_, nullptr, FALSE);
 }
 
 void StatusBar::SetState(bool english, bool trad) {

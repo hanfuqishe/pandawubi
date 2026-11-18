@@ -76,8 +76,11 @@ static void EnsureGdiplus() {
     Gdiplus::GdiplusStartup(&g_gdiplusToken, &in, nullptr);
 }
 
+// 缓存按资源 id 分开：熊猫(3)/狸花猫(4) 都要能各自缓存，切主题时不会拿到旧的那张
+static Gdiplus::Bitmap* g_artCache[8] = { nullptr };
+
 static Gdiplus::Bitmap* LoadArtFromResource(int id) {
-    if (g_artBitmap) return g_artBitmap;
+    if (id > 0 && id < 8 && g_artCache[id]) return g_artCache[id];
     EnsureGdiplus();
     if (!g_gdiplusToken) return nullptr;
 
@@ -103,8 +106,8 @@ static Gdiplus::Bitmap* LoadArtFromResource(int id) {
     Gdiplus::Bitmap* bmp = Gdiplus::Bitmap::FromStream(stream);
     stream->Release();
     if (bmp && bmp->GetLastStatus() != Gdiplus::Ok) { delete bmp; bmp = nullptr; }
-    g_artBitmap = bmp;
-    return g_artBitmap;
+    if (id > 0 && id < 8) g_artCache[id] = bmp;
+    return bmp;
 }
 static LONG      g_cRef  = 0;
 
@@ -276,6 +279,12 @@ public:
     void SetLetterLabels(bool on) { if (letterLabels_ != on) { letterLabels_ = on; RecalcAndResize(); } }
     // 纯文本徽标：不显示序号（用于中/英状态提示，避免被当成候选词）
     void SetPlain(bool on) { if (plain_ != on) { plain_ = on; RecalcAndResize(); } }
+    // 主题：候选窗右下角装饰图用哪个资源（3=熊猫吃竹子，4=狸花猫）
+    void SetArtId(int id) {
+        if (artId_ == id) return;
+        artId_ = id;
+        if (hwnd_) InvalidateRect(hwnd_, nullptr, FALSE);
+    }
     // 顶部组码显示
     void SetCode(const std::wstring& c) { code_ = c; if (hwnd_) InvalidateRect(hwnd_, nullptr, FALSE); }
     bool HasCode() const { return !code_.empty(); }
@@ -341,6 +350,7 @@ private:
     bool     inset_  = true;                  // 内框凹陷
     std::wstring face_ = L"Microsoft YaHei UI";   // 字体名
     std::vector<char> pinned_;                    // 1 = 人工锁定，词尾加小星号
+    int      artId_ = 3;                          // 右下角装饰图资源 id（3=熊猫 4=狸花猫）
     HFONT    starFont_ = nullptr;                 // 星号用的小字号字体
     COLORREF textCol_   = RGB(0x20, 0x20, 0x28);  // 普通候选字
 
@@ -397,7 +407,7 @@ void CCandidateWindow::Ensure() {
                                 DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
                                 CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, face_.c_str());
     }
-    LoadArtFromResource(3);   // 预热：PNG 解码 + GDI+ 初始化放到窗口创建时，不占第一次按键的时间
+    LoadArtFromResource(artId_);   // 预热：PNG 解码 + GDI+ 初始化放到窗口创建时，不占第一次按键的时间
 }
 
 void CCandidateWindow::Destroy() {
@@ -515,7 +525,7 @@ void CCandidateWindow::Paint(HDC dc) {
     }
 
     // ---- 右下角：熊猫吃竹子（GDI+，PNG 带 alpha）；只有候选行时才画 ----
-    if (!items_.empty()) if (Gdiplus::Bitmap* art = LoadArtFromResource(3)) {
+    if (!items_.empty()) if (Gdiplus::Bitmap* art = LoadArtFromResource(artId_)) {
         const int artSize = artW_ > 0 ? artW_ - MulDiv(6, (int)dpi, 96) : MulDiv(44, (int)dpi, 96);
         Gdiplus::Graphics gfx(dc);
         gfx.SetInterpolationMode(Gdiplus::InterpolationModeHighQualityBicubic);
@@ -1123,7 +1133,8 @@ STDMETHODIMP CTextService::ActivateEx(ITfThreadMgr* ptim, TfClientId tid, DWORD)
         ITfLangBarItemMgr* lbm = nullptr;
         if (SUCCEEDED(m_tim->QueryInterface(IID_ITfLangBarItemMgr, (void**)&lbm)) && lbm) {
             static const GUID kLangBarItemGuid = { 0x8c4f2a31, 0x6b7d, 0x4e29, { 0x9a, 0x3c, 0x1d, 0x5e, 0x7f, 0x9b, 0x0c, 0x21 } };
-            IUnknown* unk = CreateLangBarItem(CLSID_WubiTsf, kLangBarItemGuid, g_hInst, 1);
+            IUnknown* unk = CreateLangBarItem(CLSID_WubiTsf, kLangBarItemGuid, g_hInst,
+                                             (m_settings.Theme == L"cat") ? 5 : 1);   // 1=熊猫 5=狸花猫
             if (unk) {
                 ITfLangBarItem* item = nullptr;
                 if (SUCCEEDED(unk->QueryInterface(IID_ITfLangBarItem, (void**)&item)) && item) {
@@ -1564,6 +1575,27 @@ void CTextService::EnsureComposer() {
 
 // 把当前 m_settings 套用到候选窗外观、标点/简繁开关、候选个数、词库排序等。
 // 激活时调用一次；config.ini 变过的话，MaybeReloadUserWords() 里会再调一次（即时生效）。
+// 系统输入指示器的图标来自注册表里的 IconFile：改主题后写一次（HKCU 优先，不需要管理员）。
+// 说明：shell 只在加载语言配置时读这个值，所以通常要重启 explorer 或重新登录才看到变化。
+static void UpdateIndicatorIconFile(const std::wstring& icoName) {
+    wchar_t dll[MAX_PATH] = { 0 };
+    GetModuleFileNameW(g_hInst, dll, ARRAYSIZE(dll) - 1);
+    std::wstring dir(dll);
+    const size_t slash = dir.find_last_of(L"\\/");
+    if (slash == std::wstring::npos) return;
+    const std::wstring path = dir.substr(0, slash) + L"\\" + icoName;
+    if (GetFileAttributesW(path.c_str()) == INVALID_FILE_ATTRIBUTES) return;
+
+    const wchar_t* kProfile =
+        L"Software\\Microsoft\\CTF\\TIP\\{7F3B0C21-9D55-4F0E-B1C2-5A6D8E9F0A11}"
+        L"\\LanguageProfile\\0x00000804\\{7F3B0C21-9D55-4F0E-B1C2-5A6D8E9F0A12}";
+    HKEY k = nullptr;
+    if (RegOpenKeyExW(HKEY_CURRENT_USER, kProfile, 0, KEY_SET_VALUE, &k) != ERROR_SUCCESS) return;
+    RegSetValueExW(k, L"IconFile", 0, REG_SZ, (const BYTE*)path.c_str(),
+                   (DWORD)((path.size() + 1) * sizeof(wchar_t)));
+    RegCloseKey(k);
+}
+
 void CTextService::ApplySettings() {
     // 设置里存的是 0xRRGGBB（网页习惯），COLORREF 是 0x00BBGGRR，必须换序
     auto toRef = [](int v) { return RGB((v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF); };
@@ -1577,7 +1609,15 @@ void CTextService::ApplySettings() {
     m_tradEnabled = m_settings.TradChinese != 0;
     m_candCount   = m_settings.CandCount;
     m_composer.SetLimit((size_t)m_candCount);
-    BarSync();   // 悬浮栏上的 中/英、简/繁、标点 状态跟着更新
+
+    // 主题：panda（默认）/ cat
+    const bool cat = (m_settings.Theme == L"cat");
+    m_candWnd.SetArtId(cat ? 4 : 3);                    // 右下角装饰图
+    SharedBar().SetIconFile(cat ? L"cat.ico" : L"panda.ico");   // 悬浮栏最左边的 Logo
+    LogLine(L"theme: %s (art=%d, icon=%s)", m_settings.Theme.c_str(), cat ? 4 : 3,
+            cat ? L"cat.ico" : L"panda.ico");
+    UpdateIndicatorIconFile(cat ? L"cat.ico" : L"panda.ico");   // 系统输入指示器的图标（需重新登录/重启 explorer 才刷新）
+    BarSync();
 }
 
 void CTextService::ReloadSettingsNow() {

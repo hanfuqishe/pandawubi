@@ -1190,6 +1190,30 @@ KillTimer → SetWindowLongPtr(USERDATA, 0) → DestroyWindow（失败）→ Pos
   现在是"已保存，并已通知正在运行的输入法立即生效（不需要重启任何程序）"；
   切换数据目录的提示也去掉了"需要重启"。
 
+## 二·三十七·九、主题（熊猫 / 狸花猫）
+
+需求：新增狸花猫主题，熊猫保持默认。
+
+- 配置项 `Theme=panda|cat`（默认 panda，未知值归一成 panda）；
+- 狸花猫图标来源：用户给的一张 AI 图（2048²），用 `System.Drawing` 裁出猫头、套圆形羽化 alpha，
+  再交给 `tools\make-ico.ps1` 生成 6 个尺寸的 `dist\cat.ico`；
+  同一张 PNG（256²）作为候选窗右下角装饰图，写成 RC 资源 `4 RCDATA "cat_art.png"`，
+  图标本身也嵌进 DLL（`5 ICON "cat.ico"`，供语言栏项用）；
+- 生效点：悬浮栏 Logo（`StatusBar::SetIconFile`）、候选窗装饰图（`CCandidateWindow::SetArtId`
+  → `LoadArtFromResource(3|4)`）、语言栏项的图标资源（1=熊猫 5=猫）、
+  注册表里输入指示器的 `IconFile`（HKCU，写失败不影响别的）；
+- 切换路径与别的设置一样：保存 → 发 `PandaReloadSettings` → `ReloadSettingsNow()` → `ApplySettings()`。
+
+### 踩到的两个坑
+
+1. **装饰图缓存只按"有/没有"缓存**：`LoadArtFromResource` 原来用单个 `g_artBitmap`，第一次预热
+   （panda, id=3）之后，切主题再要 id=4 仍然返回熊猫。改成按 id 缓存（`g_artCache[8]`）。
+2. **`inst_` 为空时加载图标会拿到宿主 exe 的目录**：`ApplySettings()` 在 `SharedBar().Create()` 之前跑，
+   那会儿 `inst_ == nullptr`，`GetModuleFileNameW(nullptr,...)` 返回的是 host 的 exe 路径，
+   于是在 host 目录找不到 cat.ico，反而回落到 `%LOCALAPPDATA%\PandaWubi\panda.ico` ——
+   表现就是"切了主题但 Logo 还是熊猫"。改成：`SetIconFile` 在 `inst_` 为空时只记名字，
+   等 `Create()` 里拿到 DLL 句柄再加载。
+
 ## 二·三十八、按应用使用不同配置（[app:<exe>]）
 
 需求：同一个输入法，A 程序用简体、B 程序用繁体（而不是切换输入法本身）。

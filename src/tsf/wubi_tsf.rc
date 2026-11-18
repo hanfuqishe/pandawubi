@@ -1,5 +1,7 @@
-﻿#include <windows.h>
+#include <windows.h>
 // PP?? ??????DLL ?????IconIndex 0?
 1 ICON "panda.ico"
 
 3 RCDATA "panda_bamboo.png"
+4 RCDATA "cat_art.png"
+5 ICON "cat.ico"
