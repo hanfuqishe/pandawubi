@@ -77,10 +77,29 @@ static void EnsureGdiplus() {
 }
 
 // 缓存按资源 id 分开：熊猫(3)/狸花猫(4) 都要能各自缓存，切主题时不会拿到旧的那张
-static Gdiplus::Bitmap* g_artCache[8] = { nullptr };
+static Gdiplus::Bitmap* g_artCache[16] = { nullptr };
+
+// 底部背景图顶行的平均颜色（= 画面的天空色）。窗口上半部分用它填，和图无缝衔接。
+static COLORREF g_bandSky = RGB(0xF7, 0xF9, 0xFC);
+static int      g_bandSkyFor = 0;      // 已采样过的资源 id
+
+static void SampleBandSky(int id, Gdiplus::Bitmap* bmp) {
+    if (!bmp || g_bandSkyFor == id) return;
+    const int w = (int)bmp->GetWidth();
+    if (w <= 0) return;
+    unsigned r = 0, g = 0, b = 0, n = 0;
+    for (int i = 0; i < 24; ++i) {
+        const int x = (int)((long long)i * (w - 1) / 23);
+        Gdiplus::Color c;
+        if (bmp->GetPixel(x, 1, &c) == Gdiplus::Ok) { r += c.GetR(); g += c.GetG(); b += c.GetB(); ++n; }
+    }
+    if (!n) return;
+    g_bandSky = RGB(r / n, g / n, b / n);
+    g_bandSkyFor = id;
+}
 
 static Gdiplus::Bitmap* LoadArtFromResource(int id) {
-    if (id > 0 && id < 8 && g_artCache[id]) return g_artCache[id];
+    if (id > 0 && id < 16 && g_artCache[id]) return g_artCache[id];
     EnsureGdiplus();
     if (!g_gdiplusToken) return nullptr;
 
@@ -106,7 +125,7 @@ static Gdiplus::Bitmap* LoadArtFromResource(int id) {
     Gdiplus::Bitmap* bmp = Gdiplus::Bitmap::FromStream(stream);
     stream->Release();
     if (bmp && bmp->GetLastStatus() != Gdiplus::Ok) { delete bmp; bmp = nullptr; }
-    if (id > 0 && id < 8) g_artCache[id] = bmp;
+    if (id > 0 && id < 16) g_artCache[id] = bmp;
     return bmp;
 }
 static LONG      g_cRef  = 0;
@@ -510,23 +529,8 @@ void CCandidateWindow::RecalcAndResize() {
     height_ += MulDiv(4, (int)dpi, 96);
     height_ += MulDiv(18, (int)dpi, 96);          // 给装饰图留出高度
 
-    // 底部风景条：宽度铺满，高度按图片比例算，超过上限就只留最下面那一段
+    // 整窗背景图：不额外占高度，图片直接铺满整个候选窗（文字压在上面）
     bandH_ = 0;
-    if (bandId_ != 0) {
-        int aspectW = 4, aspectH = 1;
-        if (Gdiplus::Bitmap* band = LoadArtFromResource(bandId_)) {
-            aspectW = (int)band->GetWidth();
-            aspectH = (int)band->GetHeight();
-        }
-        if (aspectW <= 0) aspectW = 4;
-        if (aspectH <= 0) aspectH = 1;
-        const int cap = MulDiv(bandCapDip_, (int)dpi, 96);
-        int h = (int)((long long)width_ * aspectH / aspectW);
-        if (h > cap) h = cap;
-        if (h < 0) h = 0;
-        bandH_ = h;
-        height_ += bandH_;
-    }
     layout_.width = width_;
     layout_.height = height_;
 }
@@ -547,29 +551,58 @@ void CCandidateWindow::Paint(HDC dc) {
     const int W = rc.right, H = rc.bottom;
     const UINT dpi = Dpi();
 
+    // 底部背景图（丹顶鹤主题）：先取一下图的天空色，窗口上半部分填同色，接缝就看不出来了
+    if (bandId_ != 0) SampleBandSky(bandId_, LoadArtFromResource(bandId_));
+
     // ---- 背景：用设置里的背景色（原来是写死的淡绿渐变，设置项其实不生效）----
     {
-        HBRUSH br = CreateSolidBrush(bgCol_);
+        HBRUSH br = CreateSolidBrush(bandId_ != 0 ? g_bandSky : bgCol_);
         RECT all = { 0, 0, W, H };
         FillRect(dc, &all, br);
         DeleteObject(br);
     }
 
     // ---- 底部风景条（丹顶鹤主题）：整幅图不抠，等比缩放到铺满条带，右对齐 + 底对齐 ----
-    if (bandH_ > 0 && bandH_ < H) if (Gdiplus::Bitmap* band = LoadArtFromResource(bandId_)) {
+    if (bandId_ != 0 && !items_.empty()) if (Gdiplus::Bitmap* band = LoadArtFromResource(bandId_)) {
         Gdiplus::Graphics gfx(dc);
         gfx.SetInterpolationMode(Gdiplus::InterpolationModeHighQualityBicubic);
         gfx.SetPixelOffsetMode(Gdiplus::PixelOffsetModeHighQuality);
+        gfx.SetCompositingMode(Gdiplus::CompositingModeSourceOver);
         const Gdiplus::REAL iw = (Gdiplus::REAL)band->GetWidth();
         const Gdiplus::REAL ih = (Gdiplus::REAL)band->GetHeight();
-        const Gdiplus::REAL bw = (Gdiplus::REAL)W;
-        const Gdiplus::REAL bh = (Gdiplus::REAL)bandH_;
-        Gdiplus::REAL scale = bw / iw;
-        if (ih * scale < bh) scale = bh / ih;          // 覆盖整条，不留空白
-        const Gdiplus::REAL dw = iw * scale, dh = ih * scale;
-        gfx.DrawImage(band,
-                      Gdiplus::RectF((Gdiplus::REAL)W - dw, (Gdiplus::REAL)H - dh, dw, dh),
-                      0.0f, 0.0f, iw, ih, Gdiplus::UnitPixel, nullptr);
+        if (iw > 0 && ih > 0) {
+            // 整幅按比例缩放到窗口宽度，贴在最下方（右对齐 + 底对齐）；
+            // 窗口特别宽时改用高度对齐，仍然右下角，画面不被裁掉。
+            Gdiplus::REAL scale = (Gdiplus::REAL)W / iw;
+            if (ih * scale > (Gdiplus::REAL)H) scale = (Gdiplus::REAL)H / ih;
+            const Gdiplus::REAL dw = iw * scale, dh = ih * scale;
+            const Gdiplus::REAL left = (Gdiplus::REAL)W - dw;
+            const Gdiplus::REAL top = (Gdiplus::REAL)H - dh;
+            gfx.DrawImage(band, Gdiplus::RectF(left, top, dw, dh),
+                          0.0f, 0.0f, iw, ih, Gdiplus::UnitPixel, nullptr);
+
+            // 上沿再糊一层"天空色 → 透明"的渐变，把图片的起始边抹平（图片自身的天色有细微纹理，
+            // 光靠背景同色还是会看出一条线）；横向不够宽时左边也糊一条。
+            const BYTE sr = GetRValue(g_bandSky), sg = GetGValue(g_bandSky), sb = GetBValue(g_bandSky);
+            const Gdiplus::REAL fadeH = (Gdiplus::REAL)MulDiv(22, (int)dpi, 96);
+            if (fadeH > 0 && top + fadeH < (Gdiplus::REAL)H) {
+                Gdiplus::RectF strip(left, top, dw, fadeH);
+                Gdiplus::LinearGradientBrush lg(strip, Gdiplus::Color(255, sr, sg, sb),
+                                                Gdiplus::Color(0, sr, sg, sb),
+                                                Gdiplus::LinearGradientModeVertical);
+                gfx.FillRectangle(&lg, strip);
+            }
+            if (left > 0) {
+                const Gdiplus::REAL fadeW = (Gdiplus::REAL)MulDiv(18, (int)dpi, 96);
+                if (fadeW > 0 && left + fadeW < (Gdiplus::REAL)W) {
+                    Gdiplus::RectF vstrip(left, top, fadeW, dh);
+                    Gdiplus::LinearGradientBrush vg(vstrip, Gdiplus::Color(255, sr, sg, sb),
+                                                    Gdiplus::Color(0, sr, sg, sb),
+                                                    Gdiplus::LinearGradientModeHorizontal);
+                    gfx.FillRectangle(&vg, vstrip);
+                }
+            }
+        }
     }
 
     // ---- 右下角：熊猫吃竹子（GDI+，PNG 带 alpha）；只有候选行时才画 ----
