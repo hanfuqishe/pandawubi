@@ -2298,6 +2298,16 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
 
     // —— 分号便捷输入：数字转三种中文形式 ——
     if (m_quickMode) {
+        // 连按两次分号 = 其实想打一个全角分号（第一次分号被便捷输入吃掉了，这里补上）
+        if (vk == VK_OEM_1 && !shift && m_quickDigits.empty()) {
+            ExitQuick(pic, true);
+            const std::wstring semi = m_puncEnabled ? std::wstring(L"\uFF1B") : std::wstring(L";");
+            CommitString(pic, semi);
+            m_lastCommit = semi;          // Z 重复也能用上
+            LogLine(L"double semicolon -> %s", semi.c_str());
+            *pfEaten = TRUE;
+            return S_OK;
+        }
         if (vk >= '0' && vk <= '9') {
             if (m_quickDigits.size() < 12) m_quickDigits.push_back((char)vk);
             const std::wstring shown = AsciiToWide(m_quickDigits);
