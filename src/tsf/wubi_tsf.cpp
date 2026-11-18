@@ -1931,8 +1931,34 @@ static std::wstring AsciiToWide(const std::string& s) {
 }
 
 // 最近 4 次上屏的内容（Z 键候选用；连续重复的只记一次）
+// 是不是标点/符号（Z 键重复和自定义词组都不算标点，而且词组素材不跨标点）
+static bool IsPunctChar(wchar_t c) {
+    if (c < 0x20) return false;
+    if (c >= 0x21 && c <= 0x2F) return true;   // ! " # $ % & ' ( ) * + , - . /
+    if (c >= 0x3A && c <= 0x40) return true;   // : ; < = > ? @
+    if (c >= 0x5B && c <= 0x60) return true;   // [ \ ] ^ _ `
+    if (c >= 0x7B && c <= 0x7E) return true;   // { | } ~
+    if (c >= 0x00A1 && c <= 0x00BF) return true;   // ¡ … ¿
+    if (c >= 0x2010 && c <= 0x2027) return true;   // ‐ – — ‘ ’ “ ” … ‧
+    if (c >= 0x3000 && c <= 0x303F) return true;   // 　、。〈〉《》「」『』【】etc.
+    if (c >= 0xFE10 && c <= 0xFE1F) return true;   // 竖排标点
+    if (c >= 0xFE30 && c <= 0xFE4F) return true;   // 兼容形式
+    if (c >= 0xFF01 && c <= 0xFF20) return true;   // ！＂＃…＠
+    if (c >= 0xFF3B && c <= 0xFF40) return true;   // ［＼］＾＿｀
+    if (c >= 0xFF5B && c <= 0xFF65) return true;   // ｛｜｝～｟｠｡｢…･
+    return false;
+}
+
+static bool IsPunctText(const std::wstring& s) {
+    if (s.empty()) return false;
+    for (wchar_t c : s) if (!IsPunctChar(c)) return false;
+    return true;
+}
+
 void CTextService::RememberRecentCommit(const std::wstring& text) {
     if (text.empty()) return;
+    // 纯标点不进"最近上屏"（Z 键重复只应该重复词/字，不该是「，」「。」）
+    if (IsPunctText(text)) return;
     m_lastCommit = text;
     if (!m_recentCommits.empty() && m_recentCommits.back() == text) return;
     m_recentCommits.push_back(text);
@@ -2188,8 +2214,13 @@ static bool AppendUserWordLine(const std::wstring& path, const std::string& code
 
 // 记住刚上屏的字，供"自定义词组"用 ← 逐个回取
 void CTextService::RememberCommitted(const std::wstring& text) {
+    bool broke = false;
     for (wchar_t c : text) {
         if (c < 0x20) continue;                      // 空格/换行不进词组素材
+        if (IsPunctChar(c)) {                        // 标点：不进素材，而且把素材切断
+            if (!broke) { m_recentChars.clear(); broke = true; }
+            continue;
+        }
         m_recentChars.push_back(std::wstring(1, c));
         if (m_recentChars.size() > 64) m_recentChars.erase(m_recentChars.begin());
     }
