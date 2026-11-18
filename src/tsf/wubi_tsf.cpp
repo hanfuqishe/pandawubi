@@ -597,24 +597,28 @@ void CCandidateWindow::Paint(HDC dc) {
             const Gdiplus::REAL dw = iw * scale, dh = ih * scale;
             const Gdiplus::REAL left = (Gdiplus::REAL)W - dw;
             const Gdiplus::REAL top = (Gdiplus::REAL)H - dh;
-            // 左边空出来的部分：把图片最左一列横向拉伸铺过去（等价于复制那一列像素），
-            // 和原图的淡出完全连贯，比任何插值/渐变都准。
-            if (left > 0 && g_bandCol) {
-                const Gdiplus::InterpolationMode oldMode = gfx.GetInterpolationMode();
-                gfx.SetInterpolationMode(Gdiplus::InterpolationModeNearestNeighbor);
-                gfx.DrawImage(g_bandCol,
-                              Gdiplus::RectF(0.0f, top, left, dh),
-                              0.0f, 0.0f, 1.0f, (Gdiplus::REAL)g_bandCol->GetHeight(),
-                              Gdiplus::UnitPixel, nullptr);
-                gfx.SetInterpolationMode(oldMode);
-            }
+            // 左边保持"纯色"（背景填充已经铺好了），**不做拉伸**——
+            // 拉伸会把图像向左拖成一条虚影，观感很差；这里是让图片自己往纯色里淡出（见下）。
             gfx.DrawImage(band, Gdiplus::RectF(left, top, dw, dh),
                           0.0f, 0.0f, iw, ih, Gdiplus::UnitPixel, nullptr);
 
-            // 上沿：只有"图片上方还有空白（宽图贴在下方时）"才需要把接缝糊一下。
-            // 左边**绝对不能再糊渐变** —— 左边是用图片最左一列拉伸出来的，
-            // 在图片左沿上盖一层淡出，就会把图片那一列压淡，两边反而接不上。
             const BYTE sr = GetRValue(g_bandSky), sg = GetGValue(g_bandSky), sb = GetBValue(g_bandSky);
+
+            // 图片左沿：从"左边那个纯色"淡入到图片，宽 ~22dp。
+            // 左边是纯色，所以淡出的终点正好等于左边底色，接缝自然消失。
+            if (left > 0) {
+                const Gdiplus::REAL fadeW = (Gdiplus::REAL)MulDiv(22, (int)dpi, 96);
+                const Gdiplus::REAL w2 = fadeW < dw ? fadeW : dw;
+                if (w2 > 0) {
+                    Gdiplus::RectF fs(left, top, w2, dh);
+                    Gdiplus::LinearGradientBrush fg(fs, Gdiplus::Color(255, sr, sg, sb),
+                                                    Gdiplus::Color(0, sr, sg, sb),
+                                                    Gdiplus::LinearGradientModeHorizontal);
+                    gfx.FillRectangle(&fg, fs);
+                }
+            }
+
+            // 上沿：只有"图片上方还有空白（宽图贴在下方时）"才需要糊一下
             const Gdiplus::REAL fadeH = (Gdiplus::REAL)MulDiv(22, (int)dpi, 96);
             if (top > 0 && fadeH > 0 && top + fadeH < (Gdiplus::REAL)H) {
                 Gdiplus::RectF strip(left, top, dw, fadeH);
