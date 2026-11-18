@@ -9,7 +9,7 @@ namespace wubi {
 
 class StatusBar {
 public:
-    // onClick: 0=中/英 1=简/繁 2=标点 3=设置
+    // onClick: 0=中/英 1=简/繁 2=设置
     using ClickFn = std::function<void(int)>;
     using VoidFn  = std::function<void()>;
 

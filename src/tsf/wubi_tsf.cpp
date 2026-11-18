@@ -1202,7 +1202,7 @@ private:
     wubi::Punctuation     m_punc;
     wubi::Transliteration m_trad;
     bool  m_tradEnabled = false;
-    bool  m_puncEnabled = true;
+
     int   m_candCount   = 9;
     wubi::Settings m_settings;
     bool  m_dataLoaded  = false;
@@ -1250,7 +1250,7 @@ void CTextService::OnBarClick(int idx) {
         // 关于
         wchar_t msg[512];
         swprintf_s(msg,
-            L"熊猫五笔 v1.0.0\n\n构建: %hs %hs\n词库: %ls\n词条: %lld\n\n中/英: 单击 Shift 或点状态栏\n简繁: Ctrl+Shift+T\n标点: Ctrl+Shift+P（设置里也可改）",
+            L"熊猫五笔 v1.0.0\n\n构建: %hs %hs\n词库: %ls\n词条: %lld\n\n中/英: 单击 Shift 或点状态栏\n简繁: Ctrl+Shift+T",
             __DATE__, __TIME__,
             m_settings.DictFile.c_str(), (long long)g_dict.Get().EntryCount());
         MessageBoxW(nullptr, msg, L"关于 Panda五笔", MB_OK | MB_ICONINFORMATION);
@@ -1259,8 +1259,8 @@ void CTextService::OnBarClick(int idx) {
     default: LaunchSettingsWindow(nullptr); break;                              // 设置
     }
     BarSync();
-    LogLine(L"bar click idx=%d en=%d trad=%d punc=%d", idx,
-            (int)m_english, (int)m_tradEnabled, (int)m_puncEnabled);
+    LogLine(L"bar click idx=%d en=%d trad=%d", idx,
+            (int)m_english, (int)m_tradEnabled);
 }
 
 STDMETHODIMP CTextService::OnSetThreadFocus() {
@@ -1406,8 +1406,8 @@ STDMETHODIMP CTextService::ActivateEx(ITfThreadMgr* ptim, TfClientId tid, DWORD)
             lbm->Release();
         }
     }
-    LogLine(L"app config: exe=%ls trad=%d punc=%d vertical=%d",
-            HostAppName().c_str(), (int)m_tradEnabled, (int)m_puncEnabled, m_settings.CandVertical);
+    LogLine(L"app config: exe=%ls trad=%d vertical=%d",
+            HostAppName().c_str(), (int)m_tradEnabled, m_settings.CandVertical);
     LogLine(L"cand style: cfg=%s face=%s pt=%d bg=#%06X text=#%06X border=#%06X",
             GetConfigPath().c_str(), m_settings.CandFontFace.c_str(), m_settings.CandFontPt,
             m_settings.CandBgColor & 0xFFFFFF, m_settings.CandTextColor & 0xFFFFFF,
@@ -1427,8 +1427,8 @@ STDMETHODIMP CTextService::ActivateEx(ITfThreadMgr* ptim, TfClientId tid, DWORD)
     }
     LogLine(L"bar: users=%d owner=%p visible=%d", g_barUsers, (void*)this,
             (int)SharedBar().Visible());
-    LogLine(L"ActivateEx: tid=%u punc=%d trad=%d candCount=%d",
-            m_tid, (int)m_puncEnabled, (int)m_tradEnabled, m_candCount);
+    LogLine(L"ActivateEx: tid=%u trad=%d candCount=%d",
+            m_tid, (int)m_tradEnabled, m_candCount);
     g_service = this;
     return S_OK;
 }
@@ -1882,7 +1882,7 @@ void CTextService::EnsureComposer() {
     m_composer.SetLimit((size_t)m_candCount);
 }
 
-// 把当前 m_settings 套用到候选窗外观、标点/简繁开关、候选个数、词库排序等。
+// 把当前 m_settings 套用到候选窗外观、简繁开关、候选个数、词库排序等。
 // 激活时调用一次；config.ini 变过的话，MaybeReloadUserWords() 里会再调一次（即时生效）。
 // 系统输入指示器的图标来自注册表里的 IconFile：改主题后写一次（HKCU 优先，不需要管理员）。
 // 说明：shell 只在加载语言配置时读这个值，所以通常要重启 explorer 或重新登录才看到变化。
@@ -1961,7 +1961,7 @@ void CTextService::ApplySettings() {
     m_candWnd.SetStyle(m_settings.CandFontPt, bgRef,
                        m_settings.CandInset != 0,
                        m_settings.CandFontFace, txRef, bdRef);
-    m_puncEnabled = m_settings.EnablePunction != 0;
+
     m_tradEnabled = m_settings.TradChinese != 0;
     m_candCount   = m_settings.CandCount;
     m_composer.SetLimit((size_t)m_candCount);
@@ -1989,8 +1989,8 @@ void CTextService::ReloadSettingsNow() {
     m_settings = wubi::LoadSettings(GetConfigPath(), HostAppName());
     ApplySettings();
     if (m_comp && m_context) RefreshCandidates(m_context);   // 正在组码就顺手刷新候选
-    LogLine(L"settings reloaded: punc=%d trad=%d candCount=%d vertical=%d font=%s %dpt",
-            (int)m_puncEnabled, (int)m_tradEnabled, m_candCount, m_settings.CandVertical,
+    LogLine(L"settings reloaded: trad=%d candCount=%d vertical=%d font=%s %dpt",
+            (int)m_tradEnabled, m_candCount, m_settings.CandVertical,
             m_settings.CandFontFace.c_str(), m_settings.CandFontPt);
 }
 
@@ -2786,7 +2786,7 @@ bool CTextService::WantsKey(UINT vk, LPARAM lp) {
     if (alt) return false;
     if (ctrl) {
         // Ctrl 组合默认交给应用，但自己的热键要先声明，否则宿主根本不会把 KeyDown 转到输入法：
-        //   Ctrl+= 自定义词组 · Ctrl+Shift+= 自定义短语 · Ctrl+Shift+T/P 简繁/标点
+        //   Ctrl+= 自定义词组 · Ctrl+Shift+= 自定义短语 · Ctrl+Shift+T 简繁
         // 注意：这些热键要在**英文模式判断之前**声明 —— 英文模式只表示"字母键不打字"，
         // 不等于输入法的快捷键失效（之前放在后面，英文模式下一按 Ctrl+= 就进不了加词，是个 bug）。
         if (vk == VK_OEM_PLUS) return true;
@@ -2812,7 +2812,7 @@ bool CTextService::WantsKey(UINT vk, LPARAM lp) {
     }
     if (vk == VK_OEM_1 && !(GetKeyState(VK_SHIFT) & 0x8000)) return true;   // 分号：便捷输入
 
-    if (m_puncEnabled) {                               // 中文标点接管：确实能映射才声明
+    {                                                 // 中文标点接管：确实能映射才声明
         LoadDataOnce();
         BYTE ks[256];
         GetKeyboardState(ks);
@@ -2849,14 +2849,14 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
     LogLine(L"OnKeyDown vk=0x%02X scan=0x%02X ctrl=%d alt=%d comp=%p code=%hs",
             vk, (unsigned)((lParam >> 16) & 0xFF), (int)ctrl, (int)alt, (void*)m_comp, m_composer.Code().c_str());
 
-    // Ctrl+Shift+T 切换简繁；Ctrl+Shift+P 切换中文标点（组码中也生效）
-    if (ctrl && shift && (vk == 'T' || vk == 'P')) {
+    // Ctrl+Shift+T 切换简繁（组码中也生效）
+    if (ctrl && shift && vk == 'T') {
         LoadDataOnce();
-        if (vk == 'T') { m_tradEnabled = !m_tradEnabled; m_settings.TradChinese = m_tradEnabled ? 1 : 0; }
-        else           { m_puncEnabled = !m_puncEnabled; m_settings.EnablePunction = m_puncEnabled ? 1 : 0; }
+        m_tradEnabled = !m_tradEnabled;
+        m_settings.TradChinese = m_tradEnabled ? 1 : 0;
         const bool saved = wubi::SaveSettings(GetConfigPath(), m_settings);
-        LogLine(L"toggle %c -> trad=%d punc=%d saved=%d",
-                (wchar_t)vk, (int)m_tradEnabled, (int)m_puncEnabled, (int)saved);
+        LogLine(L"toggle %c -> trad=%d saved=%d",
+                (wchar_t)vk, (int)m_tradEnabled, (int)saved);
         BarSync();          // 快捷键切换后同步悬浮栏上的「简/繁」显示（以前只有鼠标点击才同步）
         *pfEaten = TRUE;
         return S_OK;
@@ -3045,7 +3045,7 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
         // 连按两次分号 = 其实想打一个全角分号（第一次分号被便捷输入吃掉了，这里补上）
         if (vk == VK_OEM_1 && !shift && m_quickDigits.empty()) {
             ExitQuick(pic, true);
-            const std::wstring semi = m_puncEnabled ? std::wstring(L"\uFF1B") : std::wstring(L";");
+            const std::wstring semi(L"\uFF1B");   // 分号固定输出全角，不再提供标点开关
             CommitString(pic, semi);
             RememberRecentCommit(semi);   // Z 候选里也能取到
             LogLine(L"double semicolon -> %s", semi.c_str());
@@ -3222,7 +3222,7 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
                 else          handle(m_composer.SelectBest());   // 提交 #1 并结束组合串
                 LoadDataOnce();
                 std::wstring outSym;
-                if (m_puncEnabled && m_punc.Map((char)symChar, wubi::PuncMode::ChineseHalf, outSym)) {
+                if (m_punc.Map((char)symChar, wubi::PuncMode::ChineseHalf, outSym)) {
                     CommitString(pic, outSym);
                 } else {
                     CommitString(pic, std::wstring(1, symChar));
@@ -3267,7 +3267,7 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
 
 
     // 中文标点接管（ASCII 标点 -> 中文标点，含引号成对）
-    if (m_puncEnabled) {
+    {
         BYTE ks[256];
         GetKeyboardState(ks);
         wchar_t buf[8] = { 0 };

@@ -9,7 +9,6 @@ struct Settings {
     int  InputMode      = 0;   // 0=五笔 1=拼音（预留）
     int  CandVertical   = 0;   // 候选窗竖排
     int  CandCount      = 9;   // 候选个数上限
-    int  EnablePunction = 1;   // 中文标点接管
     int  TradChinese    = 0;   // 简繁输出
     int  SortMode       = 0;   // 0=码短优先 1=纯词频优先（用户词始终优先）
     int  Level1Mode     = 2;   // 一级简码字在多键输入时: 0=不处理 1=隐藏 2=沉底

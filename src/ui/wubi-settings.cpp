@@ -54,7 +54,7 @@ static std::wstring ConfigPath() {
 enum {
     ID_L1_0 = 100, ID_L1_1, ID_L1_2,
     ID_SM_0 = 110, ID_SM_1,
-    ID_PUNC = 120, ID_TRAD = 121,
+    ID_TRAD = 121,
     ID_CAND = 130, ID_FONT = 131, ID_BG = 132, ID_INSET = 133, ID_DICT = 134,
     ID_VERT = 135,
     ID_TXT = 136, ID_BORDER = 139, ID_THEME = 145,
@@ -113,7 +113,6 @@ static void ReadUiInto(HWND hwnd) {
     g_s.Level1Mode = SendMessageW(GetDlgItem(hwnd, ID_L1_0), BM_GETCHECK, 0, 0) == BST_CHECKED ? 0
                    : SendMessageW(GetDlgItem(hwnd, ID_L1_1), BM_GETCHECK, 0, 0) == BST_CHECKED ? 1 : 2;
     g_s.SortMode   = SendMessageW(GetDlgItem(hwnd, ID_SM_1), BM_GETCHECK, 0, 0) == BST_CHECKED ? 1 : 0;
-    g_s.EnablePunction = SendMessageW(GetDlgItem(hwnd, ID_PUNC), BM_GETCHECK, 0, 0) == BST_CHECKED ? 1 : 0;
     g_s.TradChinese    = SendMessageW(GetDlgItem(hwnd, ID_TRAD), BM_GETCHECK, 0, 0) == BST_CHECKED ? 1 : 0;
     g_s.CandVertical   = SendMessageW(GetDlgItem(hwnd, ID_VERT), BM_GETCHECK, 0, 0) == BST_CHECKED ? 1 : 0;
     wchar_t buf[16] = { 0 };
@@ -184,12 +183,11 @@ static void BuildChildren(HWND hwnd) {
     y += 96 + 8;
 
     // 排序与输入（合成一组，省高度；175% DPI 下窗口才放得下）
-    MakeGroup(hwnd, L" 排序与输入", padX, y, groupW, 124);
+    MakeGroup(hwnd, L" 排序与输入", padX, y, groupW, 100);
     MakeRadio(hwnd, L"候选排序：码短优先（默认，与 QQ五笔 接近）", inX, y + 24, 380, ID_SM_0, g_s.SortMode == 0, true);
     MakeRadio(hwnd, L"候选排序：纯词频优先",                        inX, y + 46, 380, ID_SM_1, g_s.SortMode == 1);
-    MakeCheck(hwnd, L"中文标点（Ctrl+Shift+P 可临时切换）",         inX, y + 72, 380, ID_PUNC, g_s.EnablePunction != 0, true);
-    MakeCheck(hwnd, L"输出繁体（Ctrl+Shift+T 可临时切换）",         inX, y + 94, 380, ID_TRAD, g_s.TradChinese != 0);
-    y += 124 + 8;
+    MakeCheck(hwnd, L"输出繁体（Ctrl+Shift+T 可临时切换）",         inX, y + 72, 380, ID_TRAD, g_s.TradChinese != 0);
+    y += 100 + 8;
 
     // 候选窗外观（两列排版）
     MakeGroup(hwnd, L" 主题与外观", padX, y, groupW, 172);
@@ -526,8 +524,8 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, LPWSTR, int) {
             std::printf("ini=%ls\n", g_ini.c_str());
             std::printf("datadir=%ls\n", wubi::GetDataDir().c_str());
             std::printf("userdict=%ls\n", wubi::GetUserWordsPath().c_str());
-            std::printf("Level1Mode=%d SortMode=%d EnablePunction=%d TradChinese=%d CandCount=%d CandVertical=%d InputMode=%d\n",
-                        g_s.Level1Mode, g_s.SortMode, g_s.EnablePunction, g_s.TradChinese,
+            std::printf("Level1Mode=%d SortMode=%d TradChinese=%d CandCount=%d CandVertical=%d InputMode=%d\n",
+                        g_s.Level1Mode, g_s.SortMode, g_s.TradChinese,
                         g_s.CandCount, g_s.CandVertical, g_s.InputMode);
             std::printf("Theme=%ls CandFontFace=%ls CandFont=%d CandBgColor=#%06X CandTextColor=#%06X CandBorderColor=#%06X CandInset=%d\n",
                         g_s.Theme.c_str(), g_s.CandFontFace.c_str(), g_s.CandFontPt,
@@ -566,7 +564,6 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, LPWSTR, int) {
                 int iv = _wtoi(v.c_str());
                 if      (k == L"Level1Mode")     { g_s.Level1Mode = iv; any = true; }
                 else if (k == L"SortMode")       { g_s.SortMode = iv; any = true; }
-                else if (k == L"EnablePunction") { g_s.EnablePunction = iv; any = true; }
                 else if (k == L"TradChinese")    { g_s.TradChinese = iv; any = true; }
                 else if (k == L"CandCount")      { g_s.CandCount = iv; any = true; }
                 else if (k == L"CandVertical")   { g_s.CandVertical = iv; any = true; }
@@ -576,9 +573,9 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, LPWSTR, int) {
 
             const bool ok = wubi::SaveSettings(g_ini, g_s);
             if (ok) NotifyReload();       // 让正在运行的输入法立刻用上新设置
-            std::printf("%s -> Level1Mode=%d SortMode=%d EnablePunction=%d TradChinese=%d CandCount=%d\n",
+            std::printf("%s -> Level1Mode=%d SortMode=%d TradChinese=%d CandCount=%d\n",
                         ok ? "saved" : "FAILED", g_s.Level1Mode, g_s.SortMode,
-                        g_s.EnablePunction, g_s.TradChinese, g_s.CandCount);
+                        g_s.TradChinese, g_s.CandCount);
             LocalFree(argv);
             return ok ? 0 : 1;
         }

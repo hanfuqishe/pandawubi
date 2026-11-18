@@ -209,25 +209,19 @@ int wmain(int argc, wchar_t** argv) {
         return 0;
     }
     if (cmd == "toggle" && argc > 4) {
-        // 模拟 TSF 的 Ctrl+Shift+T / P：翻转 -> 写回配置 -> 重新读取
+        // 模拟 TSF 的 Ctrl+Shift+T：翻转 -> 写回配置 -> 重新读取
         std::string what = Narrow(argv[3]);
         std::wstring ini = argv[4];
+        if (what != "trad") { std::printf("usage: toggle trad <ini>\n"); return 2; }
         wubi::Settings before = wubi::LoadSettings(ini);
         wubi::Settings s = before;
-        if (what == "trad")      s.TradChinese = s.TradChinese ? 0 : 1;
-        else if (what == "punc") s.EnablePunction = s.EnablePunction ? 0 : 1;
-        else { std::printf("usage: toggle trad|punc <ini>\n"); return 2; }
+        s.TradChinese = s.TradChinese ? 0 : 1;
 
         const bool saved = wubi::SaveSettings(ini, s);
         wubi::Settings after = wubi::LoadSettings(ini);
-        bool ok = false;
-        if (what == "trad") ok = (after.TradChinese == s.TradChinese && after.TradChinese != before.TradChinese);
-        else                ok = (after.EnablePunction == s.EnablePunction && after.EnablePunction != before.EnablePunction);
-        std::printf("toggle %s: before=%d after=%d saved=%d reload-match=%s\n",
-                    what.c_str(),
-                    what == "trad" ? before.TradChinese : before.EnablePunction,
-                    what == "trad" ? after.TradChinese : after.EnablePunction,
-                    (int)saved, ok ? "PASS" : "FAIL");
+        const bool ok = (after.TradChinese == s.TradChinese && after.TradChinese != before.TradChinese);
+        std::printf("toggle trad: before=%d after=%d saved=%d reload-match=%s\n",
+                    before.TradChinese, after.TradChinese, (int)saved, ok ? "PASS" : "FAIL");
         return ok ? 0 : 1;
     }
 
@@ -633,20 +627,20 @@ int wmain(int argc, wchar_t** argv) {
         bool found = false;
         wubi::Settings s = wubi::MigrateFromQQ(argv[3], &found);
         std::printf("QQ config found=%d (%ls)\n", (int)found, argv[3]);
-        std::printf("  InputMode=%d CandVertical=%d EnablePunction=%d UseGBK=%d TradChinese=%d\n",
-                    s.InputMode, s.CandVertical, s.EnablePunction, s.UseGBK, s.TradChinese);
+        std::printf("  InputMode=%d CandVertical=%d UseGBK=%d TradChinese=%d\n",
+                    s.InputMode, s.CandVertical, s.UseGBK, s.TradChinese);
         if (!wubi::SaveSettings(argv[4], s)) { std::printf("  write FAILED\n"); return 1; }
         wubi::Settings back = wubi::LoadSettings(argv[4]);
         bool ok = back.InputMode == s.InputMode && back.CandVertical == s.CandVertical &&
-                  back.EnablePunction == s.EnablePunction && back.TradChinese == s.TradChinese;
+                  back.TradChinese == s.TradChinese;
         std::printf("  written -> %ls ; reload match=%s\n", argv[4], ok ? "PASS" : "FAIL");
         return ok ? 0 : 1;
     }
 
     if (cmd == "show" && argc > 3) {
         wubi::Settings s = wubi::LoadSettings(argv[3]);
-        std::printf("InputMode=%d CandVertical=%d CandCount=%d EnablePunction=%d TradChinese=%d SortMode=%d Level1Mode=%d CandFont=%d CandBgColor=#%06X CandInset=%d DictFile=%ls\n",
-                    s.InputMode, s.CandVertical, s.CandCount, s.EnablePunction, s.TradChinese,
+        std::printf("InputMode=%d CandVertical=%d CandCount=%d TradChinese=%d SortMode=%d Level1Mode=%d CandFont=%d CandBgColor=#%06X CandInset=%d DictFile=%ls\n",
+                    s.InputMode, s.CandVertical, s.CandCount, s.TradChinese,
                     s.SortMode, s.Level1Mode, s.CandFontPt, (unsigned)(s.CandBgColor & 0xFFFFFF), s.CandInset, s.DictFile.c_str());
     }
     if (cmd == "userdemo") {

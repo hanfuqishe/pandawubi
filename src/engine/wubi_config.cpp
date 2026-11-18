@@ -37,7 +37,6 @@ static void ApplyAppSection(const std::wstring& iniPath, const std::wstring& sec
     s.InputMode      = GetIntSec(iniPath, p, L"InputMode",      s.InputMode);
     s.CandVertical   = GetIntSec(iniPath, p, L"CandVertical",   s.CandVertical);
     s.CandCount      = GetIntSec(iniPath, p, L"CandCount",      s.CandCount);
-    s.EnablePunction = GetIntSec(iniPath, p, L"EnablePunction", s.EnablePunction);
     s.TradChinese    = GetIntSec(iniPath, p, L"TradChinese",    s.TradChinese);
     s.UseGBK         = GetIntSec(iniPath, p, L"UseGBK",         s.UseGBK);
     s.SortMode       = GetIntSec(iniPath, p, L"SortMode",       s.SortMode);
@@ -58,7 +57,6 @@ Settings LoadSettings(const std::wstring& iniPath, const std::wstring& appExe) {
     s.InputMode      = GetInt(iniPath, L"InputMode", s.InputMode);
     s.CandVertical   = GetInt(iniPath, L"CandVertical", s.CandVertical);
     s.CandCount      = GetInt(iniPath, L"CandCount", s.CandCount);
-    s.EnablePunction = GetInt(iniPath, L"EnablePunction", s.EnablePunction);
     s.TradChinese    = GetInt(iniPath, L"TradChinese", s.TradChinese);
     s.UseGBK         = GetInt(iniPath, L"UseGBK", s.UseGBK);
     s.SortMode       = GetInt(iniPath, L"SortMode", s.SortMode);
@@ -105,7 +103,6 @@ bool SaveSettings(const std::wstring& iniPath, const Settings& s) {
     PutInt(iniPath, L"InputMode", s.InputMode);
     PutInt(iniPath, L"CandVertical", s.CandVertical);
     PutInt(iniPath, L"CandCount", s.CandCount);
-    PutInt(iniPath, L"EnablePunction", s.EnablePunction);
     PutInt(iniPath, L"TradChinese", s.TradChinese);
     PutInt(iniPath, L"UseGBK", s.UseGBK);
     PutInt(iniPath, L"SortMode", s.SortMode);
@@ -144,7 +141,6 @@ Settings MigrateFromQQ(const std::wstring& qqIniPath, bool* found) {
     // QQ五笔 的键名与我们一致，直接沿用；缺失项保留默认
     s.InputMode      = GetInt(qqIniPath, L"InputMode", s.InputMode);
     s.CandVertical   = GetInt(qqIniPath, L"CandVertical", s.CandVertical);
-    s.EnablePunction = GetInt(qqIniPath, L"EnablePunction", s.EnablePunction);
     s.UseGBK         = GetInt(qqIniPath, L"UseGBK", s.UseGBK);
     // QQ 的 ChangeIMEOutput=1 大致对应“简繁输出”类行为，仅作保守映射
     const int changeOut = GetInt(qqIniPath, L"ChangeIMEOutput", 0);

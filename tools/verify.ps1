@@ -255,8 +255,6 @@ $cfgTest = Join-Path $ws 'build\toggle-test.ini'
 Copy-Item (Join-Path $ws 'dist\config.ini') $cfgTest -Force
 $out = & $cli $dict toggle trad $cfgTest 2>&1 | Out-String
 Check 'toggle trad 持久化' ($out -match 'reload-match=PASS') 'Ctrl+Shift+T 写回配置并可回读'
-$out = & $cli $dict toggle punc $cfgTest 2>&1 | Out-String
-Check 'toggle punc 持久化' ($out -match 'reload-match=PASS') 'Ctrl+Shift+P 写回配置并可回读'
 $out = & $cli $dict learnsim 16 2>&1 | Out-String
 Check 'learnsim 节流落盘' ($out -match 'RESULT=PASS' -and $out -match '文件=有') '16 次提交后首位翻转且落盘'
 "— 候选排序可调 / 双端对比工具 —"
