@@ -224,6 +224,22 @@ powershell -ExecutionPolicy Bypass -File .\tools\build-setup.ps1 -SkipBuild # �
   想要全中文界面就把 `ChineseSimplified.isl` 放到 `installer\` 并在 `[Languages]` 里加一行）。
 
 > 旧的单文件 `src\ui\panda-setup.cpp`（自己写的资源内嵌安装器）保留作后备，不再走构建脚本。
+## 顶字上屏（四码满了继续打）
+
+四个码打满之后**再打一个键**时，会把第 1 候选直接上屏、并用这个键开始下一轮组码（五笔习惯）。
+实现上有个坑，之前表现为"第五个键被吞掉"：
+
+- 上屏时 `CommitText` 会 `EndComposition` 结束旧的组合串，而 TSF 的
+  `OnCompositionTerminated` 回调是**晚一步**才到的；那时如果已经为新码开好了组合串，
+  这个迟到回调会把新串一起清掉（连 `composer` 里的新码也 Reset 了），于是第五个键消失、
+  候选窗也不出来；
+- 现在改成：上屏后**不立刻**开新组合串，只把新码留在 composer 里并刷新候选窗，
+  同时用 `m_keepCodeOnTerminate` 标记"这次终止回调别清状态"；
+  用户再打一键时才开新组合串。
+
+实测（tsf-host）：`wqvbw` → 上屏「你好」+ 候选窗显示 `w`；继续 `aq` → 编码 `wa`、`waq`，
+按键不再丢。
+
 ## Z 键：最近上屏 + 拼音反查编码
 
 按 `Z` 先弹出「最近上屏的 4 个词（倒序）+ 版本号」，按空格/回车/数字选；此时**继续打字母**就切换成

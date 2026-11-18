@@ -1164,6 +1164,9 @@ private:
     // 中英文切换（单击 Shift）与状态提示
     bool m_english   = false;
     bool m_docFocused = false;   // 当前是否有"文档焦点"（TSF 的 OnSetFocus 非空）
+    // 顶字上屏（四码满了再打第五个键）时，旧的组合串会在稍后才回调 OnCompositionTerminated；
+    // 那次回调要保留 composer 里的新码、不要清状态，否则第五个键看起来被吞掉了
+    bool m_keepCodeOnTerminate = false;
     bool m_shiftDown = false;
     bool m_shiftUsed = false;
     bool m_statusShown = false;
@@ -1545,6 +1548,7 @@ STDMETHODIMP CTextService::OnSetFocus(ITfDocumentMgr* pimdFocus, ITfDocumentMgr*
 
 void CTextService::Reset() {
     LogLine(L"Reset: comp=%p code=%hs", (void*)m_comp, m_composer.Code().c_str());
+    m_keepCodeOnTerminate = false;
     m_code.clear();
     m_composer.Reset();
     m_candWnd.Hide();
@@ -1566,9 +1570,21 @@ void CTextService::Reset() {
     if (m_comp) { m_comp->Release(); m_comp = nullptr; }
 }
 
-STDMETHODIMP CTextService::OnCompositionTerminated(TfEditCookie, ITfComposition*) {
-    LogLine(L"OnCompositionTerminated: code=%hs comp=%p", m_composer.Code().c_str(), (void*)m_comp);
+STDMETHODIMP CTextService::OnCompositionTerminated(TfEditCookie, ITfComposition* pComposition) {
+    LogLine(L"OnCompositionTerminated: code=%hs comp=%p terminated=%p",
+            m_composer.Code().c_str(), (void*)m_comp, (void*)pComposition);
+    // 顶字上屏（四码满了又打第五个键）会"先提交旧的组合串、再开一个新的"。
+    // 旧串的终止回调是**晚一步**才到的，那时 m_comp 已经指向新串了 ——
+    // 老代码不分青红皂白把 m_comp 释放掉，等于把刚开的那个新组合串掐死，
+    // 于是第五个键看起来"被吞掉了"（候选窗也不出来）。
     if (m_comp) { m_comp->Release(); m_comp = nullptr; }
+    if (m_keepCodeOnTerminate) {
+        // 这是"顶字上屏"结束旧组合串的回调：composer 里已经装好了新码，
+        // 不要 Reset、不要把候选窗收掉——等用户打下一键再开新组合串。
+        m_keepCodeOnTerminate = false;
+        LogLine(L"OnCompositionTerminated: keep code=%hs after auto-commit", m_composer.Code().c_str());
+        return S_OK;
+    }
     m_code.clear();
     m_composer.Reset();
     m_candWnd.Hide();
@@ -2652,6 +2668,7 @@ void CTextService::RefreshCandidates(ITfContext* pic) {
     (void)pic;
     m_letterLabels = false;
     const auto& cands = m_composer.Candidates();
+    LogLine(L"cands: code=%hs n=%zu comp=%p", m_composer.Code().c_str(), cands.size(), (void*)m_comp);
     std::vector<std::wstring> display;
     display.reserve(cands.size());
     // 只有"人工强制指定"（自造词/自定义短语）才在词尾加个小淡蓝星号；
@@ -3106,11 +3123,14 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
                 *pfEaten = TRUE;
                 break;
             case wubi::Composer::Act::CommitThenContinue:
-                // 顶字上屏：先把第 1 候选落盘（结束当前组合串），再用新码开新组合串
+                // 顶字上屏：把第 1 候选落盘（结束当前组合串），新码留在 composer 里。
+                // 这里**不能**马上 StartComposition：旧组合串的终止回调晚一步才到，
+                // 会把刚开的那个新组合串掐掉（第五个键就"被吞掉"了）。
                 LogLine(L"auto-commit %zu chars, continue with code=%hs", o.commit.size(), o.commitCode.c_str());
+                m_keepCodeOnTerminate = true;
                 CommitText(pic, o.commit, o.commitCode, /*resetComposer=*/false);
                 SyncCodeFromComposer();
-                if (SUCCEEDED(StartComposition(pic, std::wstring()))) RefreshCandidates(pic);   // 组码不上屏
+                RefreshCandidates(pic);      // 候选窗照常显示新码的候选（组合串等下一键再开）
                 *pfEaten = TRUE;
                 break;
             case wubi::Composer::Act::Cancelled:
