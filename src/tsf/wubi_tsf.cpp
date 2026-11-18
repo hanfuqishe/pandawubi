@@ -260,6 +260,8 @@ public:
     void SetItems(const std::vector<std::wstring>& items, bool vertical) {
         items_ = items;
         vertical_ = vertical;
+        // 取消"徽标短暂显示"的定时器：否则中/英状态提示的 700ms 定时器会在组码过程中把窗口藏掉
+        if (hwnd_) KillTimer(hwnd_, kBriefTimerId);
         RecalcAndResize();
     }
     // 与 items_ 一一对应：1 = 人工锁定（自造词/自定义短语），词尾加个小淡蓝星号
@@ -669,7 +671,26 @@ LRESULT CALLBACK CCandidateWindow::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARA
     case WM_PAINT: {
         PAINTSTRUCT ps;
         HDC dc = BeginPaint(hwnd, &ps);
-        if (self) self->Paint(dc);
+        if (self) {
+            // 双缓冲：先画到内存位图再整体贴上，避免逐条画文字/贴图时闪
+            RECT rc = { 0, 0, 0, 0 };
+            GetClientRect(hwnd, &rc);
+            const int w = rc.right, h = rc.bottom;
+            if (w > 0 && h > 0) {
+                HDC mem = CreateCompatibleDC(dc);
+                HBITMAP bmp = CreateCompatibleBitmap(dc, w, h);
+                if (mem && bmp) {
+                    HGDIOBJ oldBmp = SelectObject(mem, bmp);
+                    self->Paint(mem);
+                    BitBlt(dc, 0, 0, w, h, mem, 0, 0, SRCCOPY);
+                    SelectObject(mem, oldBmp);
+                }
+                if (bmp) DeleteObject(bmp);
+                if (mem) DeleteDC(mem);
+            } else {
+                self->Paint(dc);
+            }
+        }
         EndPaint(hwnd, &ps);
         return 0;
     }
@@ -696,9 +717,22 @@ void CCandidateWindow::ShowAt(const RECT& caret) {
         if (y + height_ > mi.rcWork.bottom) y = caret.top - height_ - 2;
         if (y < mi.rcWork.top)             y = mi.rcWork.top;
     }
+    // 已经显示在同一位置同一尺寸时，只重画内容——否则每按一键都 SetWindowPos 一次，
+    // 窗口会闪一下（尺寸变化尤其明显）。
+    RECT cur = { 0, 0, 0, 0 };
+    const bool visible = IsWindowVisible(hwnd_) != FALSE;
+    GetWindowRect(hwnd_, &cur);
+    const bool sameGeom = (cur.left == x && cur.top == y &&
+                           cur.right - cur.left == width_ && cur.bottom - cur.top == height_);
+    if (sameGeom) {
+        if (!visible) ShowWindow(hwnd_, SW_SHOWNOACTIVATE);
+        InvalidateRect(hwnd_, nullptr, FALSE);   // 自己画背景，不用系统擦除
+        return;
+    }
+    // 尺寸/位置变了：一次 SetWindowPos 完成，已可见时不重复 show（减少闪烁）
     SetWindowPos(hwnd_, HWND_TOPMOST, x, y, width_, height_,
-                 SWP_NOACTIVATE | SWP_SHOWWINDOW);
-    InvalidateRect(hwnd_, nullptr, TRUE);
+                 SWP_NOACTIVATE | (visible ? 0u : (UINT)SWP_SHOWWINDOW));
+    InvalidateRect(hwnd_, nullptr, FALSE);
 }
 
 void CCandidateWindow::Hide() {
@@ -1605,7 +1639,8 @@ void CTextService::ExitQuick(ITfContext* pic, bool cancel) {
 }
 
 void CTextService::ShowCandidateList(const std::vector<std::wstring>& display) {
-    m_candWnd.Hide();
+    // 注意：这里不能先 Hide()。组码阶段每按一键都会走这里，hide -> show 会让候选框闪一下，
+    // 直接就地更新内容即可（需要隐藏时 ShowAt 自己会处理）。
     if (display.empty()) {
         // 还在组码但一个候选都没匹配到：也要留下顶部编码框，
         // 否则屏幕上一片空白、用户不知道输入法是否在工作。

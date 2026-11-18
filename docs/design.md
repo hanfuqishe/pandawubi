@@ -1159,6 +1159,22 @@ app config: exe=notepad.exe trad=1 punc=1 vertical=0
 
 三个键同样支持放进 `[app:<exe>]` 小节，按程序区分外观。
 
+### 每按一键闪一下（用户反馈）
+
+组码时每敲一个键候选框都"闪一下"。四个原因叠在一起，逐个修掉：
+
+1. `ShowCandidateList()` 开头有一句 `m_candWnd.Hide()`——组码阶段每键都走这里，
+   hide → 立刻 show 就是肉眼看到的那一下闪。现在只在真正需要隐藏时才隐藏。
+2. `ShowAt()` 无条件 `SetWindowPos(..., SWP_SHOWWINDOW)`：内容一变（候选数/编码宽度）窗口尺寸就变，
+   每次都是一次"移动+缩放+重绘"。现在先比较几何，位置尺寸都没变就只 `InvalidateRect`。
+3. `InvalidateRect(..., TRUE)` 会先擦背景再重画：擦完到重画之间就是一片空白。
+   改成 `FALSE`（`Paint()` 自己会填满背景），并在 `WM_PAINT` 里**双缓冲**（内存位图 + `BitBlt`）。
+4. 中/英状态提示的 700ms `kBriefTimerId` 定时器：提示出现过之后如果立刻开始组码，
+   定时器会在组码中途把窗口藏掉。`SetItems()` 里补 `KillTimer`。
+
+另外实测采样（25ms 一次看 `IsWindowVisible`）：组码全过程可见性只翻转 1 次（从隐藏到显示），
+不再逐键 hide/show。
+
 ### 绘制
 
 `Paint()` 里：
