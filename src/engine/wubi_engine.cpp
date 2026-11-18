@@ -828,7 +828,9 @@ void Dictionary::EnsureLevel1() const {
         }
     } else {
         for (const auto& e : entries_) {
-            if (e.code.size() == 1) level1_.insert(e.word);
+            // 用户词不能算"一级简码字"：学习出来的 `g -> 来` 这种条目一旦进这个集合，
+            // EnsureExactFirst 会把「来」当成一级简码顶到第 1 位（用户报告：打 g 出来是「来」）。
+            if (e.code.size() == 1 && !e.user) level1_.insert(e.word);
         }
     }
 }

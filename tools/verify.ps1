@@ -140,6 +140,13 @@ $out = & $cli $dict usertest $uFix g 1 2>&1 | Out-String
 Check '一级简码 g=一' ($out -match 'code=g -> 一') '学到 g->来 也不能顶掉 一'
 $out = & $cli $dict usertest $uFix b 1 2>&1 | Out-String
 Check '一级简码 b=了' ($out -match 'code=b -> 了') '学到 b->子 也不能顶掉 了'
+# 回归：用户词里出现单键码（学习出的 g->来）时，一级简码字仍必须排第 1
+$uJunk = Join-Path $ws 'build\user-level1-junk.tsv'
+Set-Content -Path $uJunk -Value "# journal`ng`t来`t4000000`nr`t看`t4000000" -Encoding UTF8
+$out = & $cli $dict usertest $uJunk g 1 2>&1 | Out-String
+Check '一级简码不受用户词影响' ($out -match 'code=g -> 一') '学到 g->来 也不能顶掉 一（EnsureLevel1 排除用户词）'
+$out = & $cli $dict usertest $uJunk r 1 2>&1 | Out-String
+Check '一级简码 r=的' ($out -match 'code=r -> 的') '学到 r->看 也不能顶掉 的'
 $out = & $cli $dict usertest $uFix aa 1 2>&1 | Out-String
 Check '二级简码 aa=式' ($out -match 'code=aa -> 式') '高权重学习词 戒 不能顶掉 式'
 $out = & $cli $dict usertest $uFix aaa 1 2>&1 | Out-String
