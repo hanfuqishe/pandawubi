@@ -1065,8 +1065,10 @@ RegisterCategory: keyboard=0x0 immersive=0x0 systray=0x0
 
 - 启动时从 `<DLL目录>\data\eng_words.txt` 载入（`eng load: words=45535`）
 - 大写字母且未组码 → `SetEnglish(true)` + 开始组词
-- 英文模式：字母继续组词、空格上屏（并补一个空格）、数字选候选、退格删字母、Esc 取消、
-  其它键先把当前词上屏再放行
+- 英文模式：字母继续组词、**空格 = 选第 1 个候选补全并补空格**、**回车 = 原样上屏不补全**、
+  数字选候选、退格删字母、Esc 取消、其它键先把当前词上屏再放行
+- `EngUpdate` 里 `m_candWnd.SetCode(m_engTyped)`：候选窗顶部小框显示**实际敲入的样子**（含大小写），
+  不再是上一段中文组码；上屏/取消时清空，避免下次复用时残留
 - 便捷输入模式下按字母 → `ExitQuick` + 进英文 + 开始组词
 
 ## 二·三十八、按应用使用不同配置（[app:<exe>]）

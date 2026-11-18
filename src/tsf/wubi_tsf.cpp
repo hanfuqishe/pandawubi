@@ -1694,6 +1694,7 @@ void CTextService::EngUpdate(ITfContext* pic) {
 
     const double t2 = NowMs();
     m_candWnd.SetPlain(false);
+    m_candWnd.SetCode(m_engTyped);   // 候选窗顶部小框显示"实际打出来的样子"（含大小写）
     if (!disp.empty()) {
         m_candWnd.SetItems(disp, m_settings.CandVertical != 0);   // 跟随"候选竖排"设置
         if (QueryCaretRect(m_lastCaret)) m_hasCaret = true;   // 没记录时当场取，避免跑到屏幕左上角
@@ -1721,6 +1722,7 @@ void CTextService::EngCommit(ITfContext* pic, int idx, bool withSpace) {
     m_engTyped.clear();
     m_engActive = false;   // 上屏后回到中文模式
     if (m_comp) CancelComposition(pic);
+    m_candWnd.SetCode(std::wstring());   // 清掉顶部小框，别让下次复用时残留
     m_candWnd.Hide();
     if (withSpace) out += L' ';
     CommitString(pic, out);
@@ -1731,6 +1733,7 @@ void CTextService::EngCancel(ITfContext* pic) {
     m_engTyped.clear();
     m_engActive = false;
     if (m_comp) CancelComposition(pic);
+    m_candWnd.SetCode(std::wstring());
     m_candWnd.Hide();
 }
 
@@ -2253,7 +2256,9 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
             return S_OK;
         }
         if (!m_engTyped.empty()) {
-            if (vk == VK_SPACE || vk == VK_RETURN) { EngCommit(pic, 0, vk == VK_SPACE); *pfEaten = TRUE; return S_OK; }
+            // 空格：选第 1 个候选补全并补一个空格；回车：不补全，原样上屏输入框里的内容
+            if (vk == VK_SPACE) { EngCommit(pic, 0, true); *pfEaten = TRUE; return S_OK; }
+            if (vk == VK_RETURN) { EngCommit(pic, -1, false); *pfEaten = TRUE; return S_OK; }
             if (vk >= '1' && vk <= '9')        { EngCommit(pic, (int)(vk - '1'), true);  *pfEaten = TRUE; return S_OK; }  // 数字选择也接空格
             if (vk == VK_BACK) {
                 m_engTyped.pop_back();

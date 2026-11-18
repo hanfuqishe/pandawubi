@@ -210,11 +210,24 @@ powershell -ExecutionPolicy Bypass -File .\tools\hide-stale-bars.ps1 -List    # 
 规则实现在 `wubi::ApplyCase()`（`src/engine/wubi_english.cpp`），纯函数、可单测：
 `panda-cli <dict> engcase` 跑 9 组用例，`tools\verify.ps1` 里对应「大小写照抄输入」一项。
 
+候选窗**顶部小框显示的就是你实际敲的样子**（含大小写），不再显示上一段中文组码：
+
+| 键 | 效果 |
+|---|---|
+| `空格` | 选第 1 个候选补全，并补一个空格（`Ab ` → `About `） |
+| `回车` | **不补全，原样上屏**顶部小框里的内容（`AbC⏎` → `AbC`） |
+| `1`–`9` | 选第 N 个候选（同样补空格） |
+| `退格` | 删掉一个字母；删空即退出英文模式 |
+| `Esc` | 全部取消，什么都不上屏 |
+
+上屏/取消后顶部小框会清空，不会残留到下一次。
+
 端到端（真实键盘事件，会短暂抢占前台）：
 ```powershell
 .\build\tsf-host.exe -send "Ab "     # -> About
 .\build\tsf-host.exe -send "AB "     # -> ABOUT
 .\build\tsf-host.exe -send "wqvb "   # -> 你好（中文不受影响）
+.\build\tsf-host.exe -send "AbC[E]"  # -> AbC（回车原样上屏，不补全）
 ```
 
 ## 如果行为不对，怎么报给我
