@@ -1364,7 +1364,9 @@ void CTextService::ApplyInputAttribute(TfEditCookie ec, ITfRange* pRange) {
     }
 }
 HRESULT CTextService::UpdateCompositionText(ITfContext* pic) {
-    return UpdateCompositionTextWith(pic, m_code);
+    // 组码字母不上屏：组合串始终留空，编码只在候选窗顶部小框里显示。
+    // 这样上屏前文档里不会先出现 "wqvb" 再被汉字替换。
+    return UpdateCompositionTextWith(pic, std::wstring());
 }
 
 HRESULT CTextService::UpdateCompositionTextWith(ITfContext* pic, const std::wstring& text) {
@@ -2433,7 +2435,7 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
                 LogLine(L"auto-commit %zu chars, continue with code=%hs", o.commit.size(), o.commitCode.c_str());
                 CommitText(pic, o.commit, o.commitCode, /*resetComposer=*/false);
                 SyncCodeFromComposer();
-                if (SUCCEEDED(StartComposition(pic, m_code))) RefreshCandidates(pic);
+                if (SUCCEEDED(StartComposition(pic, std::wstring()))) RefreshCandidates(pic);   // 组码不上屏
                 *pfEaten = TRUE;
                 break;
             case wubi::Composer::Act::Cancelled:
@@ -2536,7 +2538,7 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
         if (o.act == wubi::Composer::Act::Updated) {
             SyncCodeFromComposer();
             // 开始组码与首帧文本在同一个编辑会话内完成
-            if (FAILED(StartComposition(pic, m_code))) { m_composer.Reset(); return S_OK; }
+            if (FAILED(StartComposition(pic, std::wstring()))) { m_composer.Reset(); return S_OK; }   // 组码不上屏
             RefreshCandidates(pic);
             *pfEaten = TRUE;
         }

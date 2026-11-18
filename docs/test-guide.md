@@ -195,6 +195,19 @@ powershell -ExecutionPolicy Bypass -File .\tools\hide-stale-bars.ps1 -List    # 
 
 或者干脆重启那些宿主程序（实测是 explorer、微信、Everything 等）；新代码只在宿主进程位于前台时显示 1 条栏。
 
+## 组码不上屏（编码只在候选窗里显示）
+
+组码阶段的字母**不会写进文档**，编码只显示在候选窗顶部的小框里；汉字上屏后文档里直接出现汉字，
+不存在"先出现字母再被替换"的过程。
+
+```powershell
+.\build\tsf-host.exe -send "wqvb"     # 文档里是空的（编码 wqvb 只在候选窗顶部）
+.\build\tsf-host.exe -send "wqvb "    # -> 你好
+.\build\tsf-host.exe -send "wqvbx"    # -> 你好（顶字上屏后继续组码 x）
+```
+
+英文补全模式仍然把字母显示在文档里——那本来就是最终要输出的内容。
+
 ## 英文单词补全（Shift+字母）
 
 `Shift+字母` 进入补全模式后，**大小写照抄键盘输入**（Shift 与 CapsLock 相异即为大写），
