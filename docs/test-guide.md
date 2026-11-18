@@ -224,6 +224,24 @@ powershell -ExecutionPolicy Bypass -File .\tools\build-setup.ps1 -SkipBuild # �
   想要全中文界面就把 `ChineseSimplified.isl` 放到 `installer\` 并在 `[Languages]` 里加一行）。
 
 > 旧的单文件 `src\ui\panda-setup.cpp`（自己写的资源内嵌安装器）保留作后备，不再走构建脚本。
+## Z 键：最近上屏 + 拼音反查编码
+
+按 `Z` 先弹出「最近上屏的 4 个词（倒序）+ 版本号」，按空格/回车/数字选；此时**继续打字母**就切换成
+**拼音反查**模式：
+
+- 打的字母当成拼音（顶部编码框显示正在打的拼音）；
+- 候选里每项是 `汉字 五笔全码`，例如打 `zni` → `1. 你 wqiy`、`2. 呢 knxn` …；
+- 空格/回车选第 1 个，数字选第 N 个，`Esc` 退出，`Backspace` 改拼音；
+- 同一拼音内按词频排序（词频取自主码表里单字的权重），常见字在前；繁体异体字已过滤。
+
+数据文件：`data\pinyin.tsv`（`拼音<TAB>字<TAB>五笔全码`），由
+`tools\build-pinyin.ps1` 从 Rime 的 `luna_pinyin.dict.yaml`（小狼毫自带）+ `data\char_fullcodes.tsv`
++ 主码表权重生成。没有这个文件时，Z 只剩「最近上屏」功能，反查自动降级。
+
+```
+powershell -ExecutionPolicy Bypass -File .\tools\build-pinyin.ps1
+```
+
 ## 主题（熊猫 / 狸花猫）
 
 设置窗口「主题与外观」里的 **主题** 下拉：

@@ -178,6 +178,11 @@ $out = & $setExe /set NoSuchKey=1 2>&1 | Out-String
 Check '设置拒绝未知键' ($out -match 'no known key') '未知键不静默通过'
 $out = & $setExe /set Theme=cat 2>&1 | Out-String
 $dump = & $setExe /dump 2>&1 | Out-String
+$pyPath = Join-Path $ws 'data\pinyin.tsv'
+$pyOk = (Test-Path $pyPath)
+if ($pyOk) { $pyOk = ((Get-Content $pyPath -Encoding UTF8 | Select-String -Pattern "^ni`t你`twqiy$") -ne $null) }
+Check '拼音反查表' $pyOk 'data\pinyin.tsv 里有 ni -> 你 wqiy'
+
 Check '主题可切换' ($dump -match 'Theme=cat') '狸花猫主题生效'
 $null = & $setExe /set Theme=dog 2>&1 | Out-String
 $dumpDog = & $setExe /dump 2>&1 | Out-String

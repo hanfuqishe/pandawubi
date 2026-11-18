@@ -54,6 +54,13 @@ $payload = [ordered]@{
     211 = @{ src = 'data\eng_words.txt';            dst = 'data\eng_words.txt' }
 }
 
+# 拼音反查表没生成过就顺手生成一次（需要本机装了 Weasel，里面有 luna_pinyin.dict.yaml）
+if (-not (Test-Path (Join-Path $root 'data\pinyin.tsv'))) {
+    Write-Host '  生成拼音反查表 data\pinyin.tsv ...'
+    try { & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root 'tools\build-pinyin.ps1') *> $null }
+    catch { Write-Host '  （生成失败，安装包里将不含拼音反查表）' }
+}
+
 "[3/5] 收集载荷"
 $total = 0
 foreach ($kv in $payload.GetEnumerator()) {

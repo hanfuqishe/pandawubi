@@ -890,6 +890,69 @@ private:
 // 而且切走应用时谁也收不掉（切应用不会触发 Deactivate）。
 // 现在：进程内只建一个窗口（SharedBar），实例计数决定它的生死；只有「拥有者」实例
 // 能往这条栏里写状态，点击也回到拥有者。显隐由线程焦点回调 + 500ms 前台自检收敛。
+// ---------------------------------------------------------------- 拼音反查表
+// data\pinyin.tsv：拼音<TAB>字<TAB>五笔全码（tools\build-pinyin.ps1 从 Rime 的
+// luna_pinyin.dict.yaml 生成）。按 Z 之后的字母走这张表，候选里带上五笔编码。
+struct PyEntry {
+    std::string  py;      // 拼音（小写，无调）
+    std::wstring ch;      // 汉字
+    std::wstring code;    // 该字的五笔全码
+};
+
+static std::vector<PyEntry>& PinyinTable() {
+    static std::vector<PyEntry> table;
+    return table;
+}
+
+static bool LoadPinyinTableOnce() {
+    static bool loaded = false;
+    static bool tried = false;
+    if (tried) return loaded;
+    tried = true;
+
+    wchar_t mod[MAX_PATH] = { 0 };
+    if (!GetModuleFileNameW(g_hInst, mod, ARRAYSIZE(mod))) return false;
+    std::wstring dir(mod);
+    const size_t slash = dir.find_last_of(L"\\/");
+    if (slash == std::wstring::npos) return false;
+    dir.erase(slash);
+    const std::wstring path = dir + L"\\data\\pinyin.tsv";
+
+    FILE* fp = nullptr;
+    if (_wfopen_s(&fp, path.c_str(), L"rb") != 0 || !fp) {
+        LogLine(L"pinyin table: missing %s", path.c_str());
+        return false;
+    }
+    auto& tbl = PinyinTable();
+    char buf[1024];
+    bool first = true;
+    while (fgets(buf, sizeof(buf), fp)) {
+        std::string line(buf);
+        while (!line.empty() && (line.back() == '\n' || line.back() == '\r')) line.pop_back();
+        if (line.empty()) continue;
+        if (first) { first = false; if (line.rfind("pinyin", 0) == 0) continue; }
+        const size_t tab1 = line.find('\t');
+        if (tab1 == std::string::npos) continue;
+        const size_t tab2 = line.find('\t', tab1 + 1);
+        PyEntry e;
+        e.py = line.substr(0, tab1);
+        const std::string chUtf8 = line.substr(tab1 + 1,
+            (tab2 == std::string::npos) ? std::string::npos : tab2 - tab1 - 1);
+        const std::string code = (tab2 == std::string::npos) ? std::string() : line.substr(tab2 + 1);
+        if (e.py.empty() || chUtf8.empty()) continue;
+        const int n = MultiByteToWideChar(CP_UTF8, 0, chUtf8.c_str(), (int)chUtf8.size(), nullptr, 0);
+        if (n <= 0) continue;
+        e.ch.resize((size_t)n);
+        MultiByteToWideChar(CP_UTF8, 0, chUtf8.c_str(), (int)chUtf8.size(), e.ch.data(), n);
+        e.code.assign(code.begin(), code.end());
+        tbl.push_back(std::move(e));
+    }
+    fclose(fp);
+    loaded = true;
+    LogLine(L"pinyin table: %zu entries from %s", tbl.size(), path.c_str());
+    return loaded;
+}
+
 class CTextService;
 
 static wubi::StatusBar& SharedBar();
@@ -1062,6 +1125,11 @@ private:
     std::vector<std::wstring> m_recentCommits;     // 最近 4 次上屏内容（Z 键候选用，旧的在前）
     bool            m_zPending = false;            // Z 按下后正在等用户选一项
     std::vector<std::wstring> m_zItems;            // Z 弹出的候选项（前 4 个历史 + 版本号）
+    // Z 之后的拼音反查（拼音 -> 汉字 + 五笔编码）
+    bool                      m_pyLookup = false;
+    std::string               m_pyTyped;           // 已输入的拼音
+    std::vector<std::wstring> m_pyChars;           // 命中的汉字（与 m_pyCodes 一一对应）
+    std::vector<std::wstring> m_pyCodes;           // 对应五笔全码
     bool            m_quickMode = false;       // 分号进入的"便捷输入"
     std::string     m_quickDigits;
     #define m_eng g_eng
@@ -1111,6 +1179,8 @@ private:
     void ShowCandidateList(const std::vector<std::wstring>& display);
     HRESULT UpdateCompositionTextWith(ITfContext* pic, const std::wstring& text);
     void BeginRepeat();
+    void PyLookupRefresh(ITfContext* pic);          // 按当前 m_pyTyped 刷新候选
+    void PyLookupEnd(ITfContext* pic);              // 结束反查（清状态、收候选窗）
     void RememberRecentCommit(const std::wstring& text);   // 记入"最近 4 次上屏"
     void ApplySettings();                                   // 把 m_settings 套到候选窗/词库/选项上
 public:
@@ -1481,6 +1551,12 @@ void CTextService::Reset() {
         m_customWord.clear();
         LogLine(L"Reset: custom word mode cleared");
     }
+    if (m_pyLookup) {
+        m_pyLookup = false;
+        m_pyTyped.clear();
+        m_pyChars.clear();
+        m_pyCodes.clear();
+    }
     if (m_compHost) { m_compHost->Release(); m_compHost = nullptr; }
     if (m_context) { m_context->Release(); m_context = nullptr; }
     if (m_comp) { m_comp->Release(); m_comp = nullptr; }
@@ -1509,6 +1585,12 @@ HRESULT CTextService::DoEdit(ITfContext* pic, std::function<HRESULT(TfEditCookie
 // 表现为“每按一个键都重新开始组码”（实测日志里 comp 反复重建）。
 HRESULT CTextService::StartComposition(ITfContext* pic, const std::wstring& text) {
     if (m_comp) return S_OK;
+    if (m_pyLookup) {
+        m_pyLookup = false;
+        m_pyTyped.clear();
+        m_pyChars.clear();
+        m_pyCodes.clear();
+    }
     if (m_compHost) { m_compHost->Release(); m_compHost = nullptr; }
     if (m_context) { m_context->Release(); m_context = nullptr; }
     pic->AddRef();
@@ -1965,6 +2047,57 @@ void CTextService::RememberRecentCommit(const std::wstring& text) {
     if (m_recentCommits.size() > 4) m_recentCommits.erase(m_recentCommits.begin());
 }
 
+// —— Z 反查：把已输入的拼音拿去查表，候选 = 汉字 + 五笔编码 ——
+void CTextService::PyLookupRefresh(ITfContext* pic) {
+    m_pyChars.clear();
+    m_pyCodes.clear();
+    if (!LoadPinyinTableOnce() || m_pyTyped.empty()) {
+        m_candWnd.SetItems({}, true);
+        m_candWnd.Hide();
+        return;
+    }
+    const auto& tbl = PinyinTable();
+    std::vector<size_t> exact, prefix;
+    exact.reserve(16);
+    prefix.reserve(64);
+    for (size_t i = 0; i < tbl.size(); ++i) {
+        const std::string& py = tbl[i].py;
+        if (py == m_pyTyped) { if (exact.size() < 64) exact.push_back(i); }
+        else if (py.size() > m_pyTyped.size() && py.compare(0, m_pyTyped.size(), m_pyTyped) == 0) {
+            if (prefix.size() < 64) prefix.push_back(i);
+        }
+        if (exact.size() >= 64 && prefix.size() >= 64) break;
+    }
+    std::vector<std::wstring> display;
+    const size_t limit = (size_t)(m_candCount > 0 ? m_candCount : 9);
+    auto add = [&](size_t i) {
+        if (m_pyChars.size() >= limit) return;
+        const PyEntry& e = tbl[i];
+        m_pyChars.push_back(e.ch);
+        m_pyCodes.push_back(e.code);
+        std::wstring text = e.ch;
+        if (!e.code.empty()) { text += L' '; text += e.code; }
+        display.push_back(std::move(text));
+    };
+    for (size_t i : exact)  add(i);
+    for (size_t i : prefix) add(i);
+
+    m_candWnd.SetPlain(false);
+    m_candWnd.SetCode(AsciiToWide(m_pyTyped));   // 顶部框显示正在打的拼音
+    m_candWnd.SetItems(display, m_settings.CandVertical != 0);
+    if (QueryCaretRect(m_lastCaret)) m_hasCaret = true;
+    m_candWnd.ShowAt(m_lastCaret);
+    LogLine(L"pinyin lookup: '%hs' -> %zu hit(s)", m_pyTyped.c_str(), m_pyChars.size());
+}
+
+void CTextService::PyLookupEnd(ITfContext*) {
+    m_pyLookup = false;
+    m_pyTyped.clear();
+    m_pyChars.clear();
+    m_pyCodes.clear();
+    m_candWnd.SetCode(std::wstring());
+    m_candWnd.Hide();
+}
 void CTextService::BeginRepeat() {
     if (m_lastCommit.empty()) return;
     m_zItems.clear();
@@ -2550,6 +2683,11 @@ static bool IsPrintableVk(UINT vk) {
 
 // 与 OnKeyDown 同一口径：只在"这个键一定会被吃掉"时才向宿主声明。
 bool CTextService::WantsKey(UINT vk, LPARAM lp) {
+    // Z 拼音反查期间：字母、退格、空格、回车、Esc、数字都由输入法处理
+    if (m_pyLookup) {
+        return (vk >= 'A' && vk <= 'Z') || (vk >= '0' && vk <= '9') ||
+               vk == VK_BACK || vk == VK_SPACE || vk == VK_RETURN || vk == VK_ESCAPE;
+    }
     // 自定义词组模式：几乎所有键都由输入法处理，先声明下来，否则宿主直接自己消化
     if (m_customWordMode) {
         return vk == VK_LEFT || vk == VK_RIGHT || vk == VK_DELETE || vk == VK_RETURN || vk == VK_ESCAPE ||
@@ -2753,10 +2891,58 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
             *pfEaten = TRUE;
             return S_OK;
         }
+        // 字母：不选历史，改为进入"拼音反查"（Z 后面打拼音，找汉字 + 五笔编码）
+        if (vk >= 'A' && vk <= 'Z' && !ctrl && !alt) {
+            m_zPending = false;
+            m_zItems.clear();
+            m_candWnd.Hide();
+            m_pyLookup = true;
+            m_pyTyped.assign(1, (char)((vk >= 'A' && vk <= 'Z') ? (vk - 'A' + 'a') : vk));
+            PyLookupRefresh(pic);
+            *pfEaten = TRUE;
+            return S_OK;
+        }
         // 其它键：放弃这次选择，继续按正常流程处理该键
         m_zPending = false;
         m_zItems.clear();
         m_candWnd.Hide();
+    }
+
+    // —— Z 反查：拼音 -> 汉字（候选里带五笔编码） ——
+    if (m_pyLookup) {
+        if (vk >= 'A' && vk <= 'Z') {
+            if (m_pyTyped.size() < 24) m_pyTyped.push_back((char)(vk - 'A' + 'a'));
+            PyLookupRefresh(pic);
+            *pfEaten = TRUE;
+            return S_OK;
+        }
+        if (vk == VK_BACK) {
+            if (m_pyTyped.empty()) { PyLookupEnd(pic); }
+            else { m_pyTyped.pop_back(); PyLookupRefresh(pic); }
+            *pfEaten = TRUE;
+            return S_OK;
+        }
+        if (vk == VK_ESCAPE) { PyLookupEnd(pic); *pfEaten = TRUE; return S_OK; }
+        // 选第 N 个：空格/回车 = 第 1 个
+        int pick = -1;
+        if (vk == VK_SPACE || vk == VK_RETURN) pick = 0;
+        else if (vk >= '1' && vk <= '9')      pick = (int)(vk - '1');
+        if (pick >= 0) {
+            if ((size_t)pick < m_pyChars.size()) {
+                const std::wstring ch = m_pyChars[(size_t)pick];
+                const std::wstring code = m_pyCodes[(size_t)pick];
+                PyLookupEnd(pic);
+                CommitString(pic, ch);
+                RememberRecentCommit(ch);
+                LogLine(L"pinyin pick '%ls' code=%ls", ch.c_str(), code.c_str());
+            } else {
+                PyLookupEnd(pic);
+            }
+            *pfEaten = TRUE;
+            return S_OK;
+        }
+        // 其它键：退出反查，按键继续按正常流程走
+        PyLookupEnd(pic);
     }
 
     // —— 分号便捷输入：数字转三种中文形式 ——

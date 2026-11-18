@@ -77,6 +77,8 @@ Source: "{#MyRoot}\data\qqwubi86.dict.tsv"; DestDir: "{app}\data"; Flags: ignore
 Source: "{#MyRoot}\data\simp2trad.dat";        DestDir: "{app}\data"; Flags: ignoreversion
 Source: "{#MyRoot}\data\punc.ini";             DestDir: "{app}\data"; Flags: ignoreversion
 Source: "{#MyRoot}\data\eng_words.txt";        DestDir: "{app}\data"; Flags: ignoreversion
+; 拼音反查表（Z + 拼音）；没生成时就不打包，功能自动降级
+Source: "{#MyRoot}\data\pinyin.tsv";         DestDir: "{app}\data"; Flags: ignoreversion skipifsourcedoesntexist
 ; 四个主题图标：一份放程序目录，一份放 %LOCALAPPDATA%\PandaWubi（输入指示器只认那里）
 Source: "{#MyRoot}\dist\panda.ico"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#MyRoot}\dist\cat.ico";   DestDir: "{app}"; Flags: ignoreversion
