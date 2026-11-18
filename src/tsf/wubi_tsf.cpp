@@ -262,6 +262,12 @@ public:
         vertical_ = vertical;
         RecalcAndResize();
     }
+    // 与 items_ 一一对应：1 = 人工锁定（自造词/自定义短语），词尾加个小淡蓝星号
+    void SetPinned(const std::vector<char>& v) {
+        if (pinned_ == v) return;
+        pinned_ = v;
+        RecalcAndResize();
+    }
     void SetOnClick(std::function<void(int)> fn) { onClick_ = std::move(fn); }
     void SetLetterLabels(bool on) { if (letterLabels_ != on) { letterLabels_ = on; RecalcAndResize(); } }
     // 纯文本徽标：不显示序号（用于中/英状态提示，避免被当成候选词）
@@ -284,12 +290,18 @@ public:
         selBgCol_ = selBg;
         borderCol_ = border;
         if (font_) { DeleteObject(font_); font_ = nullptr; }
+        if (starFont_) { DeleteObject(starFont_); starFont_ = nullptr; }
         if (hwnd_) {
             const UINT dpi = Dpi();
             const int h = -MulDiv(fontPt_, (int)dpi, 72);
             font_ = CreateFontW(h, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
                                 DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
                                 CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, face_.c_str());
+            int starPt = fontPt_ * 3 / 5;
+            if (starPt < 8) starPt = 8;
+            starFont_ = CreateFontW(-MulDiv(starPt, (int)dpi, 72), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+                                    DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+                                    CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, face_.c_str());
     if (!art_) art_ = (HBITMAP)LoadImageW(g_hInst, MAKEINTRESOURCEW(2), IMAGE_BITMAP,
                                               0, 0, LR_CREATEDIBSECTION);
         }
@@ -311,6 +323,7 @@ private:
     void Destroy();
     void RecalcAndResize();
     void Paint(HDC dc);
+    void PaintPinnedStar(HDC dc, int x, const RECT& row, UINT dpi, bool sel);
     UINT Dpi() const;
     int  padX_ = 4, padY_ = 2;
 
@@ -326,6 +339,8 @@ private:
     COLORREF bgCol_  = RGB(0xF7, 0xF9, 0xFC);    // 背景色
     bool     inset_  = true;                  // 内框凹陷
     std::wstring face_ = L"Microsoft YaHei UI";   // 字体名
+    std::vector<char> pinned_;                    // 1 = 人工锁定，词尾加小星号
+    HFONT    starFont_ = nullptr;                 // 星号用的小字号字体
     COLORREF textCol_   = RGB(0x20, 0x20, 0x28);  // 普通候选字
     COLORREF selText_   = RGB(0xFF, 0xFF, 0xFF);  // 选中文字
     COLORREF selBgCol_  = RGB(0x3B, 0x7D, 0xDD);  // 选中底色
@@ -374,11 +389,19 @@ void CCandidateWindow::Ensure() {
     int h = -MulDiv(fontPt_, (int)dpi, 72);
     font_ = CreateFontW(h, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
                         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-                        CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei UI");
+                        CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, face_.c_str());
+    {
+        int starPt = fontPt_ * 3 / 5;
+        if (starPt < 8) starPt = 8;
+        starFont_ = CreateFontW(-MulDiv(starPt, (int)dpi, 72), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+                                DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+                                CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, face_.c_str());
+    }
 }
 
 void CCandidateWindow::Destroy() {
     if (font_) { DeleteObject(font_); font_ = nullptr; }
+    if (starFont_) { DeleteObject(starFont_); starFont_ = nullptr; }
     if (hwnd_) { DestroyWindow(hwnd_); hwnd_ = nullptr; }
 }
 
@@ -406,6 +429,14 @@ void CCandidateWindow::RecalcAndResize() {
     }
     labels_.clear();
     int maxW = MulDiv(90, (int)dpi, 96);
+    int starW = 0;                       // 星号宽（人工锁定词尾的小淡蓝星）
+    if (starFont_ && pinned_.size() == items_.size()) {
+        HGDIOBJ sf = SelectObject(dc, starFont_);
+        SIZE ss = { 0, 0 };
+        GetTextExtentPoint32W(dc, L"*", 1, &ss);
+        starW = ss.cx + MulDiv(3, (int)dpi, 96);   // 星号 + 一点间距
+        SelectObject(dc, sf);
+    }
     for (size_t i = 0; i < items_.size(); ++i) {
         std::wstring t;
         if (plain_) t = items_[i];
@@ -413,7 +444,9 @@ void CCandidateWindow::RecalcAndResize() {
         else t = std::to_wstring(i + 1) + L". " + items_[i];
         SIZE sz;
         GetTextExtentPoint32W(dc, t.c_str(), (int)t.size(), &sz);
-        if (sz.cx > maxW) maxW = sz.cx;
+        int w = sz.cx;
+        if (!plain_ && i < pinned_.size() && pinned_[i]) w += starW;
+        if (w > maxW) maxW = w;
         labels_.push_back(std::move(t));
     }
     SelectObject(dc, old);
@@ -435,6 +468,18 @@ void CCandidateWindow::RecalcAndResize() {
     layout_.width = width_;
     layout_.height = height_;
 }
+// 人工锁定的小星号：淡蓝色、比正文小一号，画在词尾
+void CCandidateWindow::PaintPinnedStar(HDC dc, int x, const RECT& row, UINT dpi, bool sel) {
+    if (!starFont_) return;
+    HGDIOBJ oldFont = SelectObject(dc, starFont_);
+    // 淡蓝；选中项底色通常较深，用更亮一点的天蓝保证看得见
+    SetTextColor(dc, sel ? RGB(0xD8, 0xEA, 0xFA) : RGB(0x6F, 0xA8, 0xD8));
+    RECT sr = { x + MulDiv(2, (int)dpi, 96), row.top + MulDiv(6, (int)dpi, 96),
+                row.right, row.bottom };
+    DrawTextW(dc, L"*", -1, &sr, DT_LEFT | DT_TOP | DT_SINGLELINE);
+    SelectObject(dc, oldFont);
+}
+
 void CCandidateWindow::Paint(HDC dc) {
     RECT rc;
     GetClientRect(hwnd_, &rc);
@@ -535,6 +580,12 @@ void CCandidateWindow::Paint(HDC dc) {
             RECT wr = r;
             wr.left += sn.cx;
             DrawTextW(dc, word.c_str(), -1, &wr, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+            // 人工锁定的词：词尾一个小淡蓝星号（不抢眼，只是提示"这是我手动加的"）
+            if (i < pinned_.size() && pinned_[i]) {
+                SIZE sw = { 0, 0 };
+                GetTextExtentPoint32W(dc, word.c_str(), (int)word.size(), &sw);
+                PaintPinnedStar(dc, wr.left + sw.cx, r, dpi, sel);
+            }
         }
     } else {
         int x = padX_;
@@ -549,6 +600,11 @@ void CCandidateWindow::Paint(HDC dc) {
             }
             SetTextColor(dc, sel ? selText_ : textCol_);
             DrawTextW(dc, labels_[i].c_str(), -1, &r, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+            if (i < pinned_.size() && pinned_[i]) {
+                SIZE sw = { 0, 0 };
+                GetTextExtentPoint32W(dc, labels_[i].c_str(), (int)labels_[i].size(), &sw);
+                PaintPinnedStar(dc, r.left + sw.cx, r, dpi, sel);
+            }
             x += MulDiv(110, (int)dpi, 96);
         }
     }
@@ -797,6 +853,7 @@ private:
     std::wstring    m_engTyped;                // 英文补全已输入的字母（保留实际大小写）
     bool            m_engActive = false;      // 英文单词补全模式（区别于自由英文 m_english）
     std::vector<std::wstring> m_quickForms;
+    std::vector<char> m_candPinned;   // 与候选一一对应：1 = 人工锁定
     bool            m_letterLabels = false;   // 便捷输入模式下候选用 a. b. c.
     ITfLangBarItem* m_langBar = nullptr;   // 语言栏按钮（显示自定义图标）
     wubi::DigitPunctGate m_gate;   // 数字后单次半角逗号/句号
@@ -1528,6 +1585,7 @@ void CTextService::ShowCandidateList(const std::vector<std::wstring>& display) {
 
     m_candWnd.SetLetterLabels(m_letterLabels);
     m_candWnd.SetItems(display, m_settings.CandVertical != 0);
+    m_candWnd.SetPinned(m_candPinned);
 
     // 光标矩形（只读会话内取，避免影响输入）
     CTextService* self = this;
@@ -1962,11 +2020,15 @@ void CTextService::RefreshCandidates(ITfContext* pic) {
     const auto& cands = m_composer.Candidates();
     std::vector<std::wstring> display;
     display.reserve(cands.size());
-    for (const auto& e : cands) {
+    // 只有"人工强制指定"（自造词/自定义短语）才在词尾加个小淡蓝星号；
+    // 词频自学习把某个词顶到前面时，不加任何记号。
+    m_candPinned.assign(cands.size(), 0);
+    for (size_t i = 0; i < cands.size(); ++i) {
+        const auto& e = cands[i];
         int n = MultiByteToWideChar(CP_UTF8, 0, e.word.c_str(), (int)e.word.size(), nullptr, 0);
         std::wstring w((size_t)(n > 0 ? n : 0), L'\0');
         if (n > 0) MultiByteToWideChar(CP_UTF8, 0, e.word.c_str(), (int)e.word.size(), &w[0], n);
-        if (e.user) w = L"★" + w;   // 用户词/被 Ctrl+数字 锁定的候选加标记
+        m_candPinned[i] = e.IsPinned() ? 1 : 0;
         if (m_tradEnabled && m_trad.Loaded()) w = m_trad.ToTraditional(w);   // 候选显示与上屏保持一致的简繁
         display.push_back(w);
     }

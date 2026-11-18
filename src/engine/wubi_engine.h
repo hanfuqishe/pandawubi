@@ -11,12 +11,18 @@
 
 namespace wubi {
 
+// 人工"强制指定"的用户词用这个权重（user.tsv 里写 2147483647），
+// 和词频自学习得到的普通权重区分开：只有这类候选才在候选窗里加小记号。
+constexpr int64_t kPinnedWeight = 0x7FFFFFFFLL;
+
 // 候选值对象：从词库取出后即与词库解除耦合（词库可能重排/卸载）
 struct Candidate {
     std::string word;
     std::string code;
     int64_t     weight = 0;
-    bool        user = false;
+    bool        user = false;    // 用户词（自学习或人工）
+    // 是否人工锁定：weight 达到 kPinnedWeight 即为人工指定，见下面 kPinnedWeight
+    bool IsPinned() const { return user && weight >= kPinnedWeight; }
 };
 
 struct Entry {

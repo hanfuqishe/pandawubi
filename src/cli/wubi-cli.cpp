@@ -331,6 +331,33 @@ int wmain(int argc, wchar_t** argv) {
         std::printf("\n");
         return outWords.empty() ? 1 : 0;
     }
+    if (cmd == "pintest") {
+        // 候选记号：只有"人工强制指定"（weight 达到 kPinnedWeight）才算锁定，
+        // 词频自学习（普通权重）不加记号。
+        struct C { const char* word; int64_t weight; bool user; bool want; };
+        const C cases[] = {
+            { "人工词",  wubi::kPinnedWeight,      true,  true  },   // 自造词/自定义短语
+            { "人工词2", wubi::kPinnedWeight + 5,  true,  true  },   // 锁定后又学到，仍算锁定
+            { "自学习",  9000,                     true,  false },   // 词频顶上去的
+            { "自学习2", 99454797,                 true,  false },   // 词典大权重 + 学习
+            { "词典词",  99454797,                 false, false },   // 不是用户词
+        };
+        int bad = 0;
+        for (const auto& c : cases) {
+            wubi::Candidate cand;
+            cand.word = c.word;
+            cand.code = "a";
+            cand.weight = c.weight;
+            cand.user = c.user;
+            const bool got = cand.IsPinned();
+            const bool ok = (got == c.want);
+            std::printf("  %s %-10s weight=%-12lld user=%d -> pinned=%d want %d\n",
+                        ok ? "PASS" : "FAIL", c.word, (long long)c.weight, (int)c.user, (int)got, (int)c.want);
+            if (!ok) ++bad;
+        }
+        std::printf("pintest: %s\n", bad == 0 ? "PASS" : "FAIL");
+        return bad == 0 ? 0 : 1;
+    }
     if (cmd == "codefilter") {
         // 自定义短语窗口的编码输入框：只收英文字母，最多 4 位
         struct C { const wchar_t* in; const wchar_t* want; };
