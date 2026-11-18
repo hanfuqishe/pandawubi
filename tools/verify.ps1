@@ -173,7 +173,7 @@ $out = & $setExe /dump 2>&1 | Out-String
 Check '设置回读' ($out -match 'Level1Mode=1 SortMode=1') '写后能读回同样的值'
 $fileText = Get-Content $iniT -Encoding UTF8 -Raw
 Check '设置落盘' ($fileText -match 'Level1Mode=1' -and $fileText -match 'SortMode=1') 'config.ini 里确实有这两项'
-Check '候选窗外观项落盘' ($fileText -match 'CandFontFace=' -and $fileText -match 'CandSelBgColor=#' -and $fileText -match 'CandBorderColor=#') '字体名与四种颜色都写进 config.ini'
+Check '候选窗外观项落盘' ($fileText -match 'CandFontFace=' -and $fileText -match 'CandTextColor=#' -and $fileText -match 'CandBorderColor=#') '字体名与三种颜色都写进 config.ini'
 $out = & $setExe /set NoSuchKey=1 2>&1 | Out-String
 Check '设置拒绝未知键' ($out -match 'no known key') '未知键不静默通过'
 Remove-Item Env:\WUBI_INI

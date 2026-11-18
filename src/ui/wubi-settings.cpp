@@ -44,7 +44,7 @@ enum {
     ID_PUNC = 120, ID_TRAD = 121,
     ID_CAND = 130, ID_FONT = 131, ID_BG = 132, ID_INSET = 133, ID_DICT = 134,
     ID_VERT = 135,
-    ID_TXT = 136, ID_SELTXT = 137, ID_SELBG = 138, ID_BORDER = 139,
+    ID_TXT = 136, ID_BORDER = 139,
     ID_DATA_DIR = 140, ID_DATA_BROWSE = 141, ID_DATA_DEFAULT = 142, ID_DATA_OPEN = 143,
     ID_FACE = 144,
     ID_SAVE = 200, ID_CANCEL = 201
@@ -124,8 +124,6 @@ static void ReadUiInto(HWND hwnd) {
     };
     readColor(ID_BG, g_s.CandBgColor);
     readColor(ID_TXT, g_s.CandTextColor);
-    readColor(ID_SELBG, g_s.CandSelBgColor);
-    readColor(ID_SELTXT, g_s.CandSelTextColor);
     readColor(ID_BORDER, g_s.CandBorderColor);
     {
         HWND cb = GetDlgItem(hwnd, ID_FACE);
@@ -176,7 +174,7 @@ static void BuildChildren(HWND hwnd) {
     y += 124 + 8;
 
     // 候选窗外观（两列排版）
-    MakeGroup(hwnd, L" 候选窗外观", padX, y, groupW, 176);
+    MakeGroup(hwnd, L" 候选窗外观", padX, y, groupW, 146);
     const int cB = inX + 176;          // 第二列起点
     // 行1：候选个数 / 字号
     MakeStatic(hwnd, L"候选个数", inX, y + 24, 64, 20);
@@ -231,12 +229,10 @@ static void BuildChildren(HWND hwnd) {
     };
     makeColor(inX, y + 82, L"背景色",   ID_BG,     g_s.CandBgColor,     7);
     makeColor(cB,  y + 82, L"文字色",   ID_TXT,    g_s.CandTextColor,   7);
-    makeColor(inX, y + 112, L"选中底色", ID_SELBG, g_s.CandSelBgColor,  7);
-    makeColor(cB,  y + 112, L"选中文字", ID_SELTXT, g_s.CandSelTextColor, 7);
-    makeColor(inX, y + 142, L"边框色",   ID_BORDER, g_s.CandBorderColor, 7);
-    MakeCheck(hwnd, L"内框凹陷", cB, y + 142, 100, ID_INSET, g_s.CandInset != 0, true);
-    MakeCheck(hwnd, L"候选竖排", cB + 104, y + 142, 100, ID_VERT, g_s.CandVertical != 0);
-    y += 176 + 8;
+    makeColor(inX, y + 112, L"边框色",   ID_BORDER, g_s.CandBorderColor, 7);
+    MakeCheck(hwnd, L"内框凹陷", cB, y + 112, 100, ID_INSET, g_s.CandInset != 0, true);
+    MakeCheck(hwnd, L"候选竖排", cB + 104, y + 112, 100, ID_VERT, g_s.CandVertical != 0);
+    y += 146 + 8;
     // 词库
     MakeGroup(hwnd, L" 词库（data 目录）", padX, y, groupW, 58);
     {
@@ -388,7 +384,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 static void MeasureClient(int& w, int& h) {
     w = S(460);
     // 与 BuildChildren 里的累加保持一致
-    h = S(12 + 96 + 8 + 124 + 8 + 176 + 8 + 58 + 8 + 100 + 12 + 30 + 12);
+    h = S(12 + 96 + 8 + 124 + 8 + 146 + 8 + 58 + 8 + 100 + 12 + 30 + 12);
 }
 
 static int RunDialog() {
@@ -492,10 +488,9 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, LPWSTR, int) {
             std::printf("Level1Mode=%d SortMode=%d EnablePunction=%d TradChinese=%d CandCount=%d CandVertical=%d InputMode=%d\n",
                         g_s.Level1Mode, g_s.SortMode, g_s.EnablePunction, g_s.TradChinese,
                         g_s.CandCount, g_s.CandVertical, g_s.InputMode);
-            std::printf("CandFontFace=%ls CandFont=%d CandBgColor=#%06X CandTextColor=#%06X CandSelBgColor=#%06X CandSelTextColor=#%06X CandBorderColor=#%06X CandInset=%d\n",
+            std::printf("CandFontFace=%ls CandFont=%d CandBgColor=#%06X CandTextColor=#%06X CandBorderColor=#%06X CandInset=%d\n",
                         g_s.CandFontFace.c_str(), g_s.CandFontPt,
                         g_s.CandBgColor & 0xFFFFFF, g_s.CandTextColor & 0xFFFFFF,
-                        g_s.CandSelBgColor & 0xFFFFFF, g_s.CandSelTextColor & 0xFFFFFF,
                         g_s.CandBorderColor & 0xFFFFFF, g_s.CandInset);
             LocalFree(argv);
             return 0;

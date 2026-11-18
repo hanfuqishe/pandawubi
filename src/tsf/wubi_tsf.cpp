@@ -280,16 +280,12 @@ public:
     void SetStyle(int fontPt, COLORREF bg, bool inset,
                   const std::wstring& face = L"Microsoft YaHei UI",
                   COLORREF text = RGB(0x20, 0x20, 0x28),
-                  COLORREF selText = RGB(0xFF, 0xFF, 0xFF),
-                  COLORREF selBg = RGB(0x3B, 0x7D, 0xDD),
                   COLORREF border = RGB(0xA8, 0xCD, 0xA8)) {
         fontPt_   = fontPt > 6 ? fontPt : 14;
         bgCol_    = bg;
         inset_    = inset;
         face_     = face.empty() ? std::wstring(L"Microsoft YaHei UI") : face;
         textCol_  = text;
-        selText_  = selText;
-        selBgCol_ = selBg;
         borderCol_ = border;
         if (font_) { DeleteObject(font_); font_ = nullptr; }
         if (starFont_) { DeleteObject(starFont_); starFont_ = nullptr; }
@@ -325,7 +321,7 @@ private:
     void Destroy();
     void RecalcAndResize();
     void Paint(HDC dc);
-    void PaintPinnedStar(HDC dc, int x, const RECT& row, UINT dpi, bool sel);
+    void PaintPinnedStar(HDC dc, int x, const RECT& row, UINT dpi);
     UINT Dpi() const;
     int  padX_ = 4, padY_ = 2;
 
@@ -344,8 +340,7 @@ private:
     std::vector<char> pinned_;                    // 1 = 人工锁定，词尾加小星号
     HFONT    starFont_ = nullptr;                 // 星号用的小字号字体
     COLORREF textCol_   = RGB(0x20, 0x20, 0x28);  // 普通候选字
-    COLORREF selText_   = RGB(0xFF, 0xFF, 0xFF);  // 选中文字
-    COLORREF selBgCol_  = RGB(0x3B, 0x7D, 0xDD);  // 选中底色
+
     COLORREF borderCol_ = RGB(0xA8, 0xCD, 0xA8);  // 边框
     HBITMAP  art_    = nullptr;               // 右下角熊猫装饰
     std::wstring code_;                       // 顶部显示的组码
@@ -492,11 +487,10 @@ void CCandidateWindow::RecalcAndResize() {
     layout_.height = height_;
 }
 // 人工锁定的小星号：淡蓝色、比正文小一号，画在词尾
-void CCandidateWindow::PaintPinnedStar(HDC dc, int x, const RECT& row, UINT dpi, bool sel) {
+void CCandidateWindow::PaintPinnedStar(HDC dc, int x, const RECT& row, UINT dpi) {
     if (!starFont_) return;
     HGDIOBJ oldFont = SelectObject(dc, starFont_);
-    // 淡蓝；选中项底色通常较深，用更亮一点的天蓝保证看得见
-    SetTextColor(dc, sel ? RGB(0xD8, 0xEA, 0xFA) : RGB(0x6F, 0xA8, 0xD8));
+    SetTextColor(dc, RGB(0x6F, 0xA8, 0xD8));   // 淡淡的蓝
     RECT sr = { x + MulDiv(2, (int)dpi, 96), row.top + MulDiv(6, (int)dpi, 96),
                 row.right, row.bottom };
     DrawTextW(dc, L"*", -1, &sr, DT_LEFT | DT_TOP | DT_SINGLELINE);
@@ -584,24 +578,16 @@ void CCandidateWindow::Paint(HDC dc) {
     if (vertical_ || plain_) {
         for (size_t i = 0; i < n; ++i) {
             RECT r = { padX_, y + (int)i * rowH_, W - padX_ - artW_ / 3, y + (int)(i + 1) * rowH_ };
-            const bool sel = (i == 0);
-            if (sel) {                                  // 选中项：底色 + 高亮文字
-                HBRUSH sb = CreateSolidBrush(selBgCol_);
-                RECT sr = { r.left - MulDiv(2, (int)dpi, 96), r.top,
-                            r.right + MulDiv(2, (int)dpi, 96), r.bottom };
-                FillRect(dc, &sr, sb);
-                DeleteObject(sb);
-            }
             const std::wstring& full = labels_[i];
             const size_t dot = full.find(L'.');
             const std::wstring num = (dot == std::wstring::npos) ? std::wstring() : full.substr(0, dot + 1);
             const std::wstring word = (dot == std::wstring::npos) ? full : full.substr(dot + 1);
-            SetTextColor(dc, sel ? selText_ : textCol_);
+            SetTextColor(dc, textCol_);   // 不再给 1 号候选加底色，序号 1 已经说明了一切
             RECT nr = r;
             DrawTextW(dc, num.c_str(), -1, &nr, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
             SIZE sn = { 0, 0 };
             GetTextExtentPoint32W(dc, num.c_str(), (int)num.size(), &sn);
-            SetTextColor(dc, sel ? selText_ : textCol_);
+            SetTextColor(dc, textCol_);
             RECT wr = r;
             wr.left += sn.cx;
             DrawTextW(dc, word.c_str(), -1, &wr, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
@@ -609,26 +595,19 @@ void CCandidateWindow::Paint(HDC dc) {
             if (i < pinned_.size() && pinned_[i]) {
                 SIZE sw = { 0, 0 };
                 GetTextExtentPoint32W(dc, word.c_str(), (int)word.size(), &sw);
-                PaintPinnedStar(dc, wr.left + sw.cx, r, dpi, sel);
+                PaintPinnedStar(dc, wr.left + sw.cx, r, dpi);
             }
         }
     } else {
         int x = padX_;
         for (size_t i = 0; i < n; ++i) {
             RECT r = { x, y, x + MulDiv(110, (int)dpi, 96), y + rowH_ };
-            const bool sel = (i == 0);
-            if (sel) {
-                HBRUSH sb = CreateSolidBrush(selBgCol_);
-                RECT sr = { r.left - MulDiv(2, (int)dpi, 96), r.top, r.right, r.bottom };
-                FillRect(dc, &sr, sb);
-                DeleteObject(sb);
-            }
-            SetTextColor(dc, sel ? selText_ : textCol_);
+            SetTextColor(dc, textCol_);
             DrawTextW(dc, labels_[i].c_str(), -1, &r, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
             if (i < pinned_.size() && pinned_[i]) {
                 SIZE sw = { 0, 0 };
                 GetTextExtentPoint32W(dc, labels_[i].c_str(), (int)labels_[i].size(), &sw);
-                PaintPinnedStar(dc, r.left + sw.cx, r, dpi, sel);
+                PaintPinnedStar(dc, r.left + sw.cx, r, dpi);
             }
             x += MulDiv(110, (int)dpi, 96);
         }
@@ -1091,8 +1070,6 @@ STDMETHODIMP CTextService::ActivateEx(ITfThreadMgr* ptim, TfClientId tid, DWORD)
                        m_settings.CandInset != 0,
                        m_settings.CandFontFace,
                        toRef(m_settings.CandTextColor),
-                       toRef(m_settings.CandSelTextColor),
-                       toRef(m_settings.CandSelBgColor),
                        toRef(m_settings.CandBorderColor));
     m_puncEnabled = m_settings.EnablePunction != 0;
     m_tradEnabled = m_settings.TradChinese != 0;
@@ -1157,10 +1134,9 @@ STDMETHODIMP CTextService::ActivateEx(ITfThreadMgr* ptim, TfClientId tid, DWORD)
     }
     LogLine(L"app config: exe=%ls trad=%d punc=%d vertical=%d",
             HostAppName().c_str(), (int)m_tradEnabled, (int)m_puncEnabled, m_settings.CandVertical);
-    LogLine(L"cand style: cfg=%s face=%s pt=%d bg=#%06X text=#%06X selBg=#%06X selText=#%06X border=#%06X",
+    LogLine(L"cand style: cfg=%s face=%s pt=%d bg=#%06X text=#%06X border=#%06X",
             GetConfigPath().c_str(), m_settings.CandFontFace.c_str(), m_settings.CandFontPt,
             m_settings.CandBgColor & 0xFFFFFF, m_settings.CandTextColor & 0xFFFFFF,
-            m_settings.CandSelBgColor & 0xFFFFFF, m_settings.CandSelTextColor & 0xFFFFFF,
             m_settings.CandBorderColor & 0xFFFFFF);
     // 自绘悬浮状态栏：进程内唯一（见上方 SharedBar 注释），点击转发给当前拥有者
     {

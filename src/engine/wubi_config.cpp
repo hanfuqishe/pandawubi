@@ -67,8 +67,6 @@ Settings LoadSettings(const std::wstring& iniPath, const std::wstring& appExe) {
     s.CandBgColor    = GetColor(iniPath, L"CandBgColor", s.CandBgColor);
     s.CandInset      = GetInt(iniPath, L"CandInset", s.CandInset);
     s.CandTextColor    = GetColor(iniPath, L"CandTextColor", s.CandTextColor);
-    s.CandSelTextColor = GetColor(iniPath, L"CandSelTextColor", s.CandSelTextColor);
-    s.CandSelBgColor   = GetColor(iniPath, L"CandSelBgColor", s.CandSelBgColor);
     s.CandBorderColor  = GetColor(iniPath, L"CandBorderColor", s.CandBorderColor);
     {
         wchar_t fb[128] = { 0 };
@@ -115,8 +113,6 @@ bool SaveSettings(const std::wstring& iniPath, const Settings& s) {
             WritePrivateProfileStringW(L"Config", key, cb, iniPath.c_str());
         };
         putColor(L"CandTextColor", s.CandTextColor);
-        putColor(L"CandSelTextColor", s.CandSelTextColor);
-        putColor(L"CandSelBgColor", s.CandSelBgColor);
         putColor(L"CandBorderColor", s.CandBorderColor);
     }
     WritePrivateProfileStringW(L"Config", L"CandFontFace", s.CandFontFace.c_str(), iniPath.c_str());

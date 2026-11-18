@@ -20,8 +20,6 @@ struct Settings {
     // 候选窗字体与配色（颜色都是 0xRRGGBB）
     std::wstring CandFontFace = L"Microsoft YaHei UI";  // 字体名，空=雅黑
     int  CandTextColor    = 0x202028;  // 普通候选字
-    int  CandSelTextColor = 0xFFFFFF;  // 选中候选字
-    int  CandSelBgColor   = 0x3B7DDD;  // 选中项底色
     int  CandBorderColor  = 0xA8CDA8;  // 边框
     std::wstring DictFile = L"qqwubi86.dict.tsv";   // 词库文件名（data 目录下）
 };

@@ -123,7 +123,7 @@ TSF 的输入法目录是机器级的：`ITfInputProcessorProfiles` 读写
 | 候选个数 | 1–9 |
 | 字号 | 8–24 pt（行高跟着字号自动放大，不会压字） |
 | 字体 | 下拉里是所有已装字体（跳过 `@竖排` 字体），也可以直接输入字体名，比如 `KaiTi`、`Microsoft YaHei UI` |
-| 背景色 / 文字色 / 选中底色 / 选中文字 / 边框色 | `#RRGGBB`，第一候选（选中项）用「选中底色 + 选中文字」画底和高亮 |
+| 背景色 / 文字色 / 边框色 | `#RRGGBB`；所有候选同色，1 号候选不再加底色（序号已经表明顺序） |
 
 对应 ini 键：`CandCount`、`CandFont`（pt）、`CandFontFace`、`CandBgColor`、`CandTextColor`、
 `CandSelBgColor`、`CandSelTextColor`、`CandBorderColor`、`CandInset`、`CandVertical`。
