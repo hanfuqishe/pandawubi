@@ -208,6 +208,13 @@ powershell -ExecutionPolicy Bypass -File .\tools\hide-stale-bars.ps1 -List    # 
 
 英文补全模式仍然把字母显示在文档里——那本来就是最终要输出的内容。
 
+**任何一个候选都没匹配到时，编码框仍然保留**（不再是整块消失）：屏幕上一眼能看到刚敲的码，
+不会出现"还在组码却什么都没有"的困惑。例如 `xxqq`（词库里没有）：
+
+```powershell
+.\build\tsf-host.exe -send "xxqq"     # 文档空，候选框只剩顶部编码框显示 xxqq
+```
+
 ## 英文单词补全（Shift+字母）
 
 `Shift+字母` 进入补全模式后，**大小写照抄键盘输入**（Shift 与 CapsLock 相异即为大写），

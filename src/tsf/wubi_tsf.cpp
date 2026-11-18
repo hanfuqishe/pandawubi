@@ -1606,7 +1606,16 @@ void CTextService::ExitQuick(ITfContext* pic, bool cancel) {
 
 void CTextService::ShowCandidateList(const std::vector<std::wstring>& display) {
     m_candWnd.Hide();
-    if (display.empty()) return;
+    if (display.empty()) {
+        // 还在组码但一个候选都没匹配到：也要留下顶部编码框，
+        // 否则屏幕上一片空白、用户不知道输入法是否在工作。
+        // （编码为空时 ShowAt 会自己隐藏，所以这里安全）
+        m_candWnd.SetLetterLabels(m_letterLabels);
+        m_candWnd.SetItems(display, m_settings.CandVertical != 0);
+        if (QueryCaretRect(m_lastCaret)) m_hasCaret = true;
+        m_candWnd.ShowAt(m_lastCaret);
+        return;
+    }
 
     m_candWnd.SetLetterLabels(m_letterLabels);
     m_candWnd.SetItems(display, m_settings.CandVertical != 0);
