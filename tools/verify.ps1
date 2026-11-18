@@ -180,8 +180,12 @@ $out = & $setExe /set Theme=cat 2>&1 | Out-String
 $dump = & $setExe /dump 2>&1 | Out-String
 $pyPath = Join-Path $ws 'data\pinyin.tsv'
 $pyOk = (Test-Path $pyPath)
-if ($pyOk) { $pyOk = ((Get-Content $pyPath -Encoding UTF8 | Select-String -Pattern "^ni`t你`twqiy$") -ne $null) }
-Check '拼音反查表' $pyOk 'data\pinyin.tsv 里有 ni -> 你 wqiy'
+if ($pyOk) {
+    $pyText = Get-Content $pyPath -Encoding UTF8
+    $pyOk = (($pyText | Select-String -Pattern "^ni`t你`twqiy$") -ne $null) -and
+            (($pyText | Select-String -Pattern "^nihao`t你好`twqvb$") -ne $null)
+}
+Check '拼音反查表' $pyOk 'data\pinyin.tsv 里有 单字 ni->你 和 词 nihao->你好'
 
 Check '主题可切换' ($dump -match 'Theme=cat') '狸花猫主题生效'
 $null = & $setExe /set Theme=dog 2>&1 | Out-String

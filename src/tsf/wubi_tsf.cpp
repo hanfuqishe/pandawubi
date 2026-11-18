@@ -1128,8 +1128,11 @@ private:
     // Z 之后的拼音反查（拼音 -> 汉字 + 五笔编码）
     bool                      m_pyLookup = false;
     std::string               m_pyTyped;           // 已输入的拼音
-    std::vector<std::wstring> m_pyChars;           // 命中的汉字（与 m_pyCodes 一一对应）
-    std::vector<std::wstring> m_pyCodes;           // 对应五笔全码
+    std::vector<std::wstring> m_pyChars;           // 当前页的候选（汉字/词）
+    std::vector<std::wstring> m_pyCodes;           // 当前页对应的五笔全码
+    std::vector<std::wstring> m_pyAll;             // 全部匹配（翻页用）
+    std::vector<std::wstring> m_pyAllCodes;
+    int                       m_pyPage = 0;
     bool            m_quickMode = false;       // 分号进入的"便捷输入"
     std::string     m_quickDigits;
     #define m_eng g_eng
@@ -1179,7 +1182,8 @@ private:
     void ShowCandidateList(const std::vector<std::wstring>& display);
     HRESULT UpdateCompositionTextWith(ITfContext* pic, const std::wstring& text);
     void BeginRepeat();
-    void PyLookupRefresh(ITfContext* pic);          // 按当前 m_pyTyped 刷新候选
+    void PyLookupRefresh(ITfContext* pic, bool resetPage = true);   // 按 m_pyTyped 刷新候选
+    bool PyLookupFlipPage(ITfContext* pic, int delta);              // 翻页
     void PyLookupEnd(ITfContext* pic);              // 结束反查（清状态、收候选窗）
     void RememberRecentCommit(const std::wstring& text);   // 记入"最近 4 次上屏"
     void ApplySettings();                                   // 把 m_settings 套到候选窗/词库/选项上
@@ -2047,8 +2051,9 @@ void CTextService::RememberRecentCommit(const std::wstring& text) {
     if (m_recentCommits.size() > 4) m_recentCommits.erase(m_recentCommits.begin());
 }
 
-// —— Z 反查：把已输入的拼音拿去查表，候选 = 汉字 + 五笔编码 ——
-void CTextService::PyLookupRefresh(ITfContext* pic) {
+// —— Z 反查：拼音 -> 汉字/词（候选里带五笔编码），支持翻页 ——
+void CTextService::PyLookupRefresh(ITfContext* pic, bool resetPage) {
+    if (resetPage) m_pyPage = 0;
     m_pyChars.clear();
     m_pyCodes.clear();
     if (!LoadPinyinTableOnce() || m_pyTyped.empty()) {
@@ -2056,45 +2061,78 @@ void CTextService::PyLookupRefresh(ITfContext* pic) {
         m_candWnd.Hide();
         return;
     }
-    const auto& tbl = PinyinTable();
-    std::vector<size_t> exact, prefix;
-    exact.reserve(16);
-    prefix.reserve(64);
-    for (size_t i = 0; i < tbl.size(); ++i) {
-        const std::string& py = tbl[i].py;
-        if (py == m_pyTyped) { if (exact.size() < 64) exact.push_back(i); }
-        else if (py.size() > m_pyTyped.size() && py.compare(0, m_pyTyped.size(), m_pyTyped) == 0) {
-            if (prefix.size() < 64) prefix.push_back(i);
+    // 只在换拼音时重建全量匹配；翻页时复用
+    if (resetPage || m_pyAll.empty()) {
+        m_pyAll.clear();
+        m_pyAllCodes.clear();
+        const auto& tbl = PinyinTable();
+        const size_t kMaxMatch = 400;
+        // 先收"完全相同"的（例如 ni -> 你/呢/尼…），再收前缀匹配（nian…/nihao…）
+        for (int pass = 0; pass < 2; ++pass) {
+            for (size_t i = 0; i < tbl.size() && m_pyAll.size() < kMaxMatch; ++i) {
+                const std::string& py = tbl[i].py;
+                const bool exact = (py == m_pyTyped);
+                if (pass == 0) { if (!exact) continue; }
+                else {
+                    if (exact) continue;
+                    if (py.size() <= m_pyTyped.size()) continue;
+                    if (py.compare(0, m_pyTyped.size(), m_pyTyped) != 0) continue;
+                }
+                m_pyAll.push_back(tbl[i].ch);
+                m_pyAllCodes.push_back(tbl[i].code);
+            }
         }
-        if (exact.size() >= 64 && prefix.size() >= 64) break;
     }
+
+    const size_t pageSize = (size_t)(m_candCount > 0 ? m_candCount : 9);
+    const size_t pages = (m_pyAll.size() + pageSize - 1) / pageSize;
+    if (pages == 0) m_pyPage = 0;
+    else if (m_pyPage >= (int)pages) m_pyPage = (int)pages - 1;
+
     std::vector<std::wstring> display;
-    const size_t limit = (size_t)(m_candCount > 0 ? m_candCount : 9);
-    auto add = [&](size_t i) {
-        if (m_pyChars.size() >= limit) return;
-        const PyEntry& e = tbl[i];
-        m_pyChars.push_back(e.ch);
-        m_pyCodes.push_back(e.code);
-        std::wstring text = e.ch;
-        if (!e.code.empty()) { text += L' '; text += e.code; }
+    const size_t from = (size_t)m_pyPage * pageSize;
+    for (size_t i = from; i < m_pyAll.size() && i < from + pageSize; ++i) {
+        m_pyChars.push_back(m_pyAll[i]);
+        m_pyCodes.push_back(m_pyAllCodes[i]);
+        std::wstring text = m_pyAll[i];
+        if (!m_pyAllCodes[i].empty()) { text += L' '; text += m_pyAllCodes[i]; }
         display.push_back(std::move(text));
-    };
-    for (size_t i : exact)  add(i);
-    for (size_t i : prefix) add(i);
+    }
 
     m_candWnd.SetPlain(false);
-    m_candWnd.SetCode(AsciiToWide(m_pyTyped));   // 顶部框显示正在打的拼音
+    std::wstring head = AsciiToWide(m_pyTyped);
+    if (pages > 1) {
+        head += L"  ";
+        head += std::to_wstring(m_pyPage + 1);
+        head += L"/";
+        head += std::to_wstring(pages);
+    }
+    m_candWnd.SetCode(head);
     m_candWnd.SetItems(display, m_settings.CandVertical != 0);
     if (QueryCaretRect(m_lastCaret)) m_hasCaret = true;
     m_candWnd.ShowAt(m_lastCaret);
-    LogLine(L"pinyin lookup: '%hs' -> %zu hit(s)", m_pyTyped.c_str(), m_pyChars.size());
+    LogLine(L"pinyin lookup: '%hs' -> %zu hit(s), page %d/%zu",
+            m_pyTyped.c_str(), m_pyAll.size(), m_pyPage + 1, pages > 0 ? pages : 1);
 }
 
+bool CTextService::PyLookupFlipPage(ITfContext* pic, int delta) {
+    if (!m_pyLookup || m_pyAll.empty()) return false;
+    const size_t pageSize = (size_t)(m_candCount > 0 ? m_candCount : 9);
+    const size_t pages = (m_pyAll.size() + pageSize - 1) / pageSize;
+    const int want = m_pyPage + delta;
+    if (want < 0 || (size_t)want >= pages) return false;
+    m_pyPage = want;
+    PyLookupRefresh(pic, false);
+    return true;
+}
 void CTextService::PyLookupEnd(ITfContext*) {
     m_pyLookup = false;
     m_pyTyped.clear();
     m_pyChars.clear();
     m_pyCodes.clear();
+    m_pyAll.clear();
+    m_pyAllCodes.clear();
+    m_pyPage = 0;
     m_candWnd.SetCode(std::wstring());
     m_candWnd.Hide();
 }
@@ -2686,7 +2724,8 @@ bool CTextService::WantsKey(UINT vk, LPARAM lp) {
     // Z 拼音反查期间：字母、退格、空格、回车、Esc、数字都由输入法处理
     if (m_pyLookup) {
         return (vk >= 'A' && vk <= 'Z') || (vk >= '0' && vk <= '9') ||
-               vk == VK_BACK || vk == VK_SPACE || vk == VK_RETURN || vk == VK_ESCAPE;
+               vk == VK_BACK || vk == VK_SPACE || vk == VK_RETURN || vk == VK_ESCAPE ||
+               vk == VK_OEM_MINUS || vk == VK_OEM_PLUS || vk == VK_PRIOR || vk == VK_NEXT;
     }
     // 自定义词组模式：几乎所有键都由输入法处理，先声明下来，否则宿主直接自己消化
     if (m_customWordMode) {
@@ -2923,7 +2962,18 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
             return S_OK;
         }
         if (vk == VK_ESCAPE) { PyLookupEnd(pic); *pfEaten = TRUE; return S_OK; }
-        // 选第 N 个：空格/回车 = 第 1 个
+        // 翻页：- / = （和组码时一致），PageUp / PageDown 也行
+        if ((vk == VK_OEM_MINUS && !shift) || vk == VK_PRIOR) {
+            PyLookupFlipPage(pic, -1);
+            *pfEaten = TRUE;
+            return S_OK;
+        }
+        if ((vk == VK_OEM_PLUS && !shift) || vk == VK_NEXT) {
+            PyLookupFlipPage(pic, +1);
+            *pfEaten = TRUE;
+            return S_OK;
+        }
+        // 选第 N 个（当前页内）：空格/回车 = 本页第 1 个
         int pick = -1;
         if (vk == VK_SPACE || vk == VK_RETURN) pick = 0;
         else if (vk >= '1' && vk <= '9')      pick = (int)(vk - '1');
