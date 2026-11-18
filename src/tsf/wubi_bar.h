@@ -71,6 +71,9 @@ private:
     bool  want_ = false;            // 本会话是否要这条栏（不因临时失焦而清除）
     int   yieldTick_ = 0;           // 可见期间周期性再"喊话"让别的栏让位的计数
     bool  docFocus_ = true;         // TSF 是否正处在某个文档里（false = 焦点不在输入框上）
+    // 右键菜单弹出期间置位：TrackPopupMenu 会把前台抢到本窗口，宿主那边随即报"失去文档焦点"，
+    // 栏就会自己藏起来（用户看到"菜单出来了、栏没了"）。这个标志让菜单期间强制保持显示。
+    bool  menuOpen_ = false;
 };
 
 } // namespace wubi

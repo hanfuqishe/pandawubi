@@ -263,7 +263,7 @@ void StatusBar::Reconcile() {
     if (!hwnd_) return;
     const bool visible = IsWindowVisible(hwnd_) != FALSE;
     // 三个条件同时满足才显示：本进程被要求显示 / 前台窗口属于本进程 / 焦点确实落在能输入文字的控件上
-    const bool wantShow = want_ && ForegroundIsSelf() && docFocus_;
+    const bool wantShow = menuOpen_ || (want_ && ForegroundIsSelf() && docFocus_);
     if (wantShow && !visible) {
         ShowWindow(hwnd_, SW_SHOWNOACTIVATE);
         InvalidateRect(hwnd_, nullptr, TRUE);
@@ -461,11 +461,18 @@ LRESULT CALLBACK StatusBar::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         AppendMenuW(menu, MF_STRING, 3, L"设置...");
         AppendMenuW(menu, MF_STRING, 4, PANDA_WUBI_VERSION_FULL);
 
+        // 记住宿主窗口：TrackPopupMenu 前要把前台抢过来（否则点空白处菜单不收），
+        // 菜单结束后必须把前台还回去，宿主那边的 TSF 才会重新报"有文档焦点"。
+        HWND prevFg = GetForegroundWindow();
+        self->menuOpen_ = true;
         SetForegroundWindow(hwnd);
         const int cmd = (int)TrackPopupMenu(menu, TPM_RETURNCMD | TPM_RIGHTBUTTON,
                                             pt.x, pt.y, 0, hwnd, nullptr);
+        self->menuOpen_ = false;
         DestroyMenu(menu);
         PostMessageW(hwnd, WM_NULL, 0, 0);
+        if (prevFg && prevFg != hwnd) SetForegroundWindow(prevFg);
+        self->Reconcile();
 
         if (cmd >= 1 && cmd <= 4 && self->onClick_) self->onClick_(cmd - 1);
         else if (cmd >= 100 && cmd <= 103 && self->onClick_) self->onClick_(cmd);   // 100+n = 切主题
