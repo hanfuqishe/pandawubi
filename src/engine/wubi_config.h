@@ -22,7 +22,7 @@ struct Settings {
     int  CandTextColor    = 0x202028;  // 普通候选字
     int  CandBorderColor  = 0xA8CDA8;  // 边框
     std::wstring DictFile = L"qqwubi86.dict.tsv";   // 词库文件名（data 目录下）
-    std::wstring Theme = L"panda";  // 主题：panda（默认，熊猫）/ cat（狸花猫）
+    std::wstring Theme = L"panda";  // 主题：panda（默认，熊猫）/ cat（狸花猫）/ dog（中华田园犬）
 };
 
 // 读：缺失的键保留默认值

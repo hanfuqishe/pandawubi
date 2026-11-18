@@ -1190,17 +1190,18 @@ KillTimer → SetWindowLongPtr(USERDATA, 0) → DestroyWindow（失败）→ Pos
   现在是"已保存，并已通知正在运行的输入法立即生效（不需要重启任何程序）"；
   切换数据目录的提示也去掉了"需要重启"。
 
-## 二·三十七·九、主题（熊猫 / 狸花猫）
+## 二·三十七·九、主题（熊猫 / 狸花猫 / 中华田园犬）
 
-需求：新增狸花猫主题，熊猫保持默认。
+需求：熊猫保持默认，另有狸花猫、中华田园犬两套主题。
 
-- 配置项 `Theme=panda|cat`（默认 panda，未知值归一成 panda）；
-- 狸花猫图标来源：用户给的一张 AI 图（2048²），用 `System.Drawing` 裁出猫头、套圆形羽化 alpha，
-  再交给 `tools\make-ico.ps1` 生成 6 个尺寸的 `dist\cat.ico`；
-  同一张 PNG（256²）作为候选窗右下角装饰图，写成 RC 资源 `4 RCDATA "cat_art.png"`，
-  图标本身也嵌进 DLL（`5 ICON "cat.ico"`，供语言栏项用）；
+- 配置项 `Theme=panda|cat|dog`（默认 panda，未知值归一成 panda）；
+- 图标来源都是用户给的 AI 图（2048²）：用 `System.Drawing` 裁出头像、套圆形羽化 alpha，
+  再交给 `tools\make-ico.ps1` 生成 6 个尺寸的 ico；同一张 PNG（256²）作为候选窗右下角装饰图。
+  田园犬那张先**左右镜像**（改成向左奔跑）再裁；
+- 资源 id：`3 RCDATA panda_bamboo.png`、`4 RCDATA cat_art.png`、`6 RCDATA dog_art.png`；
+  图标 `1 ICON panda.ico`、`5 ICON cat.ico`、`7 ICON dog.ico`；
 - 生效点：悬浮栏 Logo（`StatusBar::SetIconFile`）、候选窗装饰图（`CCandidateWindow::SetArtId`
-  → `LoadArtFromResource(3|4)`）、语言栏项的图标资源（1=熊猫 5=猫）、
+  → `LoadArtFromResource(3|4|6)`）、语言栏项的图标资源（1=熊猫 5=猫 7=狗）、
   注册表里输入指示器的 `IconFile`（HKCU，写失败不影响别的）；
 - 切换路径与别的设置一样：保存 → 发 `PandaReloadSettings` → `ReloadSettingsNow()` → `ApplySettings()`。
 

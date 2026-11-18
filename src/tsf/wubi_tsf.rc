@@ -5,3 +5,5 @@
 3 RCDATA "panda_bamboo.png"
 4 RCDATA "cat_art.png"
 5 ICON "cat.ico"
+6 RCDATA "dog_art.png"
+7 ICON "dog.ico"

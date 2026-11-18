@@ -1134,7 +1134,7 @@ STDMETHODIMP CTextService::ActivateEx(ITfThreadMgr* ptim, TfClientId tid, DWORD)
         if (SUCCEEDED(m_tim->QueryInterface(IID_ITfLangBarItemMgr, (void**)&lbm)) && lbm) {
             static const GUID kLangBarItemGuid = { 0x8c4f2a31, 0x6b7d, 0x4e29, { 0x9a, 0x3c, 0x1d, 0x5e, 0x7f, 0x9b, 0x0c, 0x21 } };
             IUnknown* unk = CreateLangBarItem(CLSID_WubiTsf, kLangBarItemGuid, g_hInst,
-                                             (m_settings.Theme == L"cat") ? 5 : 1);   // 1=熊猫 5=狸花猫
+                                             (m_settings.Theme == L"dog") ? 7 : ((m_settings.Theme == L"cat") ? 5 : 1));   // 1=熊猫 5=狸花猫 7=田园犬
             if (unk) {
                 ITfLangBarItem* item = nullptr;
                 if (SUCCEEDED(unk->QueryInterface(IID_ITfLangBarItem, (void**)&item)) && item) {
@@ -1610,13 +1610,15 @@ void CTextService::ApplySettings() {
     m_candCount   = m_settings.CandCount;
     m_composer.SetLimit((size_t)m_candCount);
 
-    // 主题：panda（默认）/ cat
+    // 主题：panda（默认）/ cat（狸花猫）/ dog（中华田园犬）
     const bool cat = (m_settings.Theme == L"cat");
-    m_candWnd.SetArtId(cat ? 4 : 3);                    // 右下角装饰图
-    SharedBar().SetIconFile(cat ? L"cat.ico" : L"panda.ico");   // 悬浮栏最左边的 Logo
-    LogLine(L"theme: %s (art=%d, icon=%s)", m_settings.Theme.c_str(), cat ? 4 : 3,
-            cat ? L"cat.ico" : L"panda.ico");
-    UpdateIndicatorIconFile(cat ? L"cat.ico" : L"panda.ico");   // 系统输入指示器的图标（需重新登录/重启 explorer 才刷新）
+    const bool dog = (m_settings.Theme == L"dog");
+    const wchar_t* themeIcon = dog ? L"dog.ico" : (cat ? L"cat.ico" : L"panda.ico");
+    const int themeArtId = dog ? 6 : (cat ? 4 : 3);             // 3=熊猫 4=狸花猫 6=田园犬
+    m_candWnd.SetArtId(themeArtId);                             // 候选窗右下角装饰图
+    SharedBar().SetIconFile(themeIcon);                         // 悬浮栏最左边的 Logo
+    LogLine(L"theme: %s (art=%d, icon=%s)", m_settings.Theme.c_str(), themeArtId, themeIcon);
+    UpdateIndicatorIconFile(themeIcon);   // 系统输入指示器的图标（需重新登录/重启 explorer 才刷新）
     BarSync();
 }
 

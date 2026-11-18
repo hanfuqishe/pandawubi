@@ -178,7 +178,10 @@ $out = & $setExe /set NoSuchKey=1 2>&1 | Out-String
 Check '设置拒绝未知键' ($out -match 'no known key') '未知键不静默通过'
 $out = & $setExe /set Theme=cat 2>&1 | Out-String
 $dump = & $setExe /dump 2>&1 | Out-String
-Check '主题可切换' ($dump -match 'Theme=cat') 'panda（默认）/ cat 两种主题'
+Check '主题可切换' ($dump -match 'Theme=cat') '狸花猫主题生效'
+$null = & $setExe /set Theme=dog 2>&1 | Out-String
+$dumpDog = & $setExe /dump 2>&1 | Out-String
+Check '主题可切到田园犬' ($dumpDog -match 'Theme=dog') '中华田园犬主题生效'
 $null = & $setExe /set Theme=panda 2>&1 | Out-String
 Remove-Item Env:\WUBI_INI
 "— 数据目录（配置与自定义词可放网盘同步夹）—"

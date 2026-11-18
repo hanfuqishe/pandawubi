@@ -211,8 +211,9 @@ TSF 的输入法目录是机器级的：`ITfInputProcessorProfiles` 读写
 |---|---|---|---|
 | `熊猫（默认）` | panda.ico | 熊猫吃竹子 | panda.ico |
 | `狸花猫` | cat.ico | 狸花猫头像 | cat.ico |
+| `中华田园犬` | dog.ico | 田园犬头像（原图左右镜像，改为向左奔跑） | dog.ico |
 
-- 对应 ini：`Theme=panda` / `Theme=cat`（未知值一律回默认熊猫）；
+- 对应 ini：`Theme=panda` / `Theme=cat` / `Theme=dog`（未知值一律回默认熊猫）；
 - 只影响外观：悬浮栏 Logo、候选窗装饰图，以及写进注册表的输入指示器 `IconFile`；
 - 切换即时生效（设置窗口保存后会发消息通知输入法）；**输入指示器**的图标由系统在加载语言配置时读取，
   通常要重启 explorer 或重新登录才看到变化；
