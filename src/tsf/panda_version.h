@@ -2,4 +2,4 @@
 #pragma once
 
 #define PANDA_WUBI_VERSION      L"1.0.0"
-#define PANDA_WUBI_VERSION_FULL L"Panda五笔 " PANDA_WUBI_VERSION
+#define PANDA_WUBI_VERSION_FULL L"熊猫五笔v" PANDA_WUBI_VERSION

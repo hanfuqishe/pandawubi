@@ -1643,7 +1643,7 @@ void CTextService::BeginRepeat() {
     for (size_t i = 0; i < m_recentCommits.size(); ++i) {
         m_zItems.push_back(m_recentCommits[m_recentCommits.size() - 1 - i]);
     }
-    m_zItems.push_back(L"版本 " PANDA_WUBI_VERSION);
+    m_zItems.push_back(PANDA_WUBI_VERSION_FULL);
     m_zPending = true;
 }
 
@@ -2625,7 +2625,7 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
         for (size_t i = 0; i < m_recentCommits.size(); ++i) {
             m_zItems.push_back(m_recentCommits[m_recentCommits.size() - 1 - i]);   // 最近的在最前
         }
-        m_zItems.push_back(L"版本 " PANDA_WUBI_VERSION);
+        m_zItems.push_back(PANDA_WUBI_VERSION_FULL);
         m_zPending = true;
         ShowCandidateList(m_zItems);
         LogLine(L"z list: %zu item(s) (history=%zu)", m_zItems.size(), m_recentCommits.size());

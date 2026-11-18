@@ -1136,16 +1136,16 @@ KillTimer → SetWindowLongPtr(USERDATA, 0) → DestroyWindow（失败）→ Pos
 
 ### Z 菜单
 
-需求：按 Z 时把"前 4 次输入（倒序）"作为 4 个选项，第 5 项是版本号。
+需求：按 Z 时把"前 4 次输入（倒序）"作为 4 个选项，第 5 项是版本号（显示成 `熊猫五笔v1.0.0`）。
 
 - `m_recentCommits`（最多 4 个，旧的在前，连续的同一个词只记一次）在 `CommitText`/`CommitString`
   里通过 `RememberRecentCommit()` 维护；
-- 按 Z（无 Shift、不在组码/英文/便捷输入中）→ 组装 `m_zItems` = 最近 4 条倒序 + `版本 PANDA_WUBI_VERSION`，
+- 按 Z（无 Shift、不在组码/英文/便捷输入中）→ 组装 `m_zItems` = 最近 4 条倒序 + `PANDA_WUBI_VERSION_FULL`（`熊猫五笔v1.0.0`），
   用 `ShowCandidateList` 显示，进入 `m_zPending`；
 - `空格`/`回车` 选第 1 项、`1`–`5` 选对应项、`Esc` 取消；选中的内容 `CommitString` 上屏并记入历史。
 - 按 Z 时会开一个空组合串，选完/取消再收掉：这样选词期间的 `WM_CHAR` 会被组合吸收，
   不会在菜单关闭后往文档里漏一个数字（实测简易测试宿主里确实会漏）。
-- 版本号在 `src/tsf/panda_version.h`（`PANDA_WUBI_VERSION`），报问题时让用户按 Z 看一眼即可。
+- 版本号在 `src/tsf/panda_version.h`：`PANDA_WUBI_VERSION` 是纯数字，`PANDA_WUBI_VERSION_FULL` 是展示用的 `熊猫五笔v1.0.0`；报问题时让用户按 Z 看一眼即可。
 
 代价：`z` 变成菜单键，以 z 开头的编码（dz/sfz）在"有历史"时打不出来——与之前的 Z 重复行为一致。
 
