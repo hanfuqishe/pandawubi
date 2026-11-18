@@ -1909,6 +1909,7 @@ void CTextService::ShowCandidateList(const std::vector<std::wstring>& display) {
         // 还在组码但一个候选都没匹配到：也要留下顶部编码框，
         // 否则屏幕上一片空白、用户不知道输入法是否在工作。
         // （编码为空时 ShowAt 会自己隐藏，所以这里安全）
+        m_candWnd.SetPlain(false);   // FlashStatus 会把"纯文本"打开（那里不画序号），别带到这里
         m_candWnd.SetLetterLabels(m_letterLabels);
         m_candWnd.SetItems(display, m_settings.CandVertical != 0);
         if (QueryCaretRect(m_lastCaret)) m_hasCaret = true;
@@ -1916,6 +1917,7 @@ void CTextService::ShowCandidateList(const std::vector<std::wstring>& display) {
         return;
     }
 
+    m_candWnd.SetPlain(false);   // 同上：候选列表一律带序号
     m_candWnd.SetLetterLabels(m_letterLabels);
     m_candWnd.SetItems(display, m_settings.CandVertical != 0);
     m_candWnd.SetPinned(m_candPinned);
