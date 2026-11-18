@@ -19,6 +19,7 @@
 #include <olectl.h>
 #include <string>
 #include <vector>
+#include <algorithm>
 #include <deque>
 #include <functional>
 #include <mutex>
@@ -81,20 +82,46 @@ static Gdiplus::Bitmap* g_artCache[16] = { nullptr };
 
 // 底部背景图顶行的平均颜色（= 画面的天空色）。窗口上半部分用它填，和图无缝衔接。
 // 图片靠右下对齐时，窗口左边空出来的那块要跟图片"接上"。
-// 沿图片左边缘取 12 个点做多段渐变 —— 只取上下两点会接不上：比如熊猫那张，
-// 左边缘上面 70% 是接近纯白的淡出，只有底部才泛绿，两点线性插值会把中间插成绿色。
-static COLORREF            g_bandSky    = RGB(0xF7, 0xF9, 0xFC);  // 图片左上角的颜色
-static int                 g_bandSkyFor = 0;                      // 已处理过的资源 id
+static COLORREF            g_bandSky      = RGB(0xF7, 0xF9, 0xFC);  // 左上角那一个像素
+static COLORREF            g_bandTopEdge  = RGB(0xF7, 0xF9, 0xFC);  // 图片"上边缘"平均色
+static COLORREF            g_bandLeftEdge = RGB(0xF7, 0xF9, 0xFC);  // 图片"左边缘"平均色
+static int                 g_bandSkyFor   = 0;                       // 已处理过的资源 id
 
-
-// 图片靠右下对齐时，左边空出来的那块直接把图片最左一列横向拉过去 —— 和原图完全连贯。
+// 图片靠右下对齐时，窗口空出来那块要跟图片接上。
+// 不能只取"左上角那一个像素"：田园犬那张左上角正好是太阳的一团白光，而整片天空是蓝的 ——
+// 用角上的点会把整块底色填成惨白，和图片差得很远。
+// 规则：上方留白 → 取图片"上边缘"平均色；左侧留白 → 取"左边缘"平均色。
 static void SampleBandSky(int id, Gdiplus::Bitmap* bmp) {
     if (!bmp || g_bandSkyFor == id) return;
+    const int w = (int)bmp->GetWidth();
     const int h = (int)bmp->GetHeight();
-    if (h <= 0) return;
+    if (w <= 0 || h <= 0) return;
+
     Gdiplus::Color c0;
     if (bmp->GetPixel(0, 0, &c0) == Gdiplus::Ok) g_bandSky = RGB(c0.GetR(), c0.GetG(), c0.GetB());
 
+    // 取"中位色"而不是平均色：图片边缘常常一边是太阳/云的高光、另一边才是真正的天色，
+    // 平均会被高光拉白（田园犬那张实测均值 177,218,255，而天空其实是 149,207,255）。
+    auto medianOf = [&](bool horizontal) -> COLORREF {
+        struct Sample { int r, g, b, sum; };
+        std::vector<Sample> v;
+        v.reserve(32);
+        for (int i = 0; i < 32; ++i) {
+            const int x = horizontal ? (int)((long long)i * (w - 1) / 31) : 1;
+            const int y = horizontal ? 1 : (int)((long long)i * (h - 1) / 31);
+            Gdiplus::Color c;
+            if (bmp->GetPixel(x, y, &c) == Gdiplus::Ok) {
+                const int r = c.GetR(), g = c.GetG(), b = c.GetB();
+                v.push_back(Sample{ r, g, b, r + g + b });
+            }
+        }
+        if (v.empty()) return g_bandSky;
+        std::sort(v.begin(), v.end(), [](const Sample& a, const Sample& b) { return a.sum < b.sum; });
+        const Sample& m = v[v.size() / 2];
+        return RGB(m.r, m.g, m.b);
+    };
+    g_bandTopEdge  = medianOf(true);
+    g_bandLeftEdge = medianOf(false);
     g_bandSkyFor = id;
 }
 
@@ -551,46 +578,50 @@ void CCandidateWindow::Paint(HDC dc) {
     const int W = rc.right, H = rc.bottom;
     const UINT dpi = Dpi();
 
-    // 底部背景图（丹顶鹤主题）：先取一下图的天空色，窗口上半部分填同色，接缝就看不出来了
-    if (bandId_ != 0) SampleBandSky(bandId_, LoadArtFromResource(bandId_));
-
-    // ---- 背景：用设置里的背景色（原来是写死的淡绿渐变，设置项其实不生效）----
-    {
-        if (bandId_ != 0) {
-            HBRUSH br0 = CreateSolidBrush(g_bandSky);
-            RECT all0 = { 0, 0, W, H };
-            FillRect(dc, &all0, br0);
-            DeleteObject(br0);
+    // ---- 主题底图：先算好几何，再决定"空出来那块"填什么颜色 ----
+    Gdiplus::Bitmap* band = nullptr;
+    Gdiplus::REAL bLeft = 0, bTop = 0, bDw = 0, bDh = 0;
+    COLORREF bandFill = bgCol_;
+    if (bandId_ != 0 && !items_.empty()) {
+        band = LoadArtFromResource(bandId_);
+        if (band) SampleBandSky(bandId_, band);
+        if (band && band->GetWidth() > 0 && band->GetHeight() > 0) {
+            const Gdiplus::REAL iw = (Gdiplus::REAL)band->GetWidth();
+            const Gdiplus::REAL ih = (Gdiplus::REAL)band->GetHeight();
+            Gdiplus::REAL scale = (Gdiplus::REAL)W / iw;
+            if (ih * scale > (Gdiplus::REAL)H) scale = (Gdiplus::REAL)H / ih;
+            bDw = iw * scale; bDh = ih * scale;
+            bLeft = (Gdiplus::REAL)W - bDw;
+            bTop  = (Gdiplus::REAL)H - bDh;
+            // 上方留白 → 用图片"上边缘"的平均色；左侧留白 → 用"左边缘"的平均色
+            bandFill = (bTop > 0.5f) ? g_bandTopEdge : g_bandLeftEdge;
         } else {
-            HBRUSH br = CreateSolidBrush(bgCol_);
-            RECT all = { 0, 0, W, H };
-            FillRect(dc, &all, br);
-            DeleteObject(br);
+            band = nullptr;
         }
     }
 
-    // ---- 底部风景条（丹顶鹤主题）：整幅图不抠，等比缩放到铺满条带，右对齐 + 底对齐 ----
-    if (bandId_ != 0 && !items_.empty()) if (Gdiplus::Bitmap* band = LoadArtFromResource(bandId_)) {
+    // ---- 背景填充 ----
+    {
+        HBRUSH br = CreateSolidBrush(band ? bandFill : bgCol_);
+        RECT all = { 0, 0, W, H };
+        FillRect(dc, &all, br);
+        DeleteObject(br);
+    }
+
+    // ---- 主题底图：整幅不抠，等比缩放到贴住窗口，右对齐 + 底对齐 ----
+    if (band) {
         Gdiplus::Graphics gfx(dc);
         gfx.SetInterpolationMode(Gdiplus::InterpolationModeHighQualityBicubic);
         gfx.SetPixelOffsetMode(Gdiplus::PixelOffsetModeHighQuality);
         gfx.SetCompositingMode(Gdiplus::CompositingModeSourceOver);
         const Gdiplus::REAL iw = (Gdiplus::REAL)band->GetWidth();
         const Gdiplus::REAL ih = (Gdiplus::REAL)band->GetHeight();
+        const Gdiplus::REAL dw = bDw, dh = bDh, left = bLeft, top = bTop;
         if (iw > 0 && ih > 0) {
-            // 整幅按比例缩放到窗口宽度，贴在最下方（右对齐 + 底对齐）；
-            // 窗口特别宽时改用高度对齐，仍然右下角，画面不被裁掉。
-            Gdiplus::REAL scale = (Gdiplus::REAL)W / iw;
-            if (ih * scale > (Gdiplus::REAL)H) scale = (Gdiplus::REAL)H / ih;
-            const Gdiplus::REAL dw = iw * scale, dh = ih * scale;
-            const Gdiplus::REAL left = (Gdiplus::REAL)W - dw;
-            const Gdiplus::REAL top = (Gdiplus::REAL)H - dh;
-            // 左边保持"纯色"（背景填充已经铺好了），**不做拉伸**——
-            // 拉伸会把图像向左拖成一条虚影，观感很差；这里是让图片自己往纯色里淡出（见下）。
             gfx.DrawImage(band, Gdiplus::RectF(left, top, dw, dh),
                           0.0f, 0.0f, iw, ih, Gdiplus::UnitPixel, nullptr);
 
-            const BYTE sr = GetRValue(g_bandSky), sg = GetGValue(g_bandSky), sb = GetBValue(g_bandSky);
+            const BYTE sr = GetRValue(bandFill), sg = GetGValue(bandFill), sb = GetBValue(bandFill);
 
             // 图片左沿：从"左边那个纯色"淡入到图片，宽 ~22dp。
             // 左边是纯色，所以淡出的终点正好等于左边底色，接缝自然消失。
