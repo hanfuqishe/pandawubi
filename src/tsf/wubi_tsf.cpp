@@ -2500,18 +2500,20 @@ bool CTextService::WantsKey(UINT vk, LPARAM lp) {
     // 有些宿主会直接把这一键丢掉、不再删字（实测 RichEdit 就是如此），属于会砸功能的做法。
     // 代价是多数宿主不会把退格转给输入法，所以"删掉的字还在最近上屏队列里"这件事
     // 只能靠 OnKeyDown 里的记账（能在部分宿主生效），见那里的注释。
-    if (m_english) return false;                       // 自由英文模式：输入法完全不参与
     const bool ctrl = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
     const bool alt  = (GetKeyState(VK_MENU) & 0x8000) != 0;
     if (alt) return false;
     if (ctrl) {
         // Ctrl 组合默认交给应用，但自己的热键要先声明，否则宿主根本不会把 KeyDown 转到输入法：
         //   Ctrl+= 自定义词组 · Ctrl+Shift+= 自定义短语 · Ctrl+Shift+T/P 简繁/标点
+        // 注意：这些热键要在**英文模式判断之前**声明 —— 英文模式只表示"字母键不打字"，
+        // 不等于输入法的快捷键失效（之前放在后面，英文模式下一按 Ctrl+= 就进不了加词，是个 bug）。
         if (vk == VK_OEM_PLUS) return true;
         const bool shift = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
         if (shift && (vk == 'T' || vk == 'P')) return true;
         return false;
     }
+    if (m_english) return false;                       // 自由英文模式：字母键完全不参与
 
     if (vk >= 'A' && vk <= 'Z') {
         // 'z' 现在也是编码字符（自定义短语的 dz / sfz 要用），所以一律声明。
