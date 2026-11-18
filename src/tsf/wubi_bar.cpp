@@ -62,6 +62,7 @@ void StatusBar::Create(HINSTANCE inst, const std::wstring& iniPath, ClickFn onCl
     RegisterClassExW(&wc);   // 已注册时忽略失败
 
     dpi_ = (int)BarDpi();
+    LoadIcon_();      // 产品 Logo（和输入法指示器同一个 panda.ico）
     LoadPos();
     Layout();
 
@@ -89,6 +90,38 @@ void StatusBar::Destroy() {
     want_ = false;
 }
 
+static int S(int v, int dpi);   // 定义在后（DPI 缩放）
+
+// 产品 Logo：和输入法指示器用同一个 panda.ico。
+// 查找顺序与 TSF 那边保持一致：DLL 同目录 panda.ico -> %LOCALAPPDATA%\PandaWubi\panda.ico -> DLL 自带图标。
+void StatusBar::LoadIcon_() {
+    if (icon_) return;
+    const int want = S(18, dpi_);
+    wchar_t dll[MAX_PATH] = { 0 };
+    GetModuleFileNameW(inst_, dll, ARRAYSIZE(dll) - 1);
+    std::wstring dir(dll);
+    const size_t slash = dir.find_last_of(L"\\/");
+    if (slash != std::wstring::npos) dir.erase(slash);
+
+    const std::wstring candidates[] = {
+        dir + L"\\panda.ico",
+        std::wstring(),
+    };
+    for (const auto& path : candidates) {
+        if (path.empty()) break;
+        HICON h = (HICON)LoadImageW(nullptr, path.c_str(), IMAGE_ICON, want, want, LR_LOADFROMFILE);
+        if (h) { icon_ = h; return; }
+    }
+    wchar_t base[MAX_PATH] = { 0 };
+    if (GetEnvironmentVariableW(L"LOCALAPPDATA", base, ARRAYSIZE(base)) > 0) {
+        const std::wstring p = std::wstring(base) + L"\\PandaWubi\\panda.ico";
+        HICON h = (HICON)LoadImageW(nullptr, p.c_str(), IMAGE_ICON, want, want, LR_LOADFROMFILE);
+        if (h) { icon_ = h; return; }
+    }
+    // 最后退回 DLL 自带图标（与 TSF 指示器的兜底一致）
+    icon_ = (HICON)LoadImageW(inst_, MAKEINTRESOURCEW(1), IMAGE_ICON, want, want, LR_DEFAULTCOLOR);
+}
+
 void StatusBar::LoadPos() {
     if (iniPath_.empty()) return;
     posX_ = (int)GetPrivateProfileIntW(L"Bar", L"X", -1, iniPath_.c_str());
@@ -110,7 +143,7 @@ void StatusBar::Layout() {
     // 段：拖动手柄 | 中英 | 简繁 | 设置
     // （原来的"全角/半角（中文标点）"段已去掉：需要半角直接切英文模式，这个开关没有意义）
     const int pad  = S(5, dpi_);
-    const int grip = S(10, dpi_);
+    const int grip = S(24, dpi_);   // 最左边放产品 Logo（也是拖动区）
     const int segEN   = S(30, dpi_);
     const int segTrad = S(30, dpi_);
     const int segSet  = S(26, dpi_);
@@ -217,18 +250,20 @@ void StatusBar::Paint(HDC dc) {
     FrameRect(dc, &rc, bd);
     DeleteObject(bd);
 
-    // 拖动手柄（三条短横线）
+    // 最左边：产品 Logo（与输入法指示器同一个 panda.ico），这一块也是拖动区
     {
-        const int gripX = S(5, dpi_) + S(5, dpi_);
-        const int cy = height_ / 2;
-        HPEN pen = CreatePen(PS_SOLID, 1, RGB(150, 154, 160));
-        HGDIOBJ old = SelectObject(dc, pen);
-        for (int k = -1; k <= 1; ++k) {
-            MoveToEx(dc, gripX - S(3, dpi_), cy + k * S(4, dpi_), nullptr);
-            LineTo(dc, gripX + S(3, dpi_), cy + k * S(4, dpi_));
+        const int size = S(18, dpi_);
+        const int x = S(5, dpi_) + (S(24, dpi_) - size) / 2;
+        const int y = (height_ - size) / 2;
+        if (icon_) {
+            DrawIconEx(dc, x, y, icon_, size, size, 0, nullptr, DI_NORMAL);
+        } else {
+            // 图标没加载出来就退化成一个色块，至少能看出来是产品标识
+            HBRUSH b = CreateSolidBrush(RGB(210, 214, 220));
+            RECT r = { x, y, x + size, y + size };
+            FillRect(dc, &r, b);
+            DeleteObject(b);
         }
-        SelectObject(dc, old);
-        DeleteObject(pen);
     }
 
     SetBkMode(dc, TRANSPARENT);

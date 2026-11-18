@@ -367,15 +367,16 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
                 const int moved = wubi::MigrateDataFiles(cur, now);
                 g_ini = wubi::GetConfigPath();
                 if (moved > 0) {
-                    MessageBoxW(hwnd, L"数据目录已切换，原有的设置与用户词已复制过去。\n\n已打开的程序需要重启才会用新目录。",
+                    MessageBoxW(hwnd, L"数据目录已切换，原有的设置与用户词已复制过去，并已通知正在运行的输入法。",
                                 kTitle, MB_OK | MB_ICONINFORMATION);
                 }
             }
 
             const bool ok = wubi::SaveSettings(g_ini, g_s);
             const std::wstring msg = ok
-                ? (L"已保存。\n\n配置与用户词都在：\n" + wubi::GetDataDir() +
-                   L"\n\n新设置对之后启动的程序生效；已打开的程序需要重启才会重新读取。")
+                ? (L"已保存，并已通知正在运行的输入法立即生效（不需要重启任何程序）。\n\n配置与用户词都在：\n" +
+                   wubi::GetDataDir() +
+                   L"\n\n若某个程序还在用旧版本的输入法 DLL，需要重启那个程序一次。")
                 : std::wstring(L"保存失败：请检查数据目录是否可写。");
             if (ok) NotifyReload();
             MessageBoxW(hwnd, msg.c_str(), kTitle, MB_OK | (ok ? MB_ICONINFORMATION : MB_ICONERROR));

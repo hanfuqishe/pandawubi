@@ -41,6 +41,7 @@ private:
     int  HitTest(int x) const;
     void SavePos();
     void LoadPos();
+    void LoadIcon_();      // 产品图标（和输入法指示器同一个 panda.ico）
 
     HWND        hwnd_ = nullptr;
     HINSTANCE   inst_ = nullptr;
@@ -50,6 +51,7 @@ private:
 
     bool english_ = false;
     bool trad_    = false;
+    HICON icon_   = nullptr;   // 最左边的产品 Logo
 
 
     int  dpi_ = 96;
