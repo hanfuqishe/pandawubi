@@ -8,6 +8,9 @@ Windows 11 上的**自研 TSF 五笔输入法**（五笔86）。以 REA 对 QQ�
 - 4 套主题（熊猫 / 狸花猫 / 中华田园犬 / 丹顶鹤）、悬浮状态栏、Z 键拼音反查五笔编码
 - 免安装也可用：`regsvr32` 两个 DLL 即可
 
+> **下载**：[最新安装包（GitHub Releases）](https://github.com/hanfuqishe/pandawubi/releases/latest)
+> · 直接下载 [PandaWubi-Setup-1.0.0.exe](https://github.com/hanfuqishe/pandawubi/releases/download/v1.0.0/PandaWubi-Setup-1.0.0.exe)（13.9 MB）
+
 ---
 
 ## 安装
