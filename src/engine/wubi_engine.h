@@ -75,6 +75,8 @@ public:
     // 候选排序策略：0=码短优先（默认） 1=纯词频优先；用户词始终最优先
     void      SetSortMode(int mode) { sortMode_ = mode; sortedDirty_ = true; }
     int       SortMode() const { return sortMode_; }
+    // 候选分级（0=一级汉字 1=二级汉字 2=词 3=其余）；调试与测试用
+    static int TierOf(const std::string& wordUtf8);
     // 输入多键时隐藏一级简码字（它们一键就能打出来，再出现在长码候选里是噪声）
     // 一级简码字在多键输入时的处理：0=不处理 1=隐藏 2=沉到候选末尾（默认）
     void      SetLevel1Mode(int m) { level1Mode_ = m; }
@@ -103,7 +105,8 @@ private:
     int level1Mode_ = 2;
     mutable std::unordered_set<std::string> level1_;
     mutable bool level1Built_ = false;
-    bool BetterCand(const Candidate& a, const Candidate& b) const;
+    // inputLen = 当前输入的码长：1..3（简码）只出单字；4 码（全码）按 一级字/二级字/词/其余 排序
+    bool BetterCand(const Candidate& a, const Candidate& b, size_t inputLen = 4) const;
     void EnsureLevel1() const;
     bool IsLevel1Noise(const Candidate& c, size_t inputLen) const;
     // 1/2/3 码输入时，该码的简码字（精确匹配）必须排第一；

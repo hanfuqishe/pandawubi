@@ -18,6 +18,8 @@
 
 namespace wubi {
 
+static size_t Utf8CharCount(const std::string& s);   // 定义在文件后部：候选过滤/排序都要用
+
 // 编码字符：a..z。z 不是五笔码元，但自定义词组/短语常用拼音缩写（dz=地址、sfz=身份证），
 // 所以编码允许 z；系统词库里的码仍然只会是 a..y。
 bool IsCodeChar(char c) { return c >= 'a' && c <= 'z'; }
@@ -261,24 +263,25 @@ std::vector<Candidate> Dictionary::Lookup(std::string_view input, size_t maxCand
             stats_.exactHits = 0;
             stats_.prefixHits = 0;
             CollectUserCandidates(input, out);
-            std::sort(out.begin(), out.end(), [this](const Candidate& a, const Candidate& b) {
-                return BetterCand(a, b);
+            std::sort(out.begin(), out.end(), [this, &input](const Candidate& a, const Candidate& b) {
+                return BetterCand(a, b, input.size());
             });
             return out;
         }
         std::vector<Candidate> exact;
-        auto worseFirst = [this](const Candidate& a, const Candidate& b) { return BetterCand(a, b); }; // top = worst (was inverted)
+        auto worseFirst = [this, &input](const Candidate& a, const Candidate& b) { return BetterCand(a, b, input.size()); }; // top = worst (was inverted)
         std::priority_queue<Candidate, std::vector<Candidate>, decltype(worseFirst)> heap(worseFirst);
 
         for (size_t i = lo; i < hi; ++i) {
             const BinaryRec& r = bin_[i];
             Candidate c{ std::string(binBlob_ + r.wordOff, r.wordLen),
                          std::string(r.code, r.codeLen), r.weight, (r.flags & 1) != 0 };
+            if (input.size() < 4 && Utf8CharCount(c.word) >= 2) continue;   // 不足四码不出词
             if (r.codeLen == input.size()) {
                 exact.push_back(std::move(c));          // 磁盘顺序已是权重降序
             } else {
                 if (heap.size() < maxCandidates) heap.push(std::move(c));
-                else if (BetterCand(c, heap.top())) { heap.pop(); heap.push(std::move(c)); }
+                else if (BetterCand(c, heap.top(), input.size())) { heap.pop(); heap.push(std::move(c)); }
             }
         }
         stats_.exactHits = exact.size();
@@ -286,13 +289,13 @@ std::vector<Candidate> Dictionary::Lookup(std::string_view input, size_t maxCand
 
         std::vector<Candidate> pf;
         while (!heap.empty()) { pf.push_back(heap.top()); heap.pop(); }
-        std::sort(pf.begin(), pf.end(), [this](const Candidate& a, const Candidate& b) { return BetterCand(a, b); });
+        std::sort(pf.begin(), pf.end(), [this, &input](const Candidate& a, const Candidate& b) { return BetterCand(a, b, input.size()); });
         std::vector<Candidate> merged;
         merged.reserve(exact.size() + pf.size() + 8);
         for (auto& c : exact) merged.push_back(std::move(c));
         for (auto& c : pf)    merged.push_back(std::move(c));
         CollectUserCandidates(input, merged);   // 用户词不在映射区，必须单独并入
-        std::sort(merged.begin(), merged.end(), [this](const Candidate& a, const Candidate& b) { return BetterCand(a, b); });
+        std::sort(merged.begin(), merged.end(), [this, &input](const Candidate& a, const Candidate& b) { return BetterCand(a, b, input.size()); });
         std::unordered_set<std::string> seen;
         std::vector<Candidate> tail;   // mode==2 时把这些沉到末尾
         for (auto& c : merged) {
@@ -321,16 +324,17 @@ std::vector<Candidate> Dictionary::Lookup(std::string_view input, size_t maxCand
     if (it != buckets_.end()) {
         for (uint32_t i : it->second) {
             const Entry& e = entries_[i];
+            if (input.size() < 4 && Utf8CharCount(e.word) >= 2) continue;   // 不足四码不出词
             exact.push_back(Candidate{ e.word, e.code, e.weight, e.user });
         }
     }
-    std::sort(exact.begin(), exact.end(), [this](const Candidate& a, const Candidate& b) { return BetterCand(a, b); });
+    std::sort(exact.begin(), exact.end(), [this, &input](const Candidate& a, const Candidate& b) { return BetterCand(a, b, input.size()); });
 
     const std::string pfx(input);
     auto lower = std::lower_bound(sorted_.begin(), sorted_.end(), pfx,
         [this](uint32_t idx, const std::string& p) { return entries_[idx].code < p; });
 
-    auto worseFirst = [this](const Candidate& a, const Candidate& b) { return BetterCand(a, b); }; // top = worst (was inverted)
+    auto worseFirst = [this, &input](const Candidate& a, const Candidate& b) { return BetterCand(a, b, input.size()); }; // top = worst (was inverted)
     std::priority_queue<Candidate, std::vector<Candidate>, decltype(worseFirst)> heap(worseFirst);
     size_t scanned = 0;
     for (auto i = lower; i != sorted_.end(); ++i) {
@@ -338,16 +342,17 @@ std::vector<Candidate> Dictionary::Lookup(std::string_view input, size_t maxCand
         if (e.code.size() <= pfx.size()) continue;
         if (e.code.compare(0, pfx.size(), pfx) != 0) break;
         ++scanned;
+        if (input.size() < 4 && Utf8CharCount(e.word) >= 2) continue;   // 不足四码不出词
         Candidate c{ e.word, e.code, e.weight, e.user };
         if (heap.size() < maxCandidates) heap.push(std::move(c));
-        else if (BetterCand(c, heap.top())) { heap.pop(); heap.push(std::move(c)); }
+        else if (BetterCand(c, heap.top(), input.size())) { heap.pop(); heap.push(std::move(c)); }
     }
     stats_.exactHits = exact.size();
     stats_.prefixHits = scanned;
 
     std::vector<Candidate> pf;
     while (!heap.empty()) { pf.push_back(heap.top()); heap.pop(); }
-    std::sort(pf.begin(), pf.end(), [this](const Candidate& a, const Candidate& b) { return BetterCand(a, b); });
+    std::sort(pf.begin(), pf.end(), [this, &input](const Candidate& a, const Candidate& b) { return BetterCand(a, b, input.size()); });
     MergeDedupe(std::move(exact), std::move(pf), maxCandidates, out);
     if (level1Mode_ != 0) {
         std::vector<Candidate> keep, tail;
@@ -799,6 +804,9 @@ void Dictionary::EnsureLevel1() const {
 // 是否为"多键输入时的一级简码噪声"（一键就能打出来的单字）
 bool Dictionary::IsLevel1Noise(const Candidate& c, size_t inputLen) const {
     if (level1Mode_ == 0 || inputLen <= 1) return false;
+    // 四码全码时不再把一级简码字沉底：那时按"一级字 -> 二级字 -> 词 -> 其余"排，
+    // 一级汉字就该排最前面（否则像 lgyi 这种，国 会被踢到末尾）。
+    if (inputLen >= 4) return false;
     // 精确匹配豁免：输入长度 <= 3 且候选的码正好等于输入时，这条就是"该码的简码"，
     // 必须留在原位（一级/二级/三级简码不该被任何规则顶掉）。
     if (inputLen <= 3 && c.code.size() == inputLen) return false;
@@ -806,15 +814,49 @@ bool Dictionary::IsLevel1Noise(const Candidate& c, size_t inputLen) const {
     EnsureLevel1();
     return level1_.find(c.word) != level1_.end();
 }
-bool Dictionary::BetterCand(const Candidate& a, const Candidate& b) const {
+// 汉字分级（用 GB2312 编码页判断，不需要外部字表）：
+//   0 = 一级汉字（GB2312 常用 3,755）  1 = 二级汉字（次常用 3,008）
+//   2 = 词（两个字及以上）             3 = 其余（GBK 扩展字、扩展区生僻字）
+static int Gb2312LevelOf(wchar_t c) {
+    char b[8] = { 0 };
+    const int n = WideCharToMultiByte(936, 0, &c, 1, b, (int)sizeof(b), nullptr, nullptr);
+    if (n != 2) return 3;
+    const unsigned char hi = (unsigned char)b[0];
+    const unsigned char lo = (unsigned char)b[1];
+    if (lo < 0xA1 || lo > 0xFE) return 3;
+    if (hi >= 0xB0 && hi <= 0xD7) return 0;      // 一级汉字
+    if (hi >= 0xD8 && hi <= 0xF7) return 1;      // 二级汉字
+    return 3;
+}
+
+static int CandTier(const std::string& wordUtf8) {
+    const size_t n = Utf8CharCount(wordUtf8);
+    if (n >= 2) return 2;                        // 词
+    if (n == 0) return 3;
+    static std::unordered_map<std::string, int> cache;   // 单字分级缓存（字数量有限）
+    const auto it = cache.find(wordUtf8);
+    if (it != cache.end()) return it->second;
+    int tier = 3;
+    wchar_t wc[4] = { 0 };
+    if (MultiByteToWideChar(CP_UTF8, 0, wordUtf8.c_str(), (int)wordUtf8.size(), wc, 4) == 1) {
+        tier = Gb2312LevelOf(wc[0]);
+    }
+    cache.emplace(wordUtf8, tier);
+    return tier;
+}
+int Dictionary::TierOf(const std::string& wordUtf8) { return CandTier(wordUtf8); }
+bool Dictionary::BetterCand(const Candidate& a, const Candidate& b, size_t inputLen) const {
     if (a.user != b.user) return a.user;              // 用户词永远最优先
     if (sortMode_ == 0 && a.code.size() != b.code.size()) return a.code.size() < b.code.size();
     // 同码长时词组优先于单字：实测 QQ五笔 就是这个行为（trnt→特性/选择性/我，aaaa→词组/工）。
     // 仅作用于"码短优先"模式；纯词频模式应严格按权重。
-    if (sortMode_ == 0) {
-        const bool aw = Utf8CharCount(a.word) >= 2;
-        const bool bw = Utf8CharCount(b.word) >= 2;
-        if (aw != bw) return aw;
+    // 四码全码时的词序（用户的规则）：
+    //   一级汉字 -> 二级汉字 -> 词 -> 其余（GBK 扩展字/生僻字），同级内按权重。
+    // 不足四码不出词（在 Lookup 里已经过滤），这里保持"码短优先 + 权重"。
+    if (sortMode_ == 0 && inputLen >= 4) {
+        const int ta = CandTier(a.word);
+        const int tb = CandTier(b.word);
+        if (ta != tb) return ta < tb;
     }
     if (a.weight != b.weight) return a.weight > b.weight;
     if (a.code.size() != b.code.size()) return a.code.size() < b.code.size();
@@ -828,6 +870,7 @@ void Dictionary::CollectUserCandidates(std::string_view code, std::vector<Candid
         const Entry& e = entries_[idx];
         if (e.code.size() < code.size()) continue;
         if (e.code.compare(0, code.size(), code) != 0) continue;
+        if (code.size() < 4 && Utf8CharCount(e.word) >= 2) continue;   // 不足四码不出词（用户词也一样）
         out.push_back(Candidate{ e.word, e.code, e.weight, true });
     }
 }
@@ -1048,3 +1091,4 @@ bool Punctuation::Map(char asciiKey, PuncMode mode, std::wstring& out) {
 }
 
 } // namespace wubi
+

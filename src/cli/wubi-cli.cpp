@@ -82,6 +82,13 @@ int wmain(int argc, wchar_t** argv) {
         return same ? 0 : 1;
     }
 
+    if (cmd == "tier" && argc > 3) {
+        // 调试：打印某个字/词的候选分级（0=一级 1=二级 2=词 3=其余）
+        std::string w = Narrow(argv[3]);
+        std::printf("tier(%s) = %d\n", w.c_str(), wubi::Dictionary::TierOf(w));
+        return 0;
+    }
+
     if (cmd == "lookup" && argc > 3) {
         std::string code = Narrow(argv[3]);
         auto cands = dict.Lookup(code, 20);
