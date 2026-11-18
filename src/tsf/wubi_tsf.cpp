@@ -1735,13 +1735,15 @@ void CTextService::ApplySettings() {
                                    m_settings.CandTextColor == 0x202028 &&
                                    m_settings.CandBorderColor == 0xA8CDA8);
     const bool themePanda = (m_settings.Theme != L"cat" && m_settings.Theme != L"dog" && m_settings.Theme != L"crane");
-    const bool useThemeColors = colorsAreDefault && (themeCrane || themeCat || themePanda);
+    const bool themeDog = (m_settings.Theme == L"dog");
+    const bool useThemeColors = colorsAreDefault && (themeCrane || themeCat || themePanda || themeDog);
     COLORREF bgRef = toRef(m_settings.CandBgColor);
     COLORREF txRef = toRef(m_settings.CandTextColor);
     COLORREF bdRef = toRef(m_settings.CandBorderColor);
     if (useThemeColors) {
         if (themeCrane)      { bgRef = RGB(0xD3, 0xE9, 0xE6); txRef = RGB(0x24, 0x36, 0x32); bdRef = RGB(0x8F, 0xB8, 0xB0); }
         else if (themeCat)   { bgRef = RGB(0xE8, 0xF3, 0xFC); txRef = RGB(0x25, 0x30, 0x29); bdRef = RGB(0xA5, 0xC3, 0x9E); }
+        else if (themeDog)   { bgRef = RGB(0xE9, 0xF6, 0xFF); txRef = RGB(0x2A, 0x33, 0x24); bdRef = RGB(0xA8, 0xC0, 0x8E); }
         else                 { bgRef = RGB(0xF2, 0xF6, 0xEC); txRef = RGB(0x24, 0x33, 0x26); bdRef = RGB(0xA8, 0xC4, 0x9A); }
     }
     m_candWnd.SetStyle(m_settings.CandFontPt, bgRef,
@@ -1759,16 +1761,14 @@ void CTextService::ApplySettings() {
     const wchar_t* themeIcon = crane ? L"crane.ico"
                              : dog   ? L"dog.ico"
                              : cat   ? L"cat.ico" : L"panda.ico";
-    // 熊猫 / 狸花猫 / 丹顶鹤：整幅图当窗口背景（不抠图），关掉角落小图；
-    //   RCDATA 10 = crane_band.png（鹤）、11 = cat_band.png（猫扑蝴蝶）、12 = panda_band.png（熊猫）
-    const bool panda = !cat && !dog && !crane;
-    const int themeBandId = crane ? 10 : (cat ? 11 : (panda ? 12 : 0));
-    const int themeArtId = (themeBandId != 0) ? 0 : 6;   // 6=田园犬的角落小图
+    // 四套主题现在都用"整幅图当窗口背景"（不抠图），不再画角落小图：
+    //   RCDATA 10=鹤 11=猫扑蝴蝶 12=熊猫 13=田园犬
+    const int themeBandId = crane ? 10 : (cat ? 11 : (dog ? 13 : 12));
     m_candWnd.SetBottomBand(themeBandId, 130);
-    m_candWnd.SetArtId(themeArtId);                             // 候选窗右下角装饰图
+    m_candWnd.SetArtId(0);                                      // 不再用角落小图
     SharedBar().SetIconFile(themeIcon);                         // 悬浮栏最左边的 Logo
     SharedBar().SetThemeIndex(crane ? 3 : (dog ? 2 : (cat ? 1 : 0)));   // 右键菜单里打勾
-    LogLine(L"theme: %s (art=%d, icon=%s)", m_settings.Theme.c_str(), themeArtId, themeIcon);
+    LogLine(L"theme: %s (band=%d, icon=%s)", m_settings.Theme.c_str(), themeBandId, themeIcon);
     UpdateIndicatorIconFile(themeIcon);   // 系统输入指示器的图标（需重新登录/重启 explorer 才刷新）
     BarSync();
 }

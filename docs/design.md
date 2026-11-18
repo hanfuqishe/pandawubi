@@ -1227,7 +1227,7 @@ KillTimer → SetWindowLongPtr(USERDATA, 0) → DestroyWindow（失败）→ Pos
 需求：把这套主题的整张风景图（3072×768）当"底图"放在候选框最下方，右对齐+底对齐，不要抠图；
 并且整个候选窗的色调要跟画面融合。
 
-- 新资源 `10 RCDATA "crane_band.png"`（1536×768，晨雾荷塘）、`11 RCDATA "cat_band.png"`（1536×576）、`12 RCDATA "panda_band.png"`（768×1367，竖图）；这三个主题下 `SetArtId(0)` 关掉角落小图，
+- 新资源 `10 RCDATA "crane_band.png"`（1536×768，晨雾荷塘）、`11 RCDATA "cat_band.png"`（1536×576）、`12 RCDATA "panda_band.png"`（768×1367，竖图）、`13 RCDATA "dog_band.png"`（1344×1008）；四个主题下 `SetArtId(0)` 关掉角落小图，
   改调 `SetBottomBand(10, 130)`（130 = 条带最大高度，逻辑像素）；
 - `RecalcAndResize()` 按图片比例算条带高度 `bandH_ = width_ * H / W`，超过上限就截到上限，
   并把 `height_` 加上 `bandH_` —— 条带是真占位，不压候选文字；没有候选行的"只显示编码"状态不画条带；
