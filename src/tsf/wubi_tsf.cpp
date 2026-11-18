@@ -1741,7 +1741,25 @@ static void UpdateIndicatorIconFile(const std::wstring& icoName) {
     std::wstring dir(dll);
     const size_t slash = dir.find_last_of(L"\\/");
     if (slash == std::wstring::npos) return;
-    const std::wstring path = dir.substr(0, slash) + L"\\" + icoName;
+    const std::wstring dllIco = dir.substr(0, slash) + L"\\" + icoName;
+
+    // 图标必须放在**用户目录**里，输入指示器才认（实测：放在 Program Files 下会显示成汉字）。
+    // 装到 Program Files 之后 DLL 目录就是只读的程序目录，所以这里优先用
+    // %LOCALAPPDATA%\PandaWubi\<ico>，没有就从 DLL 目录复制一份过去。
+    std::wstring path;
+    wchar_t base[MAX_PATH] = { 0 };
+    if (GetEnvironmentVariableW(L"LOCALAPPDATA", base, ARRAYSIZE(base)) > 0) {
+        const std::wstring userDir = std::wstring(base) + L"\\PandaWubi";
+        const std::wstring userIco = userDir + L"\\" + icoName;
+        if (GetFileAttributesW(userIco.c_str()) == INVALID_FILE_ATTRIBUTES) {
+            CreateDirectoryW(userDir.c_str(), nullptr);
+            if (GetFileAttributesW(dllIco.c_str()) != INVALID_FILE_ATTRIBUTES) {
+                CopyFileW(dllIco.c_str(), userIco.c_str(), FALSE);
+            }
+        }
+        if (GetFileAttributesW(userIco.c_str()) != INVALID_FILE_ATTRIBUTES) path = userIco;
+    }
+    if (path.empty()) path = dllIco;
     if (GetFileAttributesW(path.c_str()) == INVALID_FILE_ATTRIBUTES) return;
 
     const wchar_t* kProfile =

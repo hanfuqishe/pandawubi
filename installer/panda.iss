@@ -99,6 +99,12 @@ Root: HKLM; Subkey: "SOFTWARE\Microsoft\CTF\TIP\{{7F3B0C21-9D55-4F0E-B1C2-5A6D8E
 Root: HKLM; Subkey: "SOFTWARE\Microsoft\CTF\TIP\{{7F3B0C21-9D55-4F0E-B1C2-5A6D8E9F0A11}\LanguageProfile\0x00000804\{{7F3B0C21-9D55-4F0E-B1C2-5A6D8E9F0A12}"; ValueType: dword;  ValueName: "IconIndex"; ValueData: "0"; Flags: uninsdeletevalue
 Root: HKLM; Subkey: "SOFTWARE\Microsoft\CTF\TIP\{{7F3B0C21-9D55-4F0E-B1C2-5A6D8E9F0A11}\LanguageProfile\0x00000804\{{7F3B0C21-9D55-4F0E-B1C2-5A6D8E9F0A12}"; ValueType: dword;  ValueName: "Enable"; ValueData: "1"; Flags: uninsdeletevalue
 
+; 同一组值再写一份到 HKCU：DLL 运行时也是写 HKCU 的，两处一致才不会被覆盖成别的路径
+Root: HKCU; Subkey: "Software\Microsoft\CTF\TIP\{{7F3B0C21-9D55-4F0E-B1C2-5A6D8E9F0A11}\LanguageProfile\0x00000804\{{7F3B0C21-9D55-4F0E-B1C2-5A6D8E9F0A12}"; ValueType: string; ValueName: "Description"; ValueData: "熊猫五笔"
+Root: HKCU; Subkey: "Software\Microsoft\CTF\TIP\{{7F3B0C21-9D55-4F0E-B1C2-5A6D8E9F0A11}\LanguageProfile\0x00000804\{{7F3B0C21-9D55-4F0E-B1C2-5A6D8E9F0A12}"; ValueType: string; ValueName: "IconFile"; ValueData: "{localappdata}\PandaWubi\panda.ico"
+Root: HKCU; Subkey: "Software\Microsoft\CTF\TIP\{{7F3B0C21-9D55-4F0E-B1C2-5A6D8E9F0A11}\LanguageProfile\0x00000804\{{7F3B0C21-9D55-4F0E-B1C2-5A6D8E9F0A12}"; ValueType: dword;  ValueName: "IconIndex"; ValueData: "0"
+Root: HKCU; Subkey: "Software\Microsoft\CTF\TIP\{{7F3B0C21-9D55-4F0E-B1C2-5A6D8E9F0A11}\LanguageProfile\0x00000804\{{7F3B0C21-9D55-4F0E-B1C2-5A6D8E9F0A12}"; ValueType: dword;  ValueName: "Enable"; ValueData: "1"
+
 [Run]
 ; 64 位和 32 位各注册一次；DllRegisterServer 写的是 HKLM 的 CLSID + CTF TIP
 Filename: "{sys}\regsvr32.exe"; Parameters: "/s ""{app}\panda_tsf.dll"""; StatusMsg: "正在注册 64 位输入法…"; Flags: runhidden waituntilterminated
