@@ -1198,6 +1198,10 @@ KillTimer → SetWindowLongPtr(USERDATA, 0) → DestroyWindow（失败）→ Pos
 - 图标来源都是用户给的 AI 图（2048²）：用 `System.Drawing` 裁出头像、套圆形羽化 alpha，
   再交给 `tools\make-ico.ps1` 生成 6 个尺寸的 ico；同一张 PNG（256²）作为候选窗右下角装饰图。
   田园犬那张先**左右镜像**（改成向左奔跑）再裁；丹顶鹤那张同样先镜像（原本朝右，镜像后朝左）；
+- 狸花猫的**装饰图用整幅场景**（猫扑蝴蝶），不是圆头像：`tools\make-theme-art.ps1` 负责抠图 ——
+  缩到 700²，从四边洪水填充删掉浅色背景（主体的白毛被轮廓围住，不会被误删），
+  连通块过滤丢掉草叶/小花等小碎片，3×3 羽化 alpha，按内容裁边后缩到 256²；
+  这样贴在候选窗右下角的效果和 `panda_bamboo.png`（熊猫+竹子）一致。
 - 资源 id：`3 RCDATA panda_bamboo.png`、`4 RCDATA cat_art.png`、`6 RCDATA dog_art.png`、
   `8 RCDATA crane_art.png`；图标 `1 ICON panda.ico`、`5 ICON cat.ico`、`7 ICON dog.ico`、
   `9 ICON crane.ico`；
