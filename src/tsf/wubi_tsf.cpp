@@ -275,7 +275,8 @@ public:
     // 纯文本徽标：不显示序号（用于中/英状态提示，避免被当成候选词）
     void SetPlain(bool on) { if (plain_ != on) { plain_ = on; RecalcAndResize(); } }
     // 顶部组码显示
-    void SetCode(const std::wstring& c) { code_ = c; if (hwnd_) InvalidateRect(hwnd_, nullptr, TRUE); }
+    void SetCode(const std::wstring& c) { code_ = c; if (hwnd_) InvalidateRect(hwnd_, nullptr, FALSE); }
+    bool HasCode() const { return !code_.empty(); }
     // 外观：字体名 / 字号(pt) / 背景色 / 文字色 / 选中文字色 / 选中底色 / 边框色 / 内镶凹陷
     void SetStyle(int fontPt, COLORREF bg, bool inset,
                   const std::wstring& face = L"Microsoft YaHei UI",
@@ -1600,6 +1601,8 @@ void CTextService::RefreshQuickCandidates(ITfContext* pic) {
     (void)pic;
     m_letterLabels = true;                 // 便捷输入用 a. b. c. 选词
     wubi::NumberForms(m_quickDigits, m_quickForms);
+    // 便捷输入有自己的组合串（数字），顶部小框不要再挂着上一个汉字的编码
+    m_candWnd.SetCode(std::wstring());
     ShowCandidateList(m_quickForms);
 }
 
@@ -1615,6 +1618,12 @@ void CTextService::ExitQuick(ITfContext* pic, bool cancel) {
 }
 
 void CTextService::ShowCandidateList(const std::vector<std::wstring>& display) {
+    // 非组码的提示（便捷输入 / Z 重复 / 自定义词组 / 状态徽标）不该沿用上一次的组码，
+    // 否则按分号进便捷输入时，框里还留着刚才那个字的编码。
+    if (!m_comp) {
+        if (m_candWnd.HasCode()) LogLine(L"hint list: cleared stale code");
+        m_candWnd.SetCode(std::wstring());
+    }
     // 注意：这里不能先 Hide()。组码阶段每按一键都会走这里，hide -> show 会让候选框闪一下，
     // 直接就地更新内容即可（需要隐藏时 ShowAt 自己会处理）。
     if (display.empty()) {
