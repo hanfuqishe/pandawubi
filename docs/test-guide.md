@@ -211,7 +211,7 @@ TSF 的输入法目录是机器级的：`ITfInputProcessorProfiles` 读写
 |---|---|---|---|
 | `熊猫（默认）` | panda.ico | 熊猫吃竹子 | panda.ico |
 | `狸花猫` | cat.ico | **整幅「狸花猫扑蝴蝶」抠图**（192²，和熊猫竹子图同一尺寸/占比） | cat.ico |
-| `中华田园犬` | dog.ico | **整幅「奔跑的狗」抠图**（镜像后向左跑，192²） | dog.ico |
+| `中华田园犬` | dog.ico | **整幅「叼骨头的小狗」抠图**（192²） | dog.ico |
 | `丹顶鹤` | crane.ico | **整幅「鹤立荷塘」抠图**（镜像后朝左，192²） | crane.ico |
 
 - 对应 ini：`Theme=panda` / `Theme=cat` / `Theme=dog` / `Theme=crane`（未知值一律回默认熊猫）；
