@@ -141,7 +141,7 @@ static void ReadUiInto(HWND hwnd) {
     {
         HWND cb = GetDlgItem(hwnd, ID_THEME);
         const int sel = (int)SendMessageW(cb, CB_GETCURSEL, 0, 0);
-        g_s.Theme = (sel == 2) ? L"dog" : ((sel == 1) ? L"cat" : L"panda");
+        g_s.Theme = (sel == 3) ? L"crane" : ((sel == 2) ? L"dog" : ((sel == 1) ? L"cat" : L"panda"));
     }
     {
         HWND cb = GetDlgItem(hwnd, ID_FACE);
@@ -245,8 +245,11 @@ static void BuildChildren(HWND hwnd) {
         SendMessageW(cb, CB_ADDSTRING, 0, (LPARAM)L"熊猫（默认）");
         SendMessageW(cb, CB_ADDSTRING, 0, (LPARAM)L"狸花猫");
         SendMessageW(cb, CB_ADDSTRING, 0, (LPARAM)L"中华田园犬");
+        SendMessageW(cb, CB_ADDSTRING, 0, (LPARAM)L"丹顶鹤");
         SendMessageW(cb, CB_SETCURSEL,
-                     (g_s.Theme == L"dog") ? 2 : ((g_s.Theme == L"cat") ? 1 : 0), 0);
+                     (g_s.Theme == L"crane") ? 3 :
+                     (g_s.Theme == L"dog")   ? 2 :
+                     (g_s.Theme == L"cat")   ? 1 : 0, 0);
     }
 
     // 颜色
@@ -463,7 +466,9 @@ static int RunDialog() {
         const size_t slash = dir.find_last_of(L"\\/");
         if (slash != std::wstring::npos) {
             dir.erase(slash);
-            const std::wstring icoFile = (g_s.Theme == L"dog") ? L"dog.ico" : ((g_s.Theme == L"cat") ? L"cat.ico" : L"panda.ico");
+            const std::wstring icoFile = (g_s.Theme == L"crane") ? L"crane.ico"
+                                   : (g_s.Theme == L"dog") ? L"dog.ico"
+                                   : (g_s.Theme == L"cat") ? L"cat.ico" : L"panda.ico";
             const std::wstring icoPath = dir + L"\\\\" + icoFile;
             HICON hi = (HICON)LoadImageW(nullptr, icoPath.c_str(), IMAGE_ICON, 0, 0,
                                         LR_LOADFROMFILE | LR_DEFAULTSIZE);
@@ -565,7 +570,7 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, LPWSTR, int) {
                 else if (k == L"TradChinese")    { g_s.TradChinese = iv; any = true; }
                 else if (k == L"CandCount")      { g_s.CandCount = iv; any = true; }
                 else if (k == L"CandVertical")   { g_s.CandVertical = iv; any = true; }
-                else if (k == L"Theme")          { g_s.Theme = (v == L"cat") ? L"cat" : ((v == L"dog") ? L"dog" : L"panda"); any = true; }
+                else if (k == L"Theme")          { g_s.Theme = (v == L"cat") ? L"cat" : ((v == L"dog") ? L"dog" : ((v == L"crane") ? L"crane" : L"panda")); any = true; }
             }
             if (!any) { std::printf("no known key\n"); LocalFree(argv); return 2; }
 

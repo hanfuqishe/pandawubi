@@ -182,6 +182,9 @@ Check '主题可切换' ($dump -match 'Theme=cat') '狸花猫主题生效'
 $null = & $setExe /set Theme=dog 2>&1 | Out-String
 $dumpDog = & $setExe /dump 2>&1 | Out-String
 Check '主题可切到田园犬' ($dumpDog -match 'Theme=dog') '中华田园犬主题生效'
+$null = & $setExe /set Theme=crane 2>&1 | Out-String
+$dumpCrane = & $setExe /dump 2>&1 | Out-String
+Check '主题可切到丹顶鹤' ($dumpCrane -match 'Theme=crane') '丹顶鹤主题生效'
 $null = & $setExe /set Theme=panda 2>&1 | Out-String
 Remove-Item Env:\WUBI_INI
 "— 数据目录（配置与自定义词可放网盘同步夹）—"

@@ -7,3 +7,5 @@
 5 ICON "cat.ico"
 6 RCDATA "dog_art.png"
 7 ICON "dog.ico"
+8 RCDATA "crane_art.png"
+9 ICON "crane.ico"

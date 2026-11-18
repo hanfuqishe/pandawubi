@@ -1134,7 +1134,9 @@ STDMETHODIMP CTextService::ActivateEx(ITfThreadMgr* ptim, TfClientId tid, DWORD)
         if (SUCCEEDED(m_tim->QueryInterface(IID_ITfLangBarItemMgr, (void**)&lbm)) && lbm) {
             static const GUID kLangBarItemGuid = { 0x8c4f2a31, 0x6b7d, 0x4e29, { 0x9a, 0x3c, 0x1d, 0x5e, 0x7f, 0x9b, 0x0c, 0x21 } };
             IUnknown* unk = CreateLangBarItem(CLSID_WubiTsf, kLangBarItemGuid, g_hInst,
-                                             (m_settings.Theme == L"dog") ? 7 : ((m_settings.Theme == L"cat") ? 5 : 1));   // 1=熊猫 5=狸花猫 7=田园犬
+                                             (m_settings.Theme == L"crane") ? 9 :
+                                              (m_settings.Theme == L"dog") ? 7 :
+                                              ((m_settings.Theme == L"cat") ? 5 : 1));   // 1=熊猫 5=狸花猫 7=田园犬 9=丹顶鹤
             if (unk) {
                 ITfLangBarItem* item = nullptr;
                 if (SUCCEEDED(unk->QueryInterface(IID_ITfLangBarItem, (void**)&item)) && item) {
@@ -1610,11 +1612,14 @@ void CTextService::ApplySettings() {
     m_candCount   = m_settings.CandCount;
     m_composer.SetLimit((size_t)m_candCount);
 
-    // 主题：panda（默认）/ cat（狸花猫）/ dog（中华田园犬）
-    const bool cat = (m_settings.Theme == L"cat");
-    const bool dog = (m_settings.Theme == L"dog");
-    const wchar_t* themeIcon = dog ? L"dog.ico" : (cat ? L"cat.ico" : L"panda.ico");
-    const int themeArtId = dog ? 6 : (cat ? 4 : 3);             // 3=熊猫 4=狸花猫 6=田园犬
+    // 主题：panda（默认）/ cat（狸花猫）/ dog（中华田园犬）/ crane（丹顶鹤）
+    const bool cat   = (m_settings.Theme == L"cat");
+    const bool dog   = (m_settings.Theme == L"dog");
+    const bool crane = (m_settings.Theme == L"crane");
+    const wchar_t* themeIcon = crane ? L"crane.ico"
+                             : dog   ? L"dog.ico"
+                             : cat   ? L"cat.ico" : L"panda.ico";
+    const int themeArtId = crane ? 8 : (dog ? 6 : (cat ? 4 : 3));   // 3=熊猫 4=狸花猫 6=田园犬 8=丹顶鹤
     m_candWnd.SetArtId(themeArtId);                             // 候选窗右下角装饰图
     SharedBar().SetIconFile(themeIcon);                         // 悬浮栏最左边的 Logo
     LogLine(L"theme: %s (art=%d, icon=%s)", m_settings.Theme.c_str(), themeArtId, themeIcon);
