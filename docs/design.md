@@ -1132,6 +1132,38 @@ KillTimer → SetWindowLongPtr(USERDATA, 0) → DestroyWindow（失败）→ Pos
 
 清理工具：`tools\hide-stale-bars.ps1 -Close`（直接 WM_CLOSE 掉所有残留栏；下次激活会重建一条）。
 
+## 二·三十七·六、Z 菜单（最近 4 次上屏 + 版本号）与设置即时生效
+
+### Z 菜单
+
+需求：按 Z 时把"前 4 次输入（倒序）"作为 4 个选项，第 5 项是版本号。
+
+- `m_recentCommits`（最多 4 个，旧的在前，连续的同一个词只记一次）在 `CommitText`/`CommitString`
+  里通过 `RememberRecentCommit()` 维护；
+- 按 Z（无 Shift、不在组码/英文/便捷输入中）→ 组装 `m_zItems` = 最近 4 条倒序 + `版本 PANDA_WUBI_VERSION`，
+  用 `ShowCandidateList` 显示，进入 `m_zPending`；
+- `空格`/`回车` 选第 1 项、`1`–`5` 选对应项、`Esc` 取消；选中的内容 `CommitString` 上屏并记入历史。
+- 按 Z 时会开一个空组合串，选完/取消再收掉：这样选词期间的 `WM_CHAR` 会被组合吸收，
+  不会在菜单关闭后往文档里漏一个数字（实测简易测试宿主里确实会漏）。
+- 版本号在 `src/tsf/panda_version.h`（`PANDA_WUBI_VERSION`），报问题时让用户按 Z 看一眼即可。
+
+代价：`z` 变成菜单键，以 z 开头的编码（dz/sfz）在"有历史"时打不出来——与之前的 Z 重复行为一致。
+
+### 设置即时生效（消息通知，不是轮询文件）
+
+需求：改完设置立刻生效，不要求用户重启应用。
+
+- `src/tsf/ipc.h` 里定义 `PandaReloadMessage()`（`RegisterWindowMessageW("PandaWubi.ReloadSettings")`，
+  两端拿到同一个 id，跨进程可 `PostMessage`）；
+- 设置窗口保存（GUI 或 `/set`）后 `NotifyReload()`：枚举 `PandaWubiStatusBar` / `PandaWubiCandidateWnd`
+  窗口逐个 `PostMessage`；
+- 输入法侧：`StatusBar::WndProc` 收到消息 → `RequestSettingsReload()` → `g_reloadPending = 1`
+  并立刻让状态栏拥有者实例 `ReloadSettingsNow()`（重读 ini + `ApplySettings()` + 刷新候选）；
+- 其它实例/线程在下次按键时看到 `g_reloadPending` 也会重载（`MaybeReloadUserWords()` 里消费）。
+
+一开始写的是"轮询 config.ini 修改时间"，用户指出应该由设置窗口发消息——消息方案更省、
+也不依赖文件时间戳精度，已改过来。
+
 ## 二·三十八、按应用使用不同配置（[app:<exe>]）
 
 需求：同一个输入法，A 程序用简体、B 程序用繁体（而不是切换输入法本身）。

@@ -105,6 +105,40 @@ TSF 的输入法目录是机器级的：`ITfInputProcessorProfiles` 读写
 编码框只接受**英文字母**（a–z / A–Z），最多 4 位；数字、标点、汉字都打不进去，
 粘贴/输入法带进来的也会被清掉（`wubi::FilterCode`，CLI 里 `panda-cli <dict> codefilter` 有自测）。
 
+## Z 键：最近 4 次上屏 + 版本号
+
+按 `Z`（不带 Shift，且当前不在组码/英文补全/便捷输入中）弹出最多 5 项：
+
+| 序号 | 内容 |
+|---|---|
+| 1–4 | **最近 4 次上屏的内容，倒序**（1 = 刚打的那次） |
+| 5 | `版本 1.0.0`（本输入法版本号，方便反馈问题时对照） |
+
+- `空格` / `回车` 选第 1 项；`1`–`5` 选对应项；`Esc` 取消
+- 选中的内容直接上屏，并计入"最近上屏"（下次 Z 也能取到）
+- 连续重复的内容只记一次
+
+```powershell
+.\build\tsf-host.exe -send "a wqvb z2"   # 工 + 你好，Z 列表 [你好, 工, 版本]，选 2 -> 工
+.\build\tsf-host.exe -send "a z2"        # 工，Z 列表 [工, 版本]，选 2 -> 版本 1.0.0
+```
+
+> 注：`z` 现在是"菜单键"，所以以 z 开头的编码（dz / sfz 之类）在打完字之后按不出来 ——
+> 这是 Z 菜单带来的既有取舍。
+
+## 设置即时生效（不用重启应用）
+
+设置窗口点「保存」（或命令行 `panda-settings.exe /set ...`）后，会向正在运行的输入法窗口
+`PostMessage` 一条注册消息 `PandaWubi.ReloadSettings`；输入法收到后就地重读 `config.ini`、
+套用到候选窗外观 / 标点 / 简繁 / 候选个数 / 字体，并立刻刷新正在显示的候选。
+
+```powershell
+# 应用开着，改设置，马上生效
+.\dist\panda-settings.exe /set CandCount=9
+```
+
+日志里能看到：`settings reloaded: punc=1 trad=0 candCount=9 ...`
+
 ## 分号与标点
 
 | 操作 | 结果 |

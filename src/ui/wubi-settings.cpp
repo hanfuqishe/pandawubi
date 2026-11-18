@@ -16,6 +16,7 @@
 #include <shellapi.h>
 #include <shlobj.h>
 #include "../engine/wubi_config.h"
+#include "../tsf/ipc.h"
 #include <cstdio>
 #include <string>
 
@@ -33,6 +34,18 @@ static HFONT  g_fontTitle = nullptr;
 static HBRUSH g_bg = nullptr;
 
 static int S(int v) { return MulDiv(v, g_dpi, 96); }
+
+// 保存之后通知正在运行的输入法：把配置重读一遍（不用重启任何应用）
+static void NotifyReload() {
+    const UINT msg = PandaReloadMessage();
+    const wchar_t* classes[] = { L"PandaWubiStatusBar", L"PandaWubiCandidateWnd" };
+    for (const wchar_t* cls : classes) {
+        HWND h = nullptr;
+        while ((h = FindWindowExW(nullptr, h, cls, nullptr)) != nullptr) {
+            PostMessageW(h, msg, 0, 0);
+        }
+    }
+}
 
 static std::wstring ConfigPath() {
     // 数据目录（用户可指向网盘同步夹）；WUBI_INI 可整体覆盖，供测试/便携使用
@@ -364,6 +377,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
                 ? (L"已保存。\n\n配置与用户词都在：\n" + wubi::GetDataDir() +
                    L"\n\n新设置对之后启动的程序生效；已打开的程序需要重启才会重新读取。")
                 : std::wstring(L"保存失败：请检查数据目录是否可写。");
+            if (ok) NotifyReload();
             MessageBoxW(hwnd, msg.c_str(), kTitle, MB_OK | (ok ? MB_ICONINFORMATION : MB_ICONERROR));
             DestroyWindow(hwnd);
             return 0;
@@ -533,6 +547,7 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, LPWSTR, int) {
             if (!any) { std::printf("no known key\n"); LocalFree(argv); return 2; }
 
             const bool ok = wubi::SaveSettings(g_ini, g_s);
+            if (ok) NotifyReload();       // 让正在运行的输入法立刻用上新设置
             std::printf("%s -> Level1Mode=%d SortMode=%d EnablePunction=%d TradChinese=%d CandCount=%d\n",
                         ok ? "saved" : "FAILED", g_s.Level1Mode, g_s.SortMode,
                         g_s.EnablePunction, g_s.TradChinese, g_s.CandCount);

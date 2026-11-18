@@ -37,9 +37,7 @@ static std::vector<Step> g_steps;
 static void ForceForeground(HWND h) {
     HWND fg = GetForegroundWindow();
     if (fg == h) return;
-    // 打破 Windows 前台锁：先模拟一次 ALT 键
-    keybd_event(VK_MENU, 0, 0, 0);
-    keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, 0);
+    // 不再模拟 ALT 来抢前台：那样会惊动 shell（弹菜单/开始菜单），只用 AttachThreadInput\n
     DWORD fgThread = fg ? GetWindowThreadProcessId(fg, nullptr) : 0;
     DWORD myThread = GetCurrentThreadId();
     if (fgThread && fgThread != myThread) {
@@ -225,10 +223,13 @@ int wmain(int argc, wchar_t** argv) {
     //       这条才是应用里实际的路径（TSF 在消息循环里分发按键）。
     std::wstring script = L"atrnt ";
     bool useSendInput = false;
+    bool postMode = false;
     for (int i = 1; i < argc; ++i) {
         if (wcscmp(argv[i], L"-send") == 0) useSendInput = true;
+        else if (wcscmp(argv[i], L"-post") == 0) postMode = true;   // 不抢前台、不注入按键
         else script = argv[i];
     }
+    g_postMode = postMode;
     g_script = script;
     ParseScript(script);
 

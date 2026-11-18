@@ -33,6 +33,8 @@
 #include "../engine/wubi_config.h"
 #include "../engine/wubi_composer.h"
 #include "../engine/wubi_english.h"
+#include "panda_version.h"
+#include "ipc.h"
 
 static wubi::EnglishDict g_eng;   // 全局英文词表（进程内共享）
 // 宿主进程的可执行文件名（小写），用于 [app:<exe>] 配置覆盖
@@ -881,9 +883,10 @@ private:
     wubi::Composer  m_composer;        // 组码/候选状态机（唯一实现）
     bool            m_composerReady = false;
     int             m_commitCount = 0;
-    std::wstring    m_lastCommit;   // 上一次上屏的内容（Z 键重复用）
-    bool            m_repeatPending = false;   // Z 按下后等待空格上屏
-    std::wstring    m_repeatText;
+    std::wstring    m_lastCommit;                  // 上一次上屏的内容
+    std::vector<std::wstring> m_recentCommits;     // 最近 4 次上屏内容（Z 键候选用，旧的在前）
+    bool            m_zPending = false;            // Z 按下后正在等用户选一项
+    std::vector<std::wstring> m_zItems;            // Z 弹出的候选项（前 4 个历史 + 版本号）
     bool            m_quickMode = false;       // 分号进入的"便捷输入"
     std::string     m_quickDigits;
     #define m_eng g_eng
@@ -932,6 +935,11 @@ private:
     void ShowCandidateList(const std::vector<std::wstring>& display);
     HRESULT UpdateCompositionTextWith(ITfContext* pic, const std::wstring& text);
     void BeginRepeat();
+    void RememberRecentCommit(const std::wstring& text);   // 记入"最近 4 次上屏"
+    void ApplySettings();                                   // 把 m_settings 套到候选窗/词库/选项上
+public:
+    void ReloadSettingsNow();                               // 重新读 config.ini 并立刻生效
+private:
     void BeginQuick();
     void RefreshQuickCandidates(ITfContext* pic);
     void ExitQuick(ITfContext* pic, bool cancel);
@@ -954,6 +962,11 @@ static wubi::StatusBar& SharedBar() {
     static wubi::StatusBar bar;
     return bar;
 }
+
+// 设置窗口保存后发消息过来：这里把"下次按键时重载"标脏，
+// 并立刻通知当前拥有状态栏的那个实例（如果在本进程）马上生效。
+static volatile LONG g_reloadPending = 0;
+static void RequestSettingsReload();   // 定义见下（需要 CTextService 完整类型）
 
 void CTextService::BarSync() {
     if (g_barOwner == this)
@@ -1065,16 +1078,7 @@ STDMETHODIMP CTextService::ActivateEx(ITfThreadMgr* ptim, TfClientId tid, DWORD)
     // 候选窗外观众（字体/字号/背景色/文字色/选中色/边框/凹陷）
     // 注意：设置里存的是 0xRRGGBB（网页习惯），COLORREF 是 0x00BBGGRR，必须换序，
     // 否则红蓝会颠倒（以前只设了个近白的背景，所以没暴露出来）。
-    auto toRef = [](int v) { return RGB((v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF); };
-    m_candWnd.SetStyle(m_settings.CandFontPt,
-                       toRef(m_settings.CandBgColor),
-                       m_settings.CandInset != 0,
-                       m_settings.CandFontFace,
-                       toRef(m_settings.CandTextColor),
-                       toRef(m_settings.CandBorderColor));
-    m_puncEnabled = m_settings.EnablePunction != 0;
-    m_tradEnabled = m_settings.TradChinese != 0;
-    m_candCount   = m_settings.CandCount;
+    ApplySettings();
 
     // 激活时就准备好词库（而不是等第一次按键），并把状态一次记清：
     // mmap 模式下约 0.1ms，不会拖慢激活。
@@ -1146,7 +1150,7 @@ STDMETHODIMP CTextService::ActivateEx(ITfThreadMgr* ptim, TfClientId tid, DWORD)
         if (g_barUsers == 1) {
             SharedBar().Create(g_hInst, GetConfigPath(), [](int idx) {
                 if (g_barOwner) g_barOwner->OnBarClick(idx);
-            });
+            }, [] { RequestSettingsReload(); });
         }
         g_barOwner = this;
         BarSync();
@@ -1455,7 +1459,10 @@ HRESULT CTextService::CommitString(ITfContext* pic, const std::wstring& text) {
         return h;
     });
     ctx->Release();
-    if (SUCCEEDED(hr)) RememberCommitted(text);   // 供"自定义词组"用 ← 回取
+    if (SUCCEEDED(hr)) {
+        RememberCommitted(text);        // 供"自定义词组"用 ← 回取
+        RememberRecentCommit(text);     // 供 Z 键候选用
+    }
     return hr;
 }
 
@@ -1513,7 +1520,7 @@ HRESULT CTextService::CommitText(ITfContext* pic, const std::wstring& textIn,
         return hr2;
     });
 
-    if (SUCCEEDED(hr) && !w.empty()) m_lastCommit = w;   // 记住上一次上屏的内容
+    if (SUCCEEDED(hr)) RememberRecentCommit(w);   // 记住最近几次上屏（Z 键候选）
     if (SUCCEEDED(hr)) RememberCommitted(w);             // 供"自定义词组"用 ← 回取
     if (resetComposer) m_composer.Reset();
     m_code.clear();
@@ -1556,6 +1563,39 @@ void CTextService::EnsureComposer() {
     m_composer.SetLimit((size_t)m_candCount);
 }
 
+// 把当前 m_settings 套用到候选窗外观、标点/简繁开关、候选个数、词库排序等。
+// 激活时调用一次；config.ini 变过的话，MaybeReloadUserWords() 里会再调一次（即时生效）。
+void CTextService::ApplySettings() {
+    // 设置里存的是 0xRRGGBB（网页习惯），COLORREF 是 0x00BBGGRR，必须换序
+    auto toRef = [](int v) { return RGB((v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF); };
+    m_candWnd.SetStyle(m_settings.CandFontPt,
+                       toRef(m_settings.CandBgColor),
+                       m_settings.CandInset != 0,
+                       m_settings.CandFontFace,
+                       toRef(m_settings.CandTextColor),
+                       toRef(m_settings.CandBorderColor));
+    m_puncEnabled = m_settings.EnablePunction != 0;
+    m_tradEnabled = m_settings.TradChinese != 0;
+    m_candCount   = m_settings.CandCount;
+    m_composer.SetLimit((size_t)m_candCount);
+    BarSync();   // 悬浮栏上的 中/英、简/繁、标点 状态跟着更新
+}
+
+void CTextService::ReloadSettingsNow() {
+    m_settings = wubi::LoadSettings(GetConfigPath(), HostAppName());
+    ApplySettings();
+    if (m_comp && m_context) RefreshCandidates(m_context);   // 正在组码就顺手刷新候选
+    LogLine(L"settings reloaded: punc=%d trad=%d candCount=%d vertical=%d font=%s %dpt",
+            (int)m_puncEnabled, (int)m_tradEnabled, m_candCount, m_settings.CandVertical,
+            m_settings.CandFontFace.c_str(), m_settings.CandFontPt);
+}
+
+void RequestSettingsReload() {
+    InterlockedExchange(&g_reloadPending, 1);
+    BarGuardScope guard;
+    if (g_barOwner) g_barOwner->ReloadSettingsNow();   // 本进程当前活跃的实例立刻生效
+}
+
 void CTextService::SyncCodeFromComposer() {
     m_code.clear();
     for (char c : m_composer.Code()) m_code.push_back((wchar_t)c);
@@ -1588,10 +1628,23 @@ static std::wstring AsciiToWide(const std::string& s) {
     return w;
 }
 
+// 最近 4 次上屏的内容（Z 键候选用；连续重复的只记一次）
+void CTextService::RememberRecentCommit(const std::wstring& text) {
+    if (text.empty()) return;
+    m_lastCommit = text;
+    if (!m_recentCommits.empty() && m_recentCommits.back() == text) return;
+    m_recentCommits.push_back(text);
+    if (m_recentCommits.size() > 4) m_recentCommits.erase(m_recentCommits.begin());
+}
+
 void CTextService::BeginRepeat() {
     if (m_lastCommit.empty()) return;
-    m_repeatText = m_lastCommit;
-    m_repeatPending = true;
+    m_zItems.clear();
+    for (size_t i = 0; i < m_recentCommits.size(); ++i) {
+        m_zItems.push_back(m_recentCommits[m_recentCommits.size() - 1 - i]);
+    }
+    m_zItems.push_back(L"版本 " PANDA_WUBI_VERSION);
+    m_zPending = true;
 }
 
 void CTextService::BeginQuick() {
@@ -1866,6 +1919,11 @@ void CTextService::MaybeReloadUserWords() {
     if (now - m_userWordsChecked < 1000) return;
     m_userWordsChecked = now;
 
+    // 设置窗口保存后会给各个输入法窗口 PostMessage(PandaReloadMessage())：
+    // 收到通知的实例已经就地套用过了，这里只是消费"待重载"标志，
+    // 让没拿到通知的实例（别的线程/别的宿主进程）在下次按键时也跟上。
+    if (InterlockedExchange(&g_reloadPending, 0)) ReloadSettingsNow();
+
     const std::wstring path = GetUserWordsPath();
     WIN32_FILE_ATTRIBUTE_DATA fad = {};
     if (!GetFileAttributesExW(path.c_str(), GetFileExInfoStandard, &fad)) return;
@@ -1947,7 +2005,8 @@ void CTextService::BeginCustomWord(ITfContext* pic) {
     for (const auto& c : m_customChars) m_customWord += WideToUtf8(c);
     m_engActive = false;
     m_quickMode = false;
-    m_repeatPending = false;
+    m_zPending = false;
+    m_zItems.clear();
     m_letterLabels = false;
     if (m_comp) CancelComposition(pic);
     m_candWnd.Hide();
@@ -2183,7 +2242,7 @@ bool CTextService::WantsKey(UINT vk, LPARAM lp) {
         return true;
     }
 
-    const bool busy = m_comp || m_engActive || m_quickMode || m_repeatPending ||
+    const bool busy = m_comp || m_engActive || m_quickMode || m_zPending ||
                       !m_composer.Code().empty();
     if (busy) {
         // 组码/补全/便捷输入期间这些键都由状态机处理
@@ -2261,7 +2320,7 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
     // 退格：不在组码/补全里时这一键是给应用删字的，同时把它从"最近上屏的字"里剔掉——
     // 否则打错一个字退格删掉后，做自定义词组时它还会被 ← 取回来（字序/内容全错）。
     if (vk == VK_BACK && !*pfEaten &&
-        !m_comp && !m_engActive && !m_quickMode && !m_repeatPending &&
+        !m_comp && !m_engActive && !m_quickMode && !m_zPending &&
         !ctrl && !alt && !m_english && !m_recentChars.empty()) {
         m_recentChars.pop_back();
         LogLine(L"recent chars: backspace removed one, %zu left", m_recentChars.size());
@@ -2329,27 +2388,35 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
     // ② 自由输入英文（单击 Shift）：输入法完全不参与，全部直通
     if (m_english) return S_OK;
 
-    // —— Z 待定：此时不往文档里写任何文字，只提示"按空格重复" ——
-    if (m_repeatPending) {
-        if (vk == VK_SPACE || vk == VK_RETURN) {
-            m_repeatPending = false;
-            const std::wstring text = m_repeatText;
-            m_repeatText.clear();
-            CommitString(pic, text);          // 此刻才真正写入文档
-            *pfEaten = TRUE;
-            m_candWnd.Hide();                 // CommitString 不会自动关候选窗
-            return S_OK;
-        }
+    // —— Z 待定：列出"最近 4 次上屏（倒序）+ 版本号"，选一项就上屏 ——
+    if (m_zPending) {
+        const int n = (int)m_zItems.size();
+        int idx = -1;
+        if (vk == VK_SPACE || vk == VK_RETURN)            idx = 0;
+        else if (vk >= '1' && vk <= '9' && (int)(vk - '1') < n) idx = (int)(vk - '1');
         if (vk == VK_ESCAPE) {
-            m_repeatPending = false;
-            m_repeatText.clear();
+            m_zPending = false;
+            m_zItems.clear();
+            if (m_comp) CancelComposition(pic);
             m_candWnd.Hide();
             *pfEaten = TRUE;
             return S_OK;
         }
-        // 其它键：放弃这次重复，继续按正常流程处理该键
-        m_repeatPending = false;
-        m_repeatText.clear();
+        if (idx >= 0) {
+            const std::wstring text = m_zItems[(size_t)idx];
+            m_zPending = false;
+            m_zItems.clear();
+            if (m_comp) CancelComposition(pic);
+            CommitString(pic, text);
+            RememberRecentCommit(text);       // 选出来的内容也算"刚上屏"，下次 Z 能取到
+            m_candWnd.Hide();
+            LogLine(L"z pick idx=%d len=%zu", idx, text.size());
+            *pfEaten = TRUE;
+            return S_OK;
+        }
+        // 其它键：放弃这次选择，继续按正常流程处理该键
+        m_zPending = false;
+        m_zItems.clear();
         m_candWnd.Hide();
     }
 
@@ -2360,7 +2427,7 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
             ExitQuick(pic, true);
             const std::wstring semi = m_puncEnabled ? std::wstring(L"\uFF1B") : std::wstring(L";");
             CommitString(pic, semi);
-            m_lastCommit = semi;          // Z 重复也能用上
+            RememberRecentCommit(semi);   // Z 候选里也能取到
             LogLine(L"double semicolon -> %s", semi.c_str());
             *pfEaten = TRUE;
             return S_OK;
@@ -2549,12 +2616,19 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
         return S_OK;
     }
 
-    // Z 键：进入"重复上次上屏"待定状态（只提示，不写文档；按空格才上屏）
-    if (vk == 'Z' && !shift && !m_lastCommit.empty()) {
-        m_repeatPending = true;
-        m_repeatText = m_lastCommit;
-        ShowCandidateList(std::vector<std::wstring>{ L"空格重复：" + m_lastCommit });
-        LogLine(L"repeat pending: %zu chars (waiting for space)", m_repeatText.size());
+    // Z 键：列"最近 4 次上屏（倒序）" + 版本号，共最多 5 项；选哪项就上屏哪项
+    if (vk == 'Z' && !shift) {
+        // 开一个空组合串：选词期间宿主产生的 WM_CHAR 会被组合串吸收，
+        // 不会在菜单关掉后漏一个数字进文档（实测 tsf-host 里确实会漏）。
+        if (!m_comp) StartComposition(pic, std::wstring());
+        m_zItems.clear();
+        for (size_t i = 0; i < m_recentCommits.size(); ++i) {
+            m_zItems.push_back(m_recentCommits[m_recentCommits.size() - 1 - i]);   // 最近的在最前
+        }
+        m_zItems.push_back(L"版本 " PANDA_WUBI_VERSION);
+        m_zPending = true;
+        ShowCandidateList(m_zItems);
+        LogLine(L"z list: %zu item(s) (history=%zu)", m_zItems.size(), m_recentCommits.size());
         *pfEaten = TRUE;
         return S_OK;
     }

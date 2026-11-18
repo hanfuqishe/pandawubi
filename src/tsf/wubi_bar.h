@@ -11,13 +11,14 @@ class StatusBar {
 public:
     // onClick: 0=中/英 1=简/繁 2=标点 3=设置
     using ClickFn = std::function<void(int)>;
+    using VoidFn  = std::function<void()>;
 
     StatusBar() = default;
     ~StatusBar() { Destroy(); }
     StatusBar(const StatusBar&) = delete;
     StatusBar& operator=(const StatusBar&) = delete;
 
-    void Create(HINSTANCE inst, const std::wstring& iniPath, ClickFn onClick);
+    void Create(HINSTANCE inst, const std::wstring& iniPath, ClickFn onClick, VoidFn onReload = nullptr);
     void Destroy();
 
     // Show(true/false) 设定“本会话是否要这条栏”，并立刻尝试同步一次可见性；
@@ -45,6 +46,7 @@ private:
     HINSTANCE   inst_ = nullptr;
     std::wstring iniPath_;
     ClickFn     onClick_;
+    VoidFn      onReload_;
 
     bool english_ = false;
     bool trad_    = false;

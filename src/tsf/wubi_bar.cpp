@@ -1,4 +1,5 @@
 #include "wubi_bar.h"
+#include "ipc.h"
 #include <windowsx.h>   // GET_X_LPARAM / GET_Y_LPARAM
 #include <cstdio>
 
@@ -41,13 +42,14 @@ static void CloseStrayBarsInProcess(HWND keep) {
     }
 }
 
-void StatusBar::Create(HINSTANCE inst, const std::wstring& iniPath, ClickFn onClick) {
+void StatusBar::Create(HINSTANCE inst, const std::wstring& iniPath, ClickFn onClick, VoidFn onReload) {
     inst_ = inst;
     if (hwnd_ && IsWindow(hwnd_)) return;   // 已创建：Activate 多次调用时不重复建窗
     hwnd_ = nullptr;                        // 句柄已失效（被外部关掉/窗口随线程销毁）
     CloseStrayBarsInProcess(nullptr);       // 先把同进程里的残留栏收干净
     iniPath_ = iniPath;
     onClick_ = std::move(onClick);
+    if (onReload) onReload_ = std::move(onReload);
 
     WNDCLASSEXW wc = { sizeof(wc) };
     wc.style = CS_HREDRAW | CS_VREDRAW;
@@ -239,6 +241,12 @@ void StatusBar::Paint(HDC dc) {
 
 LRESULT CALLBACK StatusBar::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     StatusBar* self = (StatusBar*)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
+
+    // 设置窗口保存配置后广播的"重新加载设置"消息（RegisterWindowMessage，跨进程可用）
+    if (msg == PandaReloadMessage()) {
+        if (self && self->onReload_) self->onReload_();
+        return 0;
+    }
 
     switch (msg) {
     case WM_CREATE: {
