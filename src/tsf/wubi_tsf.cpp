@@ -3190,7 +3190,10 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
         };
         // —— 空码（一个候选都没有）不要卡住 ——
         // 回车/空格：把空码直接清掉（什么都不上屏）；继续打字母：丢掉空码、从这一键重新开始。
-        const bool deadCode = m_composer.Candidates().empty();
+        // 空码判定要看"这个码在词库里是否存在"，而不是"当前有没有可显示的候选"：
+        // 不足四码时词会被过滤掉，xky 这种只有词的码会一个候选都不剩，但它并不是空码。
+        const bool deadCode = m_composer.Candidates().empty()
+                              && !g_dict.Get().HasPrefix(m_composer.Code());
         if (deadCode && (vk == VK_RETURN || vk == VK_SPACE)) {
             LogLine(L"dead code cleared by Enter/Space (code=%hs)", m_composer.Code().c_str());
             CancelComposition(pic);

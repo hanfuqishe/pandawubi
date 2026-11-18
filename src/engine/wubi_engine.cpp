@@ -192,8 +192,27 @@ bool Dictionary::HasExact(std::string_view code) const {
 }
 
 bool Dictionary::HasPrefix(std::string_view prefix) const {
-    // 每次按键都会先做一次 Lookup，这里直接复用其结果判定即可
-    return !Lookup(prefix, 1).empty();
+    // 注意：不能用 Lookup() 来判定 —— 它会按"四码才出词"过滤掉词，
+    // 于是像 xky（只有 强度 这类词）会误判成"这个码不存在"，
+    // 打第 4 码时输入法会把它当空码丢掉重开（用户报告：前 3 码被清空）。
+    if (prefix.empty()) return false;
+    if (bin_) {
+        size_t lo = 0, hi = 0;
+        if (!BinRange(prefix, lo, hi)) return false;
+        for (size_t i = lo; i < hi; ++i) {
+            const BinaryRec& r = bin_[i];
+            if (r.codeLen < prefix.size()) continue;
+            if (std::string_view(r.code, prefix.size()) == prefix) return true;
+        }
+        return false;
+    }
+    if (sortedDirty_) BuildSortedIndex();
+    const std::string pfx(prefix);
+    auto lower = std::lower_bound(sorted_.begin(), sorted_.end(), pfx,
+        [this](uint32_t idx, const std::string& p) { return entries_[idx].code < p; });
+    if (lower == sorted_.end()) return false;
+    const std::string& code = entries_[*lower].code;
+    return code.size() >= pfx.size() && code.compare(0, pfx.size(), pfx) == 0;
 }
 std::vector<Candidate> Dictionary::LookupExact(std::string_view code) const {
     std::vector<Candidate> hits;
