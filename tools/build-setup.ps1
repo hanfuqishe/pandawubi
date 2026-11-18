@@ -129,23 +129,19 @@ Set-Content -Path (Join-Path $stage 'setup.manifest') -Value $manifest -Encoding
 $vs = 'C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat'
 if (-not (Test-Path $vs)) { throw "找不到 vcvars64.bat：$vs" }
 $out = Join-Path $root "dist\PandaWubi-Setup-$version.exe"
-$log = "$env:TEMP\panda-setup-cl.log"
-# 写成 .bat 再执行：多行命令直接喂给 cmd /c 时续行符容易被吞掉
-$bat = Join-Path $env:TEMP 'panda-setup-build.bat'
-$lines = @(
-    '@echo off',
-    "call `"$vs`" >nul",
-    "cd /d `"$stage`"",
-    'rc /nologo /fo setup.res setup.rc',
-    'if errorlevel 1 exit /b 1',
-    "cl /nologo /std:c++20 /EHsc /O2 /utf-8 /W3 /DUNICODE /D_UNICODE /I `"$root\src\tsf`" /Fe:`"$out`" `"$root\src\ui\panda-setup.cpp`" setup.res /link /SUBSYSTEM:WINDOWS user32.lib gdi32.lib comctl32.lib advapi32.lib shell32.lib ole32.lib"
-)
-Set-Content -Path $bat -Value $lines -Encoding ASCII
-& cmd /c "`"$bat`"" *> $log
-if ($LASTEXITCODE -ne 0) { Get-Content $log -Tail 25; throw '编译安装程序失败' }
-$warn = Select-String -Path $log -Pattern 'warning C|error C|error LNK' -ErrorAction SilentlyContinue
-if ($warn) { $warn | ForEach-Object { "  " + $_.Line.Trim() } | Select-Object -First 6 }
+# 用 Inno Setup 编译（机器上已装 Inno Setup 6；ISCC 不在 PATH 里，直接按默认安装位置找）
+$iscc = 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
+if (-not (Test-Path $iscc)) {
+    $iscc = (Get-ChildItem 'C:\Program Files*\Inno Setup*\ISCC.exe' -ErrorAction SilentlyContinue |
+             Select-Object -First 1 -ExpandProperty FullName)
+}
+if (-not $iscc) { throw '找不到 ISCC.exe（Inno Setup 6 没装？）' }
 
+$log = "$env:TEMP\panda-iscc.log"
+& $iscc "/DMyVersion=$version" "/DMyRoot=$root" "/DOutDir=$root\dist" "$root\installer\panda.iss" *> $log
+if ($LASTEXITCODE -ne 0) { Get-Content $log -Tail 25; throw 'ISCC 编译失败' }
+$warn = Select-String -Path $log -Pattern 'Warning:|Error:' -ErrorAction SilentlyContinue
+if ($warn) { $warn | ForEach-Object { "  " + $_.Line.Trim() } }
 "[5/5] 完成"
 $fi = Get-Item $out
 "  输出: $out"

@@ -203,29 +203,27 @@ TSF 的输入法目录是机器级的：`ITfInputProcessorProfiles` 读写
   统一 微软雅黑 9pt，底部按钮右对齐，窗口居中后一次性显示（先建在屏幕外、摆好位置再 `ShowWindow`，避免闪一下空窗）。
 - 保存后弹提示：新设置对之后启动的程序生效。
 
-## 安装包（单文件 setup）
+## 安装包（Inno Setup）
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\tools\build-setup.ps1     # 先重新构建，再打包
-powershell -ExecutionPolicy Bypass -File .\tools\build-setup.ps1 -SkipBuild   # 直接打包现有 dist
+powershell -ExecutionPolicy Bypass -File .\tools\build-setup.ps1            # 重新构建 + 打包
+powershell -ExecutionPolicy Bypass -File .\tools\build-setup.ps1 -SkipBuild # 只打包现有 dist
 ```
 
-产物：`dist\PandaWubi-Setup-<版本>.exe`（约 14 MB，单文件）。
+产物：`dist\PandaWubi-Setup-<版本>.exe`（约 12 MB，LZMA2 压缩自 14 MB 载荷）。
 
-- 载荷（`src\ui\panda-setup.cpp` 里的 id 表，和 `tools\build-setup.ps1` 必须一致）：
-  `200` panda_tsf.dll、`201` panda_tsf32.dll、`202` panda-settings.exe、`203` panda-phrase.exe、
-  `204`–`207` 四个主题 ico、`208`–`211` data（词库/简繁/标点/英文词表）、`212` readme；
-- 安装：释放到 `%ProgramFiles%\PandaWubi`，调 64 位 DLL 的 `DllRegisterServer`，
-  用 `SysWOW64\regsvr32` 注册 32 位，补写 LanguageProfile（Description/IconFile/IconIndex/Enable），
-  在 `HKLM\...\Uninstall\PandaWubi` 写卸载项，并把安装器自己复制进去供卸载用；
-- 卸载：`panda-setup.exe /uninstall`（控制面板「应用」里也是这个命令）——反注册 + 删注册表 + 删文件，
-  **保留** `%APPDATA%\PandaWubi` 里的配置和用户词；
-- 自检：`panda-setup.exe /extract <目录>` 只释放文件、不碰注册表；
-  打包脚本编完后可以直接解析 exe 里的 RCDATA 和原文件比对哈希（见 tools\build-setup.ps1 的验证思路）。
+- 脚本：`installer\panda.iss`（由 `tools\build-setup.ps1` 调 `ISCC.exe` 编译，
+  ISCC 默认在 `C:\Program Files (x86)\Inno Setup 6\ISCC.exe`，不在 PATH 里）；
+- 装到 `{autopf}\PandaWubi`（要管理员），包含两个 DLL、设置/短语程序、四个主题图标、
+  `data\`（词库、简繁表、标点表、英文词表）；四个图标同时复制一份到 `{localappdata}\PandaWubi`（输入指示器只认那里）；
+- 装完自动：`regsvr32 panda_tsf.dll` + `SysWOW64\regsvr32 panda_tsf32.dll`，
+  补写 LanguageProfile（Description/IconFile/IconIndex/Enable），首次安装时生成默认 `config.ini`；
+- 开始菜单：`熊猫五笔 设置`、`卸载 熊猫五笔`；桌面快捷方式可选（默认不勾）；
+- 卸载：反注册两个 DLL + 删文件 + 删注册表，**保留** `%APPDATA%\PandaWubi` 里的配置与用户词；
+- 语言界面暂时是英文向导 + 中文文案（机器上没有官方的 ChineseSimplified.isl，也没网下载；
+  想要全中文界面就把 `ChineseSimplified.isl` 放到 `installer\` 并在 `[Languages]` 里加一行）。
 
-> manifest 里是 `requireAdministrator`：安装/卸载都会弹一次 UAC。本机没装 Inno/NSIS，
-> 所以用「资源内嵌 + 一个自己写的 setup.exe」实现，不依赖任何第三方打包工具。
-
+> 旧的单文件 `src\ui\panda-setup.cpp`（自己写的资源内嵌安装器）保留作后备，不再走构建脚本。
 ## 主题（熊猫 / 狸花猫）
 
 设置窗口「主题与外观」里的 **主题** 下拉：
