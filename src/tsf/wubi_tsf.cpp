@@ -1244,7 +1244,11 @@ void CTextService::OnBarClick(int idx) {
     switch (idx) {
     case 0: m_english = !m_english; SetInputModeCompartments(!m_english); break;   // 中/英
     case 1: m_tradEnabled = !m_tradEnabled; m_settings.TradChinese = m_tradEnabled ? 1 : 0;
-            wubi::SaveSettings(GetConfigPath(), m_settings); break;               // 简/繁
+            wubi::SaveSettings(GetConfigPath(), m_settings);
+            // 组字中/反查中从栏上切换简繁：候选框里的字也要立刻换（和 Ctrl+Shift+T 一致）
+            if (m_pyLookup) PyLookupRefresh(nullptr, false);
+            else if (!m_composer.Code().empty()) RefreshCandidates(nullptr);
+            break;                                                                // 简/繁
     case 2: LaunchSettingsWindow(nullptr); break;                                 // 设置
     case 3: {
         // 关于
@@ -2094,8 +2098,9 @@ void CTextService::PyLookupRefresh(ITfContext* pic, bool resetPage) {
                     if (py.size() <= m_pyTyped.size()) continue;
                     if (py.compare(0, m_pyTyped.size(), m_pyTyped) != 0) continue;
                 }
-                m_pyAll.push_back(tbl[i].ch);
-                m_pyAllCodes.push_back(tbl[i].code);
+                std::wstring ch = tbl[i].ch;
+                if (m_tradEnabled && m_trad.Loaded()) ch = m_trad.ToTraditional(ch);
+                m_pyAll.push_back(ch);
             }
         }
     }
@@ -2858,6 +2863,9 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
         LogLine(L"toggle %c -> trad=%d saved=%d",
                 (wchar_t)vk, (int)m_tradEnabled, (int)saved);
         BarSync();          // 快捷键切换后同步悬浮栏上的「简/繁」显示（以前只有鼠标点击才同步）
+        // 组字中/反查中切换简繁：候选框里的字要立刻跟着换，否则显示与上屏不一致
+        if (m_pyLookup) PyLookupRefresh(pic, false);
+        else if (!m_composer.Code().empty()) RefreshCandidates(pic);
         *pfEaten = TRUE;
         return S_OK;
     }
