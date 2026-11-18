@@ -53,6 +53,9 @@ $out = & $cli $dict phrasecode 2>&1 | Out-String
 Check '词组取码' ($out -match 'phrasecode: PASS') '你好=wqvb · 我们=trwu · 计算机=ytsm · 中华人民共和国=kwwl'
 $out = & $cli $dict trimtest 2>&1 | Out-String
 Check '退格删掉的字被剔除' ($out -match 'trimtest: PASS') '队尾/中段删除都能对上，完全对不上时由调用方放弃'
+"— 英文补全 —"
+$out = & $cli $dict engsuggest (Join-Path $ws 'dist\data\eng_words.txt') 2>&1 | Out-String
+Check '英文补全排序与速度' ($out -match 'engsuggest: PASS') '常用词/短词优先；单字母前缀 <1ms（曾经 440ms）'
 "— 候选框的人工锁定记号 —"
 $out = & $cli $dict pintest 2>&1 | Out-String
 Check '只有人工词才加记号' ($out -match 'pintest: PASS') '自造词/自定义短语=锁定；自学习与词典词不加记号'

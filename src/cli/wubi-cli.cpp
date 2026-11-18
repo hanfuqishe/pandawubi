@@ -331,6 +331,57 @@ int wmain(int argc, wchar_t** argv) {
         std::printf("\n");
         return outWords.empty() ? 1 : 0;
     }
+    if (cmd == "engsuggest") {
+        // 英文补全：常用词优先 + 短词优先，并且要够快（Shift+字母第一下曾经卡 440ms）
+        wubi::EnglishDict eng;
+        const std::wstring listPath = (argc > 3) ? std::wstring(argv[3]) : std::wstring(L"data\\eng_words.txt");
+        const long long loaded = eng.Load(listPath);
+        if (loaded <= 0) {
+            std::printf("engsuggest: FAIL (can't load %ls)\n", listPath.c_str());
+            return 1;
+        }
+        struct C { const char* prefix; const char* want; };
+        const C cases[] = {
+            { "hel",   "help"     },
+            { "compu", "computer" },
+            { "wor",   "word"     },
+            { "goo",   "good"     },
+        };
+        int bad = 0;
+        for (const auto& c : cases) {
+            const auto got = eng.Suggest(c.prefix, 9);
+            const std::string first = got.empty() ? std::string() : got[0];
+            const bool ok = (first == c.want);
+            std::printf("  %s %-6s -> %-10s want %s\n", ok ? "PASS" : "FAIL", c.prefix,
+                        first.c_str(), c.want);
+            if (!ok) ++bad;
+        }
+        // 去重：不同大小写写法的同一个词不能出现两次（Word/word）
+        {
+            bool dup = false;
+            std::unordered_set<std::string> seen;
+            for (const auto& w : eng.Suggest("a", 50)) {
+                std::string k;
+                for (char ch : w) k.push_back((char)std::tolower((unsigned char)ch));
+                if (!seen.insert(k).second) { dup = true; break; }
+            }
+            std::printf("  %s 同一前缀下没有大小写重复的候选\n", dup ? "FAIL" : "PASS");
+            if (dup) ++bad;
+        }
+        // 性能：连查 200 次单字母前缀（匹配最多的情形）
+        const auto t0 = std::chrono::high_resolution_clock::now();
+        size_t total = 0;
+        for (int i = 0; i < 200; ++i) total += eng.Suggest("a", 9).size();
+        const auto t1 = std::chrono::high_resolution_clock::now();
+        const double ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
+        const double per = ms / 200.0;
+        const bool fast = (per < 1.5);      // 单次应在 1ms 量级
+        std::printf("  %s 单字母前缀 %zu 候选/次，200 次共 %.1f ms（%.2f ms/次）\n",
+                    fast ? "PASS" : "FAIL", total / 200, ms, per);
+        if (!fast) ++bad;
+        std::printf("engsuggest: %s\n", bad == 0 ? "PASS" : "FAIL");
+        return bad == 0 ? 0 : 1;
+    }
     if (cmd == "pintest") {
         // 候选记号：只有"人工强制指定"（weight 达到 kPinnedWeight）才算锁定，
         // 词频自学习（普通权重）不加记号。

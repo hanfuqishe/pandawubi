@@ -397,6 +397,7 @@ void CCandidateWindow::Ensure() {
                                 DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
                                 CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, face_.c_str());
     }
+    LoadArtFromResource(3);   // 预热：PNG 解码 + GDI+ 初始化放到窗口创建时，不占第一次按键的时间
 }
 
 void CCandidateWindow::Destroy() {
@@ -1670,26 +1671,39 @@ std::string CTextService::EngPrefix() const {
     return s;
 }
 
+static double NowMs() {
+    static LARGE_INTEGER freq = { 0 };
+    if (freq.QuadPart == 0) QueryPerformanceFrequency(&freq);
+    LARGE_INTEGER c;
+    QueryPerformanceCounter(&c);
+    return freq.QuadPart ? (double)c.QuadPart * 1000.0 / (double)freq.QuadPart : 0.0;
+}
+
 void CTextService::EngUpdate(ITfContext* pic) {
     if (m_engTyped.empty()) { EngCancel(pic); return; }
+    const double t0 = NowMs();
     // 组码预览就显示用户实际打出来的大小写，不再一律小写
     if (m_comp) UpdateCompositionTextWith(pic, m_engTyped);
     else        StartComposition(pic, m_engTyped);
+    const double t1 = NowMs();
 
     const auto words = m_eng.Suggest(EngPrefix(), (size_t)m_candCount);
     std::vector<std::wstring> disp;
     disp.reserve(words.size());
     for (const auto& w : words) disp.push_back(wubi::ApplyCase(AsciiToWide(w), m_engTyped));
 
+    const double t2 = NowMs();
     m_candWnd.SetPlain(false);
     if (!disp.empty()) {
-    m_candWnd.SetItems(disp, m_settings.CandVertical != 0);   // 跟随"候选竖排"设置
+        m_candWnd.SetItems(disp, m_settings.CandVertical != 0);   // 跟随"候选竖排"设置
         if (QueryCaretRect(m_lastCaret)) m_hasCaret = true;   // 没记录时当场取，避免跑到屏幕左上角
         m_candWnd.ShowAt(m_lastCaret);
     } else {
         m_candWnd.Hide();
     }
-    LogLine(L"eng type %s -> %zu cands", m_engTyped.c_str(), disp.size());
+    const double t3 = NowMs();
+    LogLine(L"eng type %s -> %zu cands (comp=%.1fms suggest=%.1fms show=%.1fms)",
+            m_engTyped.c_str(), disp.size(), t1 - t0, t2 - t1, t3 - t2);
 }
 
 void CTextService::EngType(ITfContext* pic, wchar_t ch) {

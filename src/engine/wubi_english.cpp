@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <algorithm>
 #include <cctype>
+#include <unordered_set>
 
 namespace wubi {
 
@@ -65,11 +66,20 @@ static const char* kCommonWords[] = {
     "week","well","west","white","whole","woman","word","world","write","young","zero"
 };
 
-static bool IsCommon(const std::string& w) {
-    for (const char* c : kCommonWords) {
-        if (LowerAscii(w) == c) return true;
-    }
-    return false;
+// 常用词表一次性灌进哈希表：原来每次判定都要把 word 小写一遍再和 200 个词逐个比，
+// 排序比较器里一次就要做几百万次字符串分配（Shift+字母第一下要卡 400 多毫秒）。
+static const std::unordered_set<std::string>& CommonSet() {
+    static const std::unordered_set<std::string> s = [] {
+        std::unordered_set<std::string> t;
+        t.reserve(sizeof(kCommonWords) / sizeof(kCommonWords[0]) * 2);
+        for (const char* w : kCommonWords) t.insert(w);
+        return t;
+    }();
+    return s;
+}
+
+static bool IsCommon(const std::string& w) {   // 传入的必须是已小写的 key
+    return CommonSet().count(w) != 0;
 }
 long long EnglishDict::Load(const std::wstring& path) {
     words_.clear();
@@ -90,10 +100,26 @@ long long EnglishDict::Load(const std::wstring& path) {
     }
     fclose(fp);
 
-    std::sort(words_.begin(), words_.end(), [](const std::string& a, const std::string& b) {
-        return LowerAscii(a) < LowerAscii(b);
-    });
-    words_.erase(std::unique(words_.begin(), words_.end()), words_.end());
+    // 按小写 key 排序并去重：词表里同一个词常有 An/an、Word/word 两种写法，
+    // 补全时套上大小写后会变成两条一模一样的候选。同 key 保留全小写那条。
+    {
+        struct Row { std::string key, word; };
+        std::vector<Row> rows;
+        rows.reserve(words_.size());
+        for (auto& w : words_) rows.push_back({ LowerAscii(w), std::move(w) });
+        std::sort(rows.begin(), rows.end(), [](const Row& a, const Row& b) {
+            if (a.key != b.key) return a.key < b.key;
+            const bool la = (a.word == a.key), lb = (b.word == b.key);
+            if (la != lb) return la;          // 全小写优先
+            return a.word < b.word;
+        });
+        words_.clear();
+        words_.reserve(rows.size());
+        for (size_t i = 0; i < rows.size(); ++i) {
+            if (i > 0 && rows[i].key == rows[i - 1].key) continue;
+            words_.push_back(std::move(rows[i].word));
+        }
+    }
     return (long long)words_.size();
 }
 
@@ -109,19 +135,34 @@ std::vector<std::string> EnglishDict::Suggest(const std::string& prefix, size_t 
         if (LowerAscii(words_[mid]) < p) lo = mid + 1;
         else hi = mid;
     }
-    // 先收集全部匹配项，排序后再截断（否则"常用词优先"会因过早截断而失效）
-    for (size_t i = lo; i < words_.size() && out.size() < 4000; ++i) {
-        const std::string key = LowerAscii(words_[i]);
+    // 先收集匹配项（每个词的小写 key / 长度 / 是否常用词都只算一次），
+    // 排序后再截断，否则"常用词优先"会因为过早截断而失效。
+    struct Hit {
+        const std::string* word;
+        std::string key;      // 小写 key（同一前缀下比较用）
+        size_t len;
+        bool   common;
+        bool   allLower;      // 原词就是全小写（词表里既有 word 又有 Word 时优先小的）
+    };
+    std::vector<Hit> hits;
+    hits.reserve(256);
+    for (size_t i = lo; i < words_.size() && hits.size() < 4000; ++i) {
+        std::string key = LowerAscii(words_[i]);
         if (key.size() < p.size() || key.compare(0, p.size(), p) != 0) break;
-        out.push_back(words_[i]);
+        const bool lower = (key == words_[i]);
+        hits.push_back({ &words_[i], std::move(key), 0, false, lower });
+        hits.back().len    = hits.back().key.size();
+        hits.back().common = IsCommon(hits.back().key);   // key 已小写，直接查表
     }
-    std::stable_sort(out.begin(), out.end(), [](const std::string& a, const std::string& b) {
-        const bool ca = IsCommon(a), cb = IsCommon(b);
-        if (ca != cb) return ca;
-        if (a.size() != b.size()) return a.size() < b.size();
-        return LowerAscii(a) < LowerAscii(b);
+    std::stable_sort(hits.begin(), hits.end(), [](const Hit& a, const Hit& b) {
+        if (a.common != b.common) return a.common;
+        if (a.len != b.len)       return a.len < b.len;
+        const int c = a.key.compare(b.key);
+        if (c != 0) return c < 0;
+        return a.allLower && !b.allLower;
     });
-    if (out.size() > limit) out.resize(limit);
+    out.reserve(hits.size() < limit ? hits.size() : limit);
+    for (size_t i = 0; i < hits.size() && out.size() < limit; ++i) out.push_back(*hits[i].word);
     return out;
 }
 

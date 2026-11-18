@@ -1041,6 +1041,23 @@ RegisterCategory: keyboard=0x0 immersive=0x0 systray=0x0
 > 注意：必须**先收集全部匹配项再排序截断**——一开始在收集阶段就用 limit 截断，
 > 导致 hello 排在 9 名之外被丢掉。
 
+### 性能：Shift+字母第一下曾经卡 440ms
+
+用户反馈"按 Shift+字母要顿一会儿候选窗才出来"。打点测出耗时全在 `Suggest()`：第一次 439.9ms。
+
+原因：`IsCommon()` 每次都 `LowerAscii(word)` 再和 ~300 个常用词逐个比较，而它在排序比较器里
+被调用——单字母前缀能匹配到 4000 个词，排序约 4.8 万次比较，等于 **1900 万次字符串分配**。
+
+改法：
+
+1. 常用词表一次性灌进 `unordered_set`，判定变成一次哈希查找；
+2. 收集阶段就把每个词的**小写 key / 长度 / 是否常用**算好存进 `Hit`，比较器只看结构体字段；
+3. 顺带修掉的显示问题：词表里 `An/an`、`Word/word` 两种写法会让同一候选出现两次，
+   改成按小写 key 去重（同 key 保留全小写那条），比较器最后再用小写 key + 全小写优先做 tiebreak。
+
+结果：`suggest` 439.9ms → 0.4ms（后续 0.0ms），首键总延迟约 20ms（其余是 TSF 组词会话）。
+`panda-cli <dict> engsuggest <eng_words.txt>` 里有回归测试：排序用例 + 重复候选检查 + 200 次计时。
+
 ### TSF 接入
 
 - 启动时从 `<DLL目录>\data\eng_words.txt` 载入（`eng load: words=45535`）
