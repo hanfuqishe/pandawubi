@@ -2857,6 +2857,7 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
         const bool saved = wubi::SaveSettings(GetConfigPath(), m_settings);
         LogLine(L"toggle %c -> trad=%d punc=%d saved=%d",
                 (wchar_t)vk, (int)m_tradEnabled, (int)m_puncEnabled, (int)saved);
+        BarSync();          // 快捷键切换后同步悬浮栏上的「简/繁」显示（以前只有鼠标点击才同步）
         *pfEaten = TRUE;
         return S_OK;
     }

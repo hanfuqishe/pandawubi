@@ -144,6 +144,8 @@ static void ParseScript(const std::wstring& s) {
                 switch (s[i + 1]) {
                 case L'C': vk = VK_OEM_PLUS; ctrl = true; break;
                 case L'S': vk = VK_OEM_PLUS; ctrl = true; sh = true; break;
+            case L'T': vk = 'T'; ctrl = true; sh = true; break;   // Ctrl+Shift+T 切简繁
+            case L'P': vk = 'P'; ctrl = true; sh = true; break;   // Ctrl+Shift+P 切标点
                 case L'L': vk = VK_LEFT; break;
                 case L'R': vk = VK_RIGHT; break;
                 case L'D': vk = VK_DELETE; break;

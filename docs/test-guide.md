@@ -97,6 +97,14 @@ TSF 的输入法目录是机器级的：`ITfInputProcessorProfiles` 读写
 .\build\tsf-host.exe -send "dz "               # -> 窗口里填的那条短语
 ```
 
+## 快捷键切换后悬浮栏要同步
+
+`Ctrl+Shift+T`（简/繁）、`Ctrl+Shift+P`（标点）以前只改内部状态并落盘，**没有刷新悬浮栏**，
+所以栏上还是「简」而实际输出已经是繁体。现在这两条分支末尾都调 `BarSync()`，
+栏上的「简/繁」立刻跟着变（和鼠标点栏上的那一格走的是同一条同步逻辑）。
+
+测试宿主新增两个 token：`[T]` = Ctrl+Shift+T、`[P]` = Ctrl+Shift+P，可直接验证。
+
 ## 提示类候选框（自定义词组 / Z 重复 / 便捷输入）的显示
 
 这些"非组码提示"在组码之外显示，没有 `m_context`，所以编辑会话里取不到光标：
@@ -235,6 +243,14 @@ powershell -ExecutionPolicy Bypass -File .\tools\build-setup.ps1 -SkipBuild # �
   想要全中文界面就把 `ChineseSimplified.isl` 放到 `installer\` 并在 `[Languages]` 里加一行）。
 
 > 旧的单文件 `src\ui\panda-setup.cpp`（自己写的资源内嵌安装器）保留作后备，不再走构建脚本。
+## 快捷键切换后悬浮栏要同步
+
+`Ctrl+Shift+T`（简/繁）、`Ctrl+Shift+P`（标点）以前只改内部状态并落盘，**没有刷新悬浮栏**，
+所以栏上还是「简」而实际输出已经是繁体。现在这两条分支末尾都调 `BarSync()`，
+栏上的「简/繁」立刻跟着变（和鼠标点栏上的那一格走的是同一条同步逻辑）。
+
+测试宿主新增两个 token：`[T]` = Ctrl+Shift+T、`[P]` = Ctrl+Shift+P，可直接验证。
+
 ## 提示类候选框（自定义词组 / Z 重复 / 便捷输入）的显示
 
 这些"非组码提示"在组码之外显示，没有 `m_context`，所以编辑会话里取不到光标：
