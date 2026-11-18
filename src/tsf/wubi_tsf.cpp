@@ -3108,6 +3108,15 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
     if (!m_comp) m_gate.NoteKey(isDigitKey, isCommaKey || isPeriodKey);
 
     // 组码进行中：所有键交给状态机
+    // 顶字上屏之后：composer 里已经有新码，但组合串要等下一键才开。
+    // 这里补一手——凡是 composer 里有码却没有组合串，就先把它开起来，
+    // 否则空格/数字这些"选字键"会走非组码分支，看起来像"空格不上屏"。
+    if (!m_comp && !m_composer.Code().empty() && !m_customWordMode) {
+        if (SUCCEEDED(StartComposition(pic, std::wstring()))) {
+            LogLine(L"ensure composition for pending code=%hs", m_composer.Code().c_str());
+        }
+    }
+
     if (m_comp) {
         auto handle = [&](wubi::Composer::Outcome o) {
             switch (o.act) {

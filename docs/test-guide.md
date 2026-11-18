@@ -240,6 +240,11 @@ powershell -ExecutionPolicy Bypass -File .\tools\build-setup.ps1 -SkipBuild # �
 实测（tsf-host）：`wqvbw` → 上屏「你好」+ 候选窗显示 `w`；继续 `aq` → 编码 `wa`、`waq`，
 按键不再丢。
 
+还有一个连带问题要处理：上屏后 pending 的新码**没有组合串**（组合串等下一键才开），
+于是空格/数字这些"选字键"会走非组码分支而失效（表现为"空格不上屏"）。
+现在在按键处理前补一手：只要 `composer` 里有码却没有组合串，就先 `StartComposition`，
+选字键就能正常上屏。实测 `wqvbw` + 空格 → 「你好」+「人」；`wqvbw` + `1` 同样。
+
 ## Z 键：最近上屏 + 拼音反查编码
 
 按 `Z` 先弹出「最近上屏的 4 个词（倒序）+ 版本号」，按空格/回车/数字选；此时**继续打字母**就切换成
