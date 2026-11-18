@@ -37,29 +37,30 @@ public static class ThemeArt {
             Marshal.Copy(data.Scan0, bytes, 0, bytes.Length);
 
             Func<int,int,int> idx = (x, y) => y * stride + x * 4;
-            Func<int,int,bool> bgLike = (x, y) => {
-                int i = idx(x, y);
-                int b = bytes[i], gg = bytes[i + 1], r = bytes[i + 2];
-                return r >= 235 - tol && gg >= 235 - tol && b >= 215 - tol;
-            };
 
-            // 1) 从四边洪水填充
+            // 1) 从四边做"区域生长"式洪水填充：相邻像素颜色差都在局部容差内才继续，
+            //    这样天空/水面的渐变也能一路吃掉，而主体（有深色轮廓）挡得住。
             var isBg = new bool[W * W];
-            var seen = new bool[W * W];
             var stack = new Stack<int>();
             for (int x = 0; x < W; x++) { stack.Push(x); stack.Push((W - 1) * W + x); }
             for (int y = 0; y < W; y++) { stack.Push(y * W); stack.Push(y * W + W - 1); }
             while (stack.Count > 0) {
                 int p = stack.Pop();
-                if (seen[p]) continue;
-                seen[p] = true;
-                int py = p / W, px = p - py * W;
-                if (!bgLike(px, py)) continue;
+                if (isBg[p]) continue;
                 isBg[p] = true;
-                if (px > 0)     stack.Push(p - 1);
-                if (px < W - 1) stack.Push(p + 1);
-                if (py > 0)     stack.Push(p - W);
-                if (py < W - 1) stack.Push(p + W);
+                int py = p / W, px = p - py * W;
+                int i0 = idx(px, py);
+                int b0 = bytes[i0], g0 = bytes[i0 + 1], r0 = bytes[i0 + 2];
+                for (int k = 0; k < 4; k++) {
+                    int nx = px + (k == 0 ? -1 : k == 1 ? 1 : 0);
+                    int ny = py + (k == 2 ? -1 : k == 3 ? 1 : 0);
+                    if (nx < 0 || nx >= W || ny < 0 || ny >= W) continue;
+                    int q = ny * W + nx;
+                    if (isBg[q]) continue;
+                    int iq = idx(nx, ny);
+                    int db = Math.Abs(bytes[iq] - b0), dg = Math.Abs(bytes[iq + 1] - g0), dr = Math.Abs(bytes[iq + 2] - r0);
+                    if (db <= tol && dg <= tol && dr <= tol) stack.Push(q);
+                }
             }
 
             // 2) 连通块：只保留够大的（主体/蝴蝶），丢小碎片

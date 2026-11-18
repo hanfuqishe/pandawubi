@@ -210,9 +210,9 @@ TSF 的输入法目录是机器级的：`ITfInputProcessorProfiles` 读写
 | 主题 | 悬浮栏 Logo | 候选窗右下角装饰 | 输入指示器图标 |
 |---|---|---|---|
 | `熊猫（默认）` | panda.ico | 熊猫吃竹子 | panda.ico |
-| `狸花猫` | cat.ico | **整幅「狸花猫扑蝴蝶」抠图**（去背景、192×192，和熊猫竹子图同一尺寸/占比） | cat.ico |
-| `中华田园犬` | dog.ico | 田园犬头像（原图左右镜像，改为向左奔跑） | dog.ico |
-| `丹顶鹤` | crane.ico | 丹顶鹤头像（原图左右镜像） | crane.ico |
+| `狸花猫` | cat.ico | **整幅「狸花猫扑蝴蝶」抠图**（192²，和熊猫竹子图同一尺寸/占比） | cat.ico |
+| `中华田园犬` | dog.ico | **整幅「奔跑的狗」抠图**（镜像后向左跑，192²） | dog.ico |
+| `丹顶鹤` | crane.ico | **整幅「鹤立荷塘」抠图**（镜像后朝左，192²） | crane.ico |
 
 - 对应 ini：`Theme=panda` / `Theme=cat` / `Theme=dog` / `Theme=crane`（未知值一律回默认熊猫）；
 - 只影响外观：悬浮栏 Logo、候选窗装饰图，以及写进注册表的输入指示器 `IconFile`；
