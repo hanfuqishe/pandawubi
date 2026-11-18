@@ -1712,12 +1712,18 @@ void CTextService::ApplySettings() {
 
     // 丹顶鹤主题：窗口色调跟着那张风景图走（淡薄荷天 + 墨绿字 + 青灰边）。
     // 只有在用户没改过颜色（还是出厂默认）时才接管，改过就完全尊重用户设置。
+    const bool themeCat = (m_settings.Theme == L"cat");
     const bool colorsAreDefault = (m_settings.CandBgColor == 0xF7F9FC &&
                                    m_settings.CandTextColor == 0x202028 &&
                                    m_settings.CandBorderColor == 0xA8CDA8);
-    const COLORREF bgRef = (themeCrane && colorsAreDefault) ? RGB(0xD3, 0xE9, 0xE6) : toRef(m_settings.CandBgColor);
-    const COLORREF txRef = (themeCrane && colorsAreDefault) ? RGB(0x24, 0x36, 0x32) : toRef(m_settings.CandTextColor);
-    const COLORREF bdRef = (themeCrane && colorsAreDefault) ? RGB(0x8F, 0xB8, 0xB0) : toRef(m_settings.CandBorderColor);
+    const bool useThemeColors = colorsAreDefault && (themeCrane || themeCat);
+    COLORREF bgRef = toRef(m_settings.CandBgColor);
+    COLORREF txRef = toRef(m_settings.CandTextColor);
+    COLORREF bdRef = toRef(m_settings.CandBorderColor);
+    if (useThemeColors) {
+        if (themeCrane) { bgRef = RGB(0xD3, 0xE9, 0xE6); txRef = RGB(0x24, 0x36, 0x32); bdRef = RGB(0x8F, 0xB8, 0xB0); }
+        else            { bgRef = RGB(0xE8, 0xF3, 0xFC); txRef = RGB(0x25, 0x30, 0x29); bdRef = RGB(0xA5, 0xC3, 0x9E); }
+    }
     m_candWnd.SetStyle(m_settings.CandFontPt, bgRef,
                        m_settings.CandInset != 0,
                        m_settings.CandFontFace, txRef, bdRef);
@@ -1733,9 +1739,11 @@ void CTextService::ApplySettings() {
     const wchar_t* themeIcon = crane ? L"crane.ico"
                              : dog   ? L"dog.ico"
                              : cat   ? L"cat.ico" : L"panda.ico";
-    // 丹顶鹤不用角落小图，改成候选窗最下方一条整幅风景（不抠图）
-    const int themeArtId = crane ? 0 : (dog ? 6 : (cat ? 4 : 3));   // 3=熊猫 4=狸花猫 6=田园犬
-    m_candWnd.SetBottomBand(crane ? 10 : 0, 130);                   // 10 = RCDATA crane_band.png
+    // 丹顶鹤 / 狸花猫：整幅图当窗口背景（不抠图），关掉角落小图；
+    //   RCDATA 10 = crane_band.png（鹤）、11 = cat_band.png（猫扑蝴蝶）
+    const int themeBandId = crane ? 10 : (cat ? 11 : 0);
+    const int themeArtId = (themeBandId != 0) ? 0 : (dog ? 6 : 3);   // 3=熊猫 6=田园犬
+    m_candWnd.SetBottomBand(themeBandId, 130);
     m_candWnd.SetArtId(themeArtId);                             // 候选窗右下角装饰图
     SharedBar().SetIconFile(themeIcon);                         // 悬浮栏最左边的 Logo
     SharedBar().SetThemeIndex(crane ? 3 : (dog ? 2 : (cat ? 1 : 0)));   // 右键菜单里打勾
