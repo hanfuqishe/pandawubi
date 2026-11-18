@@ -1,4 +1,4 @@
-﻿// wubi_config.h —— 配置读写，键名与 QQ五笔 Config.ini 保持一致，便于直接迁移
+// wubi_config.h —— 配置读写，键名与 QQ五笔 Config.ini 保持一致，便于直接迁移
 #pragma once
 
 #include <string>
@@ -27,5 +27,21 @@ Settings LoadSettings(const std::wstring& iniPath, const std::wstring& appExe = 
 bool SaveSettings(const std::wstring& iniPath, const Settings& s);
 // 从 QQ五笔 的 Config.ini 迁移（键名相同，容忍缺失）
 Settings MigrateFromQQ(const std::wstring& qqIniPath, bool* found);
+
+// ---------------------------------------------------------------- 数据目录
+// 设置（config.ini）和自定义词/短语（user.tsv）都放在同一个数据目录里，
+// 用户可以把目录指到网盘同步夹，换机器后指回来就能恢复，不需要自己的服务器。
+// 查找优先级：环境变量 WUBI_DATA_DIR > HKCU\Software\PandaWubi\DataDir > %APPDATA%\PandaWubi
+// 返回的目录一定已经创建好（失败则退回默认目录）。
+std::wstring GetDataDir();
+// 指定数据目录（空串 = 恢复默认）。只写注册表，不动文件。
+bool         SetDataDir(const std::wstring& dir);
+// 默认数据目录（%APPDATA%\PandaWubi）
+std::wstring DefaultDataDir();
+// config.ini / user.tsv 的完整路径（config.ini 允许用 WUBI_INI 直接覆盖，供测试与便携使用）
+std::wstring GetConfigPath();
+std::wstring GetUserWordsPath();
+// 把 fromDir 里缺失的文件（config.ini、user.tsv）复制到 toDir，返回复制成功的个数
+int          MigrateDataFiles(const std::wstring& fromDir, const std::wstring& toDir);
 
 } // namespace wubi

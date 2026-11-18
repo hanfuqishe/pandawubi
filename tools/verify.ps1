@@ -167,6 +167,21 @@ Check '设置落盘' ($fileText -match 'Level1Mode=1' -and $fileText -match 'Sor
 $out = & $setExe /set NoSuchKey=1 2>&1 | Out-String
 Check '设置拒绝未知键' ($out -match 'no known key') '未知键不静默通过'
 Remove-Item Env:\WUBI_INI
+"— 数据目录（配置与自定义词可放网盘同步夹）—"
+$regRoot = 'HKCU:\Software\PandaWubi'
+$oldDataDir = (Get-ItemProperty -Path $regRoot -Name DataDir -ErrorAction SilentlyContinue).DataDir
+$dd = Join-Path $ws 'build\datadir-test'
+Remove-Item $dd -Recurse -Force -ErrorAction SilentlyContinue
+New-Item -ItemType Directory -Path $dd | Out-Null
+$out = & $setExe /datadir $dd 2>&1 | Out-String
+$ddIni = Join-Path $dd 'config.ini'
+Check '数据目录可指定' (($out -match 'datadir ->') -and (Test-Path $ddIni)) '切换时把 config.ini / user.tsv 复制过去'
+$out = & $setExe /dump 2>&1 | Out-String
+Check '数据目录生效' ($out -match [regex]::Escape($dd)) 'ini/datadir/userdict 都指向新目录'
+# 还原用户原来的数据目录设置（不动用户数据）
+if ($oldDataDir) { Set-ItemProperty -Path $regRoot -Name DataDir -Value $oldDataDir }
+else { Remove-ItemProperty -Path $regRoot -Name DataDir -ErrorAction SilentlyContinue }
+Remove-Item $dd -Recurse -Force -ErrorAction SilentlyContinue
 "— 数字后的半角逗号/句号 —"
 $out = & $cli $dict gatesim '3,' 2>&1 | Out-String
 Check '数字后半角逗号' ($out -match "半角 ','") '3 之后按逗号输出半角'

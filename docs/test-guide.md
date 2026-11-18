@@ -97,6 +97,33 @@ TSF 的输入法目录是机器级的：`ITfInputProcessorProfiles` 读写
 .\build\tsf-host.exe -send "dz "               # -> 窗口里填的那条短语
 ```
 
+## 数据目录（换机/备份）
+
+输入法不自建云端，改为**让用户指定一个目录**，所有"个人数据"都在里面：
+
+| 文件 | 内容 |
+|---|---|
+| `config.ini` | 全部设置（候选个数/字号/排序/简繁/标点/数据目录指针之外的项……） |
+| `user.tsv` | 自定义词组、自定义短语、词频自学习结果 |
+
+- 默认 `%APPDATA%\PandaWubi`；在设置窗口最下面的「数据目录」里**浏览…**选一个目录即可
+  （选 OneDrive / 坚果云 / 百度网盘的同步夹最省事，不用自己架服务器）。
+- 切换时会**先把旧目录里缺的 `config.ini`、`user.tsv` 复制到新目录**，不会丢东西；
+  之后所有读写都走新目录（输入法侧热加载 user.tsv，配置重启后生效）。
+- 「打开」直接打开该目录；「默认」一键指回 `%APPDATA%\PandaWubi`。
+- 指针本身存在 `HKCU\Software\PandaWubi\DataDir`（机器级，不进同步目录），
+  所以换机器后只要在这个窗口里把目录指回云盘那份，设置和自定义词立刻回来。
+- 命令行（脚本/免界面）：
+  ```powershell
+  .\dist\panda-settings.exe /dump                      # 会打印 datadir / userdict
+  .\dist\panda-settings.exe /datadir "D:\OneDrive\PandaWubi"
+  .\dist\panda-settings.exe /datadir default            # 指回默认
+  ```
+- 测试/便携：`WUBI_DATA_DIR` 环境变量优先级最高（verify.ps1 用它验证目录切换）。
+
+> 词库本体（`qqwubi86.bin` 等）是**程序数据**，放在 `dist\data`，不进数据目录——
+> 换机时拷贝 `dist` 整个目录 + 指回数据目录，就是完整恢复。
+
 ## 设置界面（panda-settings.exe）
 
 `dist\panda-settings.exe`（或设置窗口里的「设置」）打开：

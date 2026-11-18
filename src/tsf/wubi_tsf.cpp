@@ -162,14 +162,10 @@ static void LogLine(const wchar_t* fmt, ...) {
     CloseHandle(h);
 }
 
-// 用户词文件：%APPDATA%\PandaWubi\user.tsv（自造词 + 词频自学习结果）
+// 用户词文件：<数据目录>\user.tsv（自造词 + 词频自学习结果）
+// 数据目录可由用户在设置里指定（可指向网盘同步夹），见 wubi::GetDataDir()
 static std::wstring GetUserWordsPath() {
-    wchar_t base[MAX_PATH];
-    DWORD n = GetEnvironmentVariableW(L"APPDATA", base, ARRAYSIZE(base));
-    std::wstring dir = (n > 0 && n < ARRAYSIZE(base)) ? std::wstring(base) : std::wstring(L".");
-    dir += L"\\PandaWubi";
-    CreateDirectoryW(dir.c_str(), nullptr);
-    return dir + L"\\user.tsv";
+    return wubi::GetUserWordsPath();
 }
 
 // ---------------------------------------------------------------- 词库单例
@@ -221,30 +217,9 @@ static std::wstring GetDictPath() {
 }
 
 static std::wstring GetConfigPath() {
-    wchar_t buf[MAX_PATH];
-    DWORD n = GetEnvironmentVariableW(L"APPDATA", buf, ARRAYSIZE(buf));
-    std::wstring base = (n > 0 && n < ARRAYSIZE(buf)) ? std::wstring(buf) : std::wstring(L".");
-    const std::wstring dir  = base + L"\\PandaWubi";
-    const std::wstring path = dir + L"\\config.ini";
-
-    // 一次性迁移：老版本用的是 %APPDATA%\\WubiTsf
-    if (GetFileAttributesW(path.c_str()) == INVALID_FILE_ATTRIBUTES) {
-        const std::wstring oldDir = base + L"\\WubiTsf";
-        const std::wstring oldIni = oldDir + L"\\config.ini";
-        if (GetFileAttributesW(oldIni.c_str()) != INVALID_FILE_ATTRIBUTES) {
-            CreateDirectoryW(dir.c_str(), nullptr);
-            CopyFileW(oldIni.c_str(), path.c_str(), FALSE);
-            const std::wstring oldUser = oldDir + L"\\user.tsv";
-            const std::wstring newUser = dir + L"\\user.tsv";
-            if (GetFileAttributesW(oldUser.c_str()) != INVALID_FILE_ATTRIBUTES &&
-                GetFileAttributesW(newUser.c_str()) == INVALID_FILE_ATTRIBUTES) {
-                CopyFileW(oldUser.c_str(), newUser.c_str(), FALSE);
-            }
-        }
-    }
-    return path;
-}
-void DictHolder::Load() {
+    // 数据目录可由用户指定（设置里可选网盘同步夹）；WUBI_INI 可整体覆盖 ini 路径
+    return wubi::GetConfigPath();
+}void DictHolder::Load() {
     // 优先共享只读映射的二进制（多进程共享物理页，载入仅毫秒级）；
     // 缺失时回退 TSV（约 100ms，且每进程各占一份内存）。
     std::wstring p = GetDictPath();
@@ -265,15 +240,16 @@ void DictHolder::Load() {
     if (n > 0) {
         loaded_ = true;
         const long long u = dict_.LoadUserWords(GetUserWordsPath());
-        LogLine(L"dict load(bin): path=%s entries=%lld ok=1 userWords=%lld", binPath.c_str(), n, u);
+        LogLine(L"dict load(bin): path=%s entries=%lld ok=1 userWords=%lld userPath=%s",
+                binPath.c_str(), n, u, GetUserWordsPath().c_str());
         return;
     }
     n = dict_.Load(p);
     loaded_ = (n > 0);
     // 用户词（自造词 + 词频自学习结果）
     const long long u = dict_.LoadUserWords(GetUserWordsPath());
-    LogLine(L"dict load(tsv): path=%s entries=%lld codes=%zu ok=%d userWords=%lld",
-            p.c_str(), n, dict_.CodeCount(), (int)loaded_, u);
+    LogLine(L"dict load(tsv): path=%s entries=%lld codes=%zu ok=%d userWords=%lld userPath=%s",
+            p.c_str(), n, dict_.CodeCount(), (int)loaded_, u, GetUserWordsPath().c_str());
 }
 
 // ---------------------------------------------------------------- 候选窗

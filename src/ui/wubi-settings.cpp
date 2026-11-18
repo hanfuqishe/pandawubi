@@ -14,11 +14,14 @@
 #include <windows.h>
 #include <commctrl.h>
 #include <shellapi.h>
+#include <shlobj.h>
 #include "../engine/wubi_config.h"
 #include <cstdio>
 #include <string>
 
 #pragma comment(lib, "comctl32.lib")
+#pragma comment(lib, "shell32.lib")
+#pragma comment(lib, "ole32.lib")
 
 static const wchar_t* kTitle = L"Panda五笔 — 设置";
 static wubi::Settings g_s;
@@ -32,25 +35,16 @@ static HBRUSH g_bg = nullptr;
 static int S(int v) { return MulDiv(v, g_dpi, 96); }
 
 static std::wstring ConfigPath() {
-    // 允许用环境变量覆盖（自检/便携部署用）
-    wchar_t override_[MAX_PATH];
-    DWORD on = GetEnvironmentVariableW(L"WUBI_INI", override_, ARRAYSIZE(override_));
-    if (on > 0 && on < ARRAYSIZE(override_)) return std::wstring(override_);
-
-    wchar_t buf[MAX_PATH];
-    DWORD n = GetEnvironmentVariableW(L"APPDATA", buf, ARRAYSIZE(buf));
-    std::wstring dir = (n > 0 && n < ARRAYSIZE(buf)) ? std::wstring(buf) : std::wstring(L".");
-    dir += L"\\PandaWubi";
-    CreateDirectoryW(dir.c_str(), nullptr);
-    return dir + L"\\config.ini";
+    // 数据目录（用户可指向网盘同步夹）；WUBI_INI 可整体覆盖，供测试/便携使用
+    return wubi::GetConfigPath();
 }
-
 enum {
     ID_L1_0 = 100, ID_L1_1, ID_L1_2,
     ID_SM_0 = 110, ID_SM_1,
     ID_PUNC = 120, ID_TRAD = 121,
     ID_CAND = 130, ID_FONT = 131, ID_BG = 132, ID_INSET = 133, ID_DICT = 134,
     ID_VERT = 135,
+    ID_DATA_DIR = 140, ID_DATA_BROWSE = 141, ID_DATA_DEFAULT = 142, ID_DATA_OPEN = 143,
     ID_SAVE = 200, ID_CANCEL = 201
 };
 
@@ -154,63 +148,59 @@ static void BuildChildren(HWND hwnd) {
     int y = 12;
 
     // 一级简码
-    MakeGroup(hwnd, L" 一级简码（输入多个键时如何处理）", padX, y, groupW, 108);
-    MakeRadio(hwnd, L"不处理：长码候选里照常出现",              inX, y + 26, 360, ID_L1_0, g_s.Level1Mode == 0, true);
-    MakeRadio(hwnd, L"隐藏：彻底不出现在候选里",                inX, y + 50, 360, ID_L1_1, g_s.Level1Mode == 1);
-    MakeRadio(hwnd, L"沉底：放到最后，仍可选中（默认）",        inX, y + 74, 360, ID_L1_2, g_s.Level1Mode == 2);
-    y += 108 + 10;
+    MakeGroup(hwnd, L" 一级简码（输入多个键时如何处理）", padX, y, groupW, 96);
+    MakeRadio(hwnd, L"不处理：长码候选里照常出现",              inX, y + 24, 360, ID_L1_0, g_s.Level1Mode == 0, true);
+    MakeRadio(hwnd, L"隐藏：彻底不出现在候选里",                inX, y + 46, 360, ID_L1_1, g_s.Level1Mode == 1);
+    MakeRadio(hwnd, L"沉底：放到最后，仍可选中（默认）",        inX, y + 68, 360, ID_L1_2, g_s.Level1Mode == 2);
+    y += 96 + 8;
 
-    // 候选排序
-    MakeGroup(hwnd, L" 候选排序", padX, y, groupW, 82);
-    MakeRadio(hwnd, L"码短优先（默认，与 QQ五笔 接近）",        inX, y + 26, 360, ID_SM_0, g_s.SortMode == 0, true);
-    MakeRadio(hwnd, L"纯词频优先",                              inX, y + 50, 360, ID_SM_1, g_s.SortMode == 1);
-    y += 82 + 10;
-
-    // 输入选项
-    MakeGroup(hwnd, L" 输入选项", padX, y, groupW, 82);
-    MakeCheck(hwnd, L"中文标点（Ctrl+Shift+P 可临时切换）",     inX, y + 24, 360, ID_PUNC, g_s.EnablePunction != 0, true);
-    MakeCheck(hwnd, L"输出繁体（Ctrl+Shift+T 可临时切换）",     inX, y + 50, 360, ID_TRAD, g_s.TradChinese != 0);
-    y += 82 + 10;
+    // 排序与输入（合成一组，省高度；175% DPI 下窗口才放得下）
+    MakeGroup(hwnd, L" 排序与输入", padX, y, groupW, 124);
+    MakeRadio(hwnd, L"候选排序：码短优先（默认，与 QQ五笔 接近）", inX, y + 24, 380, ID_SM_0, g_s.SortMode == 0, true);
+    MakeRadio(hwnd, L"候选排序：纯词频优先",                        inX, y + 46, 380, ID_SM_1, g_s.SortMode == 1);
+    MakeCheck(hwnd, L"中文标点（Ctrl+Shift+P 可临时切换）",         inX, y + 72, 380, ID_PUNC, g_s.EnablePunction != 0, true);
+    MakeCheck(hwnd, L"输出繁体（Ctrl+Shift+T 可临时切换）",         inX, y + 94, 380, ID_TRAD, g_s.TradChinese != 0);
+    y += 124 + 8;
 
     // 候选窗外观
-    MakeGroup(hwnd, L" 候选窗外观", padX, y, groupW, 148);
-    MakeStatic(hwnd, L"候选个数", inX, y + 28, 90, 20);
+    MakeGroup(hwnd, L" 候选窗外观", padX, y, groupW, 140);
+    MakeStatic(hwnd, L"候选个数", inX, y + 24, 90, 20);
     {
         wchar_t nb[8];
         wsprintfW(nb, L"%d", g_s.CandCount);
-        MakeEdit(hwnd, inX + 96, y + 24, 52, ID_CAND, nb, 1);
+        MakeEdit(hwnd, inX + 96, y + 20, 52, ID_CAND, nb, 1);
     }
-    MakeStatic(hwnd, L"1 – 9 个", inX + 156, y + 28, 120, 20);
+    MakeStatic(hwnd, L"1 – 9 个", inX + 156, y + 24, 120, 20);
 
-    MakeStatic(hwnd, L"字号", inX, y + 58, 90, 20);
+    MakeStatic(hwnd, L"字号", inX, y + 54, 90, 20);
     {
         wchar_t fb[8];
         wsprintfW(fb, L"%d", g_s.CandFontPt);
-        MakeEdit(hwnd, inX + 96, y + 54, 52, ID_FONT, fb, 2);
+        MakeEdit(hwnd, inX + 96, y + 50, 52, ID_FONT, fb, 2);
     }
-    MakeStatic(hwnd, L"8 – 24 pt", inX + 156, y + 58, 120, 20);
+    MakeStatic(hwnd, L"8 – 24 pt", inX + 156, y + 54, 120, 20);
 
-    MakeStatic(hwnd, L"背景色", inX, y + 88, 90, 20);
+    MakeStatic(hwnd, L"背景色", inX, y + 84, 90, 20);
     {
         wchar_t cb[16];
         swprintf_s(cb, L"#%06X", (unsigned)(g_s.CandBgColor & 0xFFFFFF));
         HWND be = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", cb,
                                   WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL,
-                                  S(inX + 96), S(y + 84), S(90), S(24), hwnd,
+                                  S(inX + 96), S(y + 80), S(90), S(24), hwnd,
                                   (HMENU)(INT_PTR)ID_BG, nullptr, nullptr);
         SendMessageW(be, WM_SETFONT, (WPARAM)g_font, TRUE);
         SendMessageW(be, EM_SETLIMITTEXT, (WPARAM)7, 0);
     }
-    MakeCheck(hwnd, L"内框凹陷",                                inX, y + 114, 200, ID_INSET, g_s.CandInset != 0, true);
-    MakeCheck(hwnd, L"候选竖排",                                inX + 130, y + 114, 200, ID_VERT, g_s.CandVertical != 0);
-    y += 148 + 10;
+    MakeCheck(hwnd, L"内框凹陷", inX, y + 112, 160, ID_INSET, g_s.CandInset != 0, true);
+    MakeCheck(hwnd, L"候选竖排", inX + 170, y + 112, 160, ID_VERT, g_s.CandVertical != 0);
+    y += 140 + 8;
 
     // 词库
-    MakeGroup(hwnd, L" 词库（data 目录）", padX, y, groupW, 62);
+    MakeGroup(hwnd, L" 词库（data 目录）", padX, y, groupW, 58);
     {
         HWND cb = CreateWindowExW(WS_EX_CLIENTEDGE, L"COMBOBOX", L"",
                                   WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWNLIST,
-                                  S(inX), S(y + 26), S(300), S(220), hwnd, (HMENU)(INT_PTR)ID_DICT, nullptr, nullptr);
+                                  S(inX), S(y + 24), S(300), S(220), hwnd, (HMENU)(INT_PTR)ID_DICT, nullptr, nullptr);
         SendMessageW(cb, WM_SETFONT, (WPARAM)g_font, TRUE);
         // 枚举 exe 同目录 data\*.tsv / *.bin
         wchar_t self[MAX_PATH] = { 0 };
@@ -242,8 +232,23 @@ static void BuildChildren(HWND hwnd) {
             SendMessageW(cb, CB_SETCURSEL, (WPARAM)selIdx, 0);
         }
     }
-    y += 62 + 14;
+    y += 58 + 8;
 
+    // 数据目录：配置(config.ini) + 自定义词/短语(user.tsv) 都放这里，可指向网盘同步夹
+    MakeGroup(hwnd, L" 数据目录（配置与自定义词/短语都放这里）", padX, y, groupW, 100);
+    {
+        HWND ed = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", wubi::GetDataDir().c_str(),
+                                  WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL | ES_READONLY,
+                                  S(inX), S(y + 24), S(224), S(24), hwnd,
+                                  (HMENU)(INT_PTR)ID_DATA_DIR, nullptr, nullptr);
+        SendMessageW(ed, WM_SETFONT, (WPARAM)g_font, TRUE);
+        MakeButton(hwnd, L"浏览…", inX + 232, y + 21, 56, ID_DATA_BROWSE, false);
+        MakeButton(hwnd, L"默认",  inX + 294, y + 21, 48, ID_DATA_DEFAULT, false);
+        MakeButton(hwnd, L"打开",  inX + 348, y + 21, 48, ID_DATA_OPEN, false);
+        MakeStatic(hwnd, L"指向 OneDrive / 坚果云等同步目录，换机器后指回来即可恢复设置和自定义词。",
+                   inX, y + 54, 380, S(32));
+    }
+    y += 100 + 12;
     // 底部按钮（右下角对齐）
     MakeButton(hwnd, L"保存", padX + groupW - 196, y, 90, ID_SAVE, true);
     MakeButton(hwnd, L"取消", padX + groupW - 96,  y, 90, ID_CANCEL, false);
@@ -254,6 +259,12 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     case WM_CREATE:
         BuildChildren(hwnd);
         return 0;
+    case WM_ERASEBKGND: {              // 自己也刷背景：避免某些抓图/重绘路径留黑底
+        RECT rc;
+        GetClientRect(hwnd, &rc);
+        FillRect((HDC)wp, &rc, g_bg);
+        return 1;
+    }
     case WM_CTLCOLORSTATIC: {          // 让分组框里的文字背景跟窗口一致，不留白块
         HDC dc = (HDC)wp;
         SetBkMode(dc, TRANSPARENT);
@@ -261,13 +272,61 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         return (LRESULT)g_bg;
     }
     case WM_COMMAND:
+        if (LOWORD(wp) == ID_DATA_BROWSE) {
+            // 选目录（SHBrowseForFolder：不需要 COM 初始化，够用）
+            BROWSEINFOW bi = {};
+            wchar_t title[128] = L"选择数据目录（可指向 OneDrive 等同步目录）";
+            bi.lpszTitle = title;
+            bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_USENEWUI | BIF_NEWDIALOGSTYLE;
+            PIDLIST_ABSOLUTE pidl = SHBrowseForFolderW(&bi);
+            if (pidl) {
+                wchar_t path[MAX_PATH] = { 0 };
+                if (SHGetPathFromIDListW(pidl, path) && path[0]) {
+                    SetWindowTextW(GetDlgItem(hwnd, ID_DATA_DIR), path);
+                }
+                CoTaskMemFree(pidl);
+            }
+            return 0;
+        }
+        if (LOWORD(wp) == ID_DATA_DEFAULT) {
+            SetWindowTextW(GetDlgItem(hwnd, ID_DATA_DIR), wubi::DefaultDataDir().c_str());
+            return 0;
+        }
+        if (LOWORD(wp) == ID_DATA_OPEN) {
+            const std::wstring dir = wubi::GetDataDir();
+            ShellExecuteW(hwnd, L"open", dir.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+            return 0;
+        }
         if (LOWORD(wp) == ID_SAVE) {
             ReadUiInto(hwnd);
+
+            // 数据目录变了：先落注册表，再把旧目录里缺的文件搬过去，最后往新目录里写设置
+            wchar_t dirBuf[MAX_PATH * 2] = { 0 };
+            GetWindowTextW(GetDlgItem(hwnd, ID_DATA_DIR), dirBuf, ARRAYSIZE(dirBuf) - 1);
+            const std::wstring want = dirBuf;
+            const std::wstring cur = wubi::GetDataDir();
+            const std::wstring def = wubi::DefaultDataDir();
+            if (_wcsicmp(want.c_str(), cur.c_str()) != 0) {
+                if (!wubi::SetDataDir(_wcsicmp(want.c_str(), def.c_str()) == 0 ? std::wstring() : want)) {
+                    MessageBoxW(hwnd, L"无法记录数据目录（写 HKCU\\Software\\PandaWubi 失败）。", kTitle,
+                                MB_OK | MB_ICONERROR);
+                    return 0;
+                }
+                const std::wstring now = wubi::GetDataDir();
+                const int moved = wubi::MigrateDataFiles(cur, now);
+                g_ini = wubi::GetConfigPath();
+                if (moved > 0) {
+                    MessageBoxW(hwnd, L"数据目录已切换，原有的设置与用户词已复制过去。\n\n已打开的程序需要重启才会用新目录。",
+                                kTitle, MB_OK | MB_ICONINFORMATION);
+                }
+            }
+
             const bool ok = wubi::SaveSettings(g_ini, g_s);
-            MessageBoxW(hwnd,
-                        ok ? L"已保存。\n\n新设置对之后启动的程序生效；已打开的程序需要重启才会重新读取。"
-                           : L"保存失败：请检查 %APPDATA%\\PandaWubi 是否可写。",
-                        kTitle, MB_OK | (ok ? MB_ICONINFORMATION : MB_ICONERROR));
+            const std::wstring msg = ok
+                ? (L"已保存。\n\n配置与用户词都在：\n" + wubi::GetDataDir() +
+                   L"\n\n新设置对之后启动的程序生效；已打开的程序需要重启才会重新读取。")
+                : std::wstring(L"保存失败：请检查数据目录是否可写。");
+            MessageBoxW(hwnd, msg.c_str(), kTitle, MB_OK | (ok ? MB_ICONINFORMATION : MB_ICONERROR));
             DestroyWindow(hwnd);
             return 0;
         }
@@ -286,7 +345,8 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 // 窗口客户区尺寸随 DPI 缩放；控件坐标在 BuildChildren 里也按 S() 缩放
 static void MeasureClient(int& w, int& h) {
     w = S(460);
-    h = S(12 + 108 + 10 + 82 + 10 + 82 + 10 + 148 + 10 + 62 + 14 + 30 + 16);
+    // 与 BuildChildren 里的累加保持一致
+    h = S(12 + 96 + 8 + 124 + 8 + 140 + 8 + 58 + 8 + 100 + 12 + 30 + 12);
 }
 
 static int RunDialog() {
@@ -385,9 +445,30 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, LPWSTR, int) {
         if (cmd == L"/dump") {
             EnsureStdIo();
             std::printf("ini=%ls\n", g_ini.c_str());
+            std::printf("datadir=%ls\n", wubi::GetDataDir().c_str());
+            std::printf("userdict=%ls\n", wubi::GetUserWordsPath().c_str());
             std::printf("Level1Mode=%d SortMode=%d EnablePunction=%d TradChinese=%d CandCount=%d CandVertical=%d InputMode=%d\n",
                         g_s.Level1Mode, g_s.SortMode, g_s.EnablePunction, g_s.TradChinese,
                         g_s.CandCount, g_s.CandVertical, g_s.InputMode);
+            LocalFree(argv);
+            return 0;
+        }
+        if (cmd == L"/datadir" && argc > 2) {
+            // 指定数据目录（default = 恢复默认），并把旧目录里缺的 config.ini/user.tsv 复制过去
+            EnsureStdIo();
+            const std::wstring want = argv[2];
+            const std::wstring oldDir = wubi::GetDataDir();
+            const std::wstring defDir = wubi::DefaultDataDir();
+            const bool useDefault = (_wcsicmp(want.c_str(), L"default") == 0);
+            if (!wubi::SetDataDir(useDefault ? std::wstring() : want)) {
+                std::printf("FAILED: cannot record data dir\n");
+                LocalFree(argv);
+                return 1;
+            }
+            const std::wstring now = wubi::GetDataDir();
+            const int copied = wubi::MigrateDataFiles(oldDir, now);
+            std::printf("datadir -> %ls (copied %d file(s) from %ls)\n", now.c_str(), copied, oldDir.c_str());
+            std::printf("ini=%ls\n", wubi::GetConfigPath().c_str());
             LocalFree(argv);
             return 0;
         }

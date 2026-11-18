@@ -1,4 +1,4 @@
-﻿#include "wubi_config.h"
+#include "wubi_config.h"
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -123,6 +123,125 @@ Settings MigrateFromQQ(const std::wstring& qqIniPath, bool* found) {
     const int changeOut = GetInt(qqIniPath, L"ChangeIMEOutput", 0);
     if (changeOut == 0) s.TradChinese = 0;
     return s;
+}
+
+// ---------------------------------------------------------------- 数据目录
+static const wchar_t* kRegKey = L"Software\\PandaWubi";
+static const wchar_t* kRegVal = L"DataDir";
+
+static bool EnsureDir(const std::wstring& dir) {
+    if (dir.empty()) return false;
+    if (GetFileAttributesW(dir.c_str()) != INVALID_FILE_ATTRIBUTES) return true;
+    // 多级创建
+    std::wstring cur;
+    for (size_t i = 0; i < dir.size(); ++i) {
+        cur.push_back(dir[i]);
+        if (dir[i] == L'\\' || dir[i] == L'/') continue;
+        if (i + 1 == dir.size() || dir[i + 1] == L'\\' || dir[i + 1] == L'/') {
+            CreateDirectoryW(cur.c_str(), nullptr);
+        }
+    }
+    return GetFileAttributesW(dir.c_str()) != INVALID_FILE_ATTRIBUTES;
+}
+
+std::wstring DefaultDataDir() {
+    wchar_t buf[MAX_PATH] = { 0 };
+    const DWORD n = GetEnvironmentVariableW(L"APPDATA", buf, ARRAYSIZE(buf));
+    std::wstring base = (n > 0 && n < ARRAYSIZE(buf)) ? std::wstring(buf) : std::wstring(L".");
+    return base + L"\\PandaWubi";
+}
+
+static std::wstring RegDataDir() {
+    HKEY k = nullptr;
+    if (RegOpenKeyExW(HKEY_CURRENT_USER, kRegKey, 0, KEY_READ, &k) != ERROR_SUCCESS) return std::wstring();
+    wchar_t buf[MAX_PATH * 2] = { 0 };
+    DWORD cb = sizeof(buf) - sizeof(wchar_t);
+    DWORD type = 0;
+    std::wstring out;
+    if (RegQueryValueExW(k, kRegVal, nullptr, &type, (LPBYTE)buf, &cb) == ERROR_SUCCESS && type == REG_SZ) {
+        buf[cb / sizeof(wchar_t)] = 0;
+        out = buf;
+    }
+    RegCloseKey(k);
+    return out;
+}
+
+std::wstring GetDataDir() {
+    // 1) 环境变量（测试/便携）
+    wchar_t env[MAX_PATH * 2] = { 0 };
+    const DWORD en = GetEnvironmentVariableW(L"WUBI_DATA_DIR", env, ARRAYSIZE(env));
+    if (en > 0 && en < ARRAYSIZE(env) && env[0]) {
+        const std::wstring dir = env;
+        if (EnsureDir(dir)) return dir;
+    }
+    // 2) 用户指定
+    std::wstring reg = RegDataDir();
+    if (!reg.empty()) {
+        if (EnsureDir(reg)) return reg;      // 目录不可写时退回默认，不要因此丢配置
+    }
+    // 3) 默认
+    const std::wstring def = DefaultDataDir();
+    EnsureDir(def);
+
+    // 一次性迁移：老版本用的是 %APPDATA%\WubiTsf
+    const std::wstring newIni = def + L"\\config.ini";
+    if (GetFileAttributesW(newIni.c_str()) == INVALID_FILE_ATTRIBUTES) {
+        wchar_t base[MAX_PATH] = { 0 };
+        const DWORD n = GetEnvironmentVariableW(L"APPDATA", base, ARRAYSIZE(base));
+        if (n > 0 && n < ARRAYSIZE(base)) {
+            const std::wstring oldDir = std::wstring(base) + L"\\WubiTsf";
+            if (GetFileAttributesW((oldDir + L"\\config.ini").c_str()) != INVALID_FILE_ATTRIBUTES) {
+                MigrateDataFiles(oldDir, def);
+            }
+        }
+    }
+    return def;
+}
+
+bool SetDataDir(const std::wstring& dir) {
+    HKEY k = nullptr;
+    if (RegCreateKeyExW(HKEY_CURRENT_USER, kRegKey, 0, nullptr, 0, KEY_WRITE, nullptr, &k, nullptr) != ERROR_SUCCESS) {
+        return false;
+    }
+    bool ok = false;
+    if (dir.empty()) {
+        RegDeleteValueW(k, kRegVal);
+        ok = true;                                  // 恢复默认：值不存在即成功
+    } else {
+        ok = RegSetValueExW(k, kRegVal, 0, REG_SZ, (const BYTE*)dir.c_str(),
+                            (DWORD)((dir.size() + 1) * sizeof(wchar_t))) == ERROR_SUCCESS;
+    }
+    RegCloseKey(k);
+    return ok;
+}
+
+std::wstring GetConfigPath() {
+    // 显式覆盖（测试、便携部署）
+    wchar_t ini[MAX_PATH * 2] = { 0 };
+    const DWORD n = GetEnvironmentVariableW(L"WUBI_INI", ini, ARRAYSIZE(ini));
+    if (n > 0 && n < ARRAYSIZE(ini) && ini[0]) return ini;
+    return GetDataDir() + L"\\config.ini";
+}
+
+std::wstring GetUserWordsPath() {
+    return GetDataDir() + L"\\user.tsv";
+}
+
+int MigrateDataFiles(const std::wstring& fromDir, const std::wstring& toDir) {
+    if (fromDir.empty() || toDir.empty()) return 0;
+    if (_wcsicmp(fromDir.c_str(), toDir.c_str()) == 0) return 0;
+    if (!EnsureDir(toDir)) return 0;
+
+    int copied = 0;
+    const wchar_t* names[] = { L"config.ini", L"user.tsv" };
+    for (const wchar_t* name : names) {
+        const std::wstring src = fromDir + L"\\" + name;
+        const std::wstring dst = toDir + L"\\" + name;
+        if (GetFileAttributesW(src.c_str()) == INVALID_FILE_ATTRIBUTES) continue;
+        if (GetFileAttributesW(dst.c_str()) != INVALID_FILE_ATTRIBUTES) continue;   // 目标已有，不覆盖
+        if (CopyFileW(src.c_str(), dst.c_str(), TRUE)) ++copied;
+    }
+    return copied;
 }
 
 } // namespace wubi

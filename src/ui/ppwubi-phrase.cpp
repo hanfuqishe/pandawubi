@@ -14,6 +14,7 @@
 #endif
 #include <windows.h>
 #include <commctrl.h>
+#include "../engine/wubi_config.h"
 #include <cstdio>
 #include <string>
 
@@ -35,13 +36,9 @@ static int   g_dpi = 96;
 
 static int S(int v) { return MulDiv(v, g_dpi, 96); }
 
+// 用户词文件跟输入法共用同一个数据目录（用户可指向网盘同步夹）
 static std::wstring UserDictPath() {
-    wchar_t base[MAX_PATH] = { 0 };
-    const DWORD n = GetEnvironmentVariableW(L"APPDATA", base, ARRAYSIZE(base));
-    std::wstring dir = (n > 0 && n < ARRAYSIZE(base)) ? std::wstring(base) : std::wstring(L".");
-    dir += L"\\PandaWubi";
-    CreateDirectoryW(dir.c_str(), nullptr);
-    return dir + L"\\user.tsv";
+    return wubi::GetUserWordsPath();
 }
 
 static void SetFont(HWND h, HFONT f) { SendMessageW(h, WM_SETFONT, (WPARAM)f, TRUE); }
@@ -218,6 +215,12 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     case WM_CREATE:
         CreateChildren(hwnd);
         return 0;
+    case WM_ERASEBKGND: {              // 自己刷背景：避免某些抓图/重绘路径留黑底
+        RECT rc;
+        GetClientRect(hwnd, &rc);
+        FillRect((HDC)wp, &rc, GetSysColorBrush(COLOR_BTNFACE));
+        return 1;
+    }
     case WM_COMMAND:
         switch (LOWORD(wp)) {
         case ID_OK:     OnSave(); return 0;
