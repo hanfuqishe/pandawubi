@@ -97,6 +97,17 @@ TSF 的输入法目录是机器级的：`ITfInputProcessorProfiles` 读写
 .\build\tsf-host.exe -send "dz "               # -> 窗口里填的那条短语
 ```
 
+## 提示类候选框（自定义词组 / Z 重复 / 便捷输入）的显示
+
+这些"非组码提示"在组码之外显示，没有 `m_context`，所以编辑会话里取不到光标：
+以前那条 `if (haveCaret) ShowAt(...)` 就整段跳过 —— 提示框不出现，可输入法已经进了该模式，
+按键全被吞，表现为"按了 Ctrl+= 却什么都没弹出来，接着打字全没了"。
+
+现在：
+- 先探测位置：`QueryCaretRect`（GUI 线程插入符）→ 退到**鼠标位置**；
+- 编辑会话拿不到光标（没有 context）时，用探测到的位置 `ShowAt` 兜底显示；
+- 冷启动直接按 `Ctrl+=`、直接按 `Z`，提示框都会出现在鼠标附近而不是屏幕左上角。
+
 ## 自定义短语窗口
 
 `Ctrl+Shift+=` 或设置窗口里打开。**Tab / Shift+Tab 在编码框 → 短语框 → 保存 → 取消 之间循环切换焦点**
@@ -224,6 +235,17 @@ powershell -ExecutionPolicy Bypass -File .\tools\build-setup.ps1 -SkipBuild # �
   想要全中文界面就把 `ChineseSimplified.isl` 放到 `installer\` 并在 `[Languages]` 里加一行）。
 
 > 旧的单文件 `src\ui\panda-setup.cpp`（自己写的资源内嵌安装器）保留作后备，不再走构建脚本。
+## 提示类候选框（自定义词组 / Z 重复 / 便捷输入）的显示
+
+这些"非组码提示"在组码之外显示，没有 `m_context`，所以编辑会话里取不到光标：
+以前那条 `if (haveCaret) ShowAt(...)` 就整段跳过 —— 提示框不出现，可输入法已经进了该模式，
+按键全被吞，表现为"按了 Ctrl+= 却什么都没弹出来，接着打字全没了"。
+
+现在：
+- 先探测位置：`QueryCaretRect`（GUI 线程插入符）→ 退到**鼠标位置**；
+- 编辑会话拿不到光标（没有 context）时，用探测到的位置 `ShowAt` 兜底显示；
+- 冷启动直接按 `Ctrl+=`、直接按 `Z`，提示框都会出现在鼠标附近而不是屏幕左上角。
+
 ## 自定义短语窗口
 
 `Ctrl+Shift+=` 打开独立窗口 `panda-phrase.exe`（编码 + 短语两个输入框）：

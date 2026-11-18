@@ -2189,6 +2189,24 @@ void CTextService::ExitQuick(ITfContext* pic, bool cancel) {
 }
 
 void CTextService::ShowCandidateList(const std::vector<std::wstring>& display) {
+    // 位置兜底：拿不到插入点坐标时退到鼠标位置。
+    // 否则提示窗会跑到屏幕左上角(0,2)，用户看着像"根本没弹出来"，
+    // 可输入法其实已经在等按键了（自定义词组 / 便捷输入都踩过这个坑）。
+    {
+        RECT probe = {};
+        const bool hasProbe = QueryCaretRect(probe);
+        if (!hasProbe || (probe.left == 0 && probe.top == 0)) {
+            POINT pt = { 0, 0 };
+            if (GetCursorPos(&pt) && (pt.x != 0 || pt.y != 0)) {
+                probe.left = probe.right = pt.x;
+                probe.top = probe.bottom = pt.y;
+            }
+        }
+        if (probe.left != 0 || probe.top != 0) {
+            m_lastCaret = probe;
+            m_hasCaret = true;
+        }
+    }
     // 非组码的提示（便捷输入 / Z 重复 / 自定义词组 / 状态徽标）不该沿用上一次的组码，
     // 否则按分号进便捷输入时，框里还留着刚才那个字的编码。
     if (!m_comp) {
@@ -2211,6 +2229,8 @@ void CTextService::ShowCandidateList(const std::vector<std::wstring>& display) {
 
     m_candWnd.SetPlain(false);   // 同上：候选列表一律带序号
     m_candWnd.SetLetterLabels(m_letterLabels);
+    LogLine(L"show list: items=%zu caret=%ld,%ld hasCaret=%d",
+            display.size(), m_lastCaret.left, m_lastCaret.top, (int)m_hasCaret);
     m_candWnd.SetItems(display, m_settings.CandVertical != 0);
     m_candWnd.SetPinned(m_candPinned);
 
@@ -2255,6 +2275,13 @@ void CTextService::ShowCandidateList(const std::vector<std::wstring>& display) {
         m_lastCaret = caret;
         m_hasCaret = true;
         m_candWnd.ShowAt(caret);
+    } else if (m_hasCaret) {
+        // 没有 m_context（自定义词组 / Z 重复 / 便捷输入这些"非组码提示"就是这样），
+        // 编辑会话拿不到光标；以前这里直接不 ShowAt —— 于是提示框不出现，
+        // 可输入法已经进了那个模式，按键全被吞，表现特别诡异。
+        // 用前面探测到的位置（光标 -> 鼠标）兜底显示。
+        LogLine(L"show list: no context caret, fallback to %ld,%ld", m_lastCaret.left, m_lastCaret.top);
+        m_candWnd.ShowAt(m_lastCaret);
     }
 }
 
