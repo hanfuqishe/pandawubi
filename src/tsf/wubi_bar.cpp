@@ -13,12 +13,32 @@ static const UINT     kBarTickMs = 500;
 // 悬浮栏只应该出现在“正在被操作的那个进程”里。TSF 会为每个宿主进程各加载一份本 DLL，
 // 每份都会建一条栏；单靠 Deactivate 收不掉（切到别的应用并不会 Deactivate），
 // 于是桌面上会攒出好几条。这里用“本进程是否前台”作为唯一判据。
+// 桌面 / 任务栏 / 开始菜单这些"没有文字输入焦点"的窗口：即使它们属于本进程（explorer 里也装了 DLL），
+// 也不该冒出悬浮栏 —— 用户回到桌面时那条栏没有任何意义。
 static bool ForegroundIsSelf() {
     HWND fg = GetForegroundWindow();
     if (!fg) return false;
     DWORD pid = 0;
     GetWindowThreadProcessId(fg, &pid);
-    return pid == GetCurrentProcessId();
+    if (pid != GetCurrentProcessId()) return false;
+
+    wchar_t cls[64] = { 0 };
+    GetClassNameW(fg, cls, ARRAYSIZE(cls) - 1);
+    static const wchar_t* kNoTyping[] = {
+        L"Progman",                     // 桌面
+        L"WorkerW",                     // 桌面（壁纸层）
+        L"Shell_TrayWnd",               // 任务栏
+        L"Shell_SecondaryTrayWnd",      // 副屏任务栏
+        L"NotifyIconOverflowWindow",    // 托盘溢出面板
+        L"ForegroundStaging",           // 前台切换的过渡窗口
+        L"MultitaskingViewFrame",       // 任务视图
+        L"XamlExplorerHostIslandWindow",// 小组件面板
+        L"TaskListThumbnailWnd",        // 任务栏缩略图
+    };
+    for (const wchar_t* c : kNoTyping) {
+        if (wcscmp(cls, c) == 0) return false;
+    }
+    return true;
 }
 
 static UINT BarDpi() {
