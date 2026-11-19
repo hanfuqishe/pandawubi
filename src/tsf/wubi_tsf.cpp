@@ -2865,6 +2865,12 @@ bool CTextService::WantsKey(UINT vk, LPARAM lp) {
         if (shift && (vk == 'T' || vk == 'P')) return true;
         return false;
     }
+    // 大写锁定开着：用户在敲命令/全大写，输入法整体让路（Ctrl 热键在上面已单独声明过）
+    if ((GetKeyState(VK_CAPITAL) & 1) != 0 && !m_comp && !m_quickMode && !m_engActive &&
+        !m_zPending && !m_customWordMode) {
+        return false;
+    }
+
     if (m_english) return false;                       // 自由英文模式：字母键完全不参与
 
     if (vk >= 'A' && vk <= 'Z') {
@@ -3021,6 +3027,12 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
     }
 
     // ② 自由输入英文（单击 Shift）：输入法完全不参与，全部直通
+    // 大写锁定开着：全键直通（与"单击 Shift 进自由英文"等价），输入法不组码、不接管标点
+    if (!ctrl && !alt && caps && !m_comp && !m_quickMode && !m_engActive && !m_rawMode &&
+        !m_pyLookup && !m_zPending && !m_customWordMode) {
+        return S_OK;
+    }
+
     if (m_english) return S_OK;
 
     // —— Z 待定：列出"最近 4 次上屏（倒序）+ 版本号"，选一项就上屏 ——

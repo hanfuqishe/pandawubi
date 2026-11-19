@@ -104,6 +104,11 @@ TSF 的输入法目录是机器级的：`ITfInputProcessorProfiles` 读写
 
 测试宿主新增两个 token：`[T]` = Ctrl+Shift+T、`[P]` = Ctrl+Shift+P，可直接验证。
 
+## 大写锁定（CapsLock）
+
+CapsLock 开着时输入法**整体直通**：字母原样进应用（`ab` → `AB`），不组码、不接管标点。
+`Ctrl+=` / `Ctrl+Shift+=` / `Ctrl+Shift+T` 这类热键仍然有效。
+
 ## 分号便捷输入的四种走向
 
 按 `;` 进入便捷输入后：
@@ -271,6 +276,11 @@ powershell -ExecutionPolicy Bypass -File .\tools\build-setup.ps1 -SkipBuild # �
 栏上的「简/繁」立刻跟着变（和鼠标点栏上的那一格走的是同一条同步逻辑）。
 
 测试宿主新增两个 token：`[T]` = Ctrl+Shift+T、`[P]` = Ctrl+Shift+P，可直接验证。
+
+## 大写锁定（CapsLock）
+
+CapsLock 开着时输入法**整体直通**：字母原样进应用（`ab` → `AB`），不组码、不接管标点。
+`Ctrl+=` / `Ctrl+Shift+=` / `Ctrl+Shift+T` 这类热键仍然有效。
 
 ## 分号便捷输入的四种走向
 
