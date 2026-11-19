@@ -3176,7 +3176,10 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
             *pfEaten = TRUE;
             return S_OK;
         }
-        if (vk == VK_SPACE || vk == VK_RETURN || vk == VK_OEM_1 || vk == VK_OEM_7 ||
+        // 选三种数字形式：空格/回车，或"不带 Shift 的 ; 和 '"。
+        // Shift+; 是冒号、Shift+' 是双引号，那些要落到下面的"原样记录"里。
+        if (vk == VK_SPACE || vk == VK_RETURN ||
+            (!shift && !m_quickDigits.empty() && (vk == VK_OEM_1 || vk == VK_OEM_7)) ||
             false) {
             size_t idx = 0;
             if (vk == 'B' || vk == VK_OEM_1)      idx = 1;
