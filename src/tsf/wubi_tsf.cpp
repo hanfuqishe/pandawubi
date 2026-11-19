@@ -948,8 +948,11 @@ static bool LoadPinyinTableOnce() {
         tbl.push_back(std::move(e));
     }
     fclose(fp);
+    // 表按"拼音"升序排好（生成脚本已排序；这里再排一次兜底），后面的前缀查询才能二分
+    std::stable_sort(tbl.begin(), tbl.end(),
+                     [](const PyEntry& a, const PyEntry& b) { return a.py < b.py; });
     loaded = true;
-    LogLine(L"pinyin table: %zu entries from %s", tbl.size(), path.c_str());
+    LogLine(L"pinyin table: %zu entries from %s (sorted by pinyin)", tbl.size(), path.c_str());
     return loaded;
 }
 
@@ -2092,27 +2095,26 @@ void CTextService::PyLookupRefresh(ITfContext* pic, bool resetPage) {
         m_candWnd.Hide();
         return;
     }
+    LARGE_INTEGER t0 = {}, t1 = {}, freq = {};
+    QueryPerformanceFrequency(&freq);
+    QueryPerformanceCounter(&t0);
     // 只在换拼音时重建全量匹配；翻页时复用
     if (resetPage || m_pyAll.empty()) {
         m_pyAll.clear();
         m_pyAllCodes.clear();
         const auto& tbl = PinyinTable();
         const size_t kMaxMatch = 400;
-        // 先收"完全相同"的（例如 ni -> 你/呢/尼…），再收前缀匹配（nian…/nihao…）
-        for (int pass = 0; pass < 2; ++pass) {
-            for (size_t i = 0; i < tbl.size() && m_pyAll.size() < kMaxMatch; ++i) {
-                const std::string& py = tbl[i].py;
-                const bool exact = (py == m_pyTyped);
-                if (pass == 0) { if (!exact) continue; }
-                else {
-                    if (exact) continue;
-                    if (py.size() <= m_pyTyped.size()) continue;
-                    if (py.compare(0, m_pyTyped.size(), m_pyTyped) != 0) continue;
-                }
-                std::wstring ch = tbl[i].ch;
-                if (m_tradEnabled && m_trad.Loaded()) ch = m_trad.ToTraditional(ch);
-                m_pyAll.push_back(ch);
-            }
+        // 表按拼音升序：二分定位前缀区间，只扫这一段（以前是 9.5 万行全表线性扫描）
+        auto lower = std::lower_bound(tbl.begin(), tbl.end(), m_pyTyped,
+                                      [](const PyEntry& e, const std::string& v) { return e.py < v; });
+        for (auto it = lower; it != tbl.end() && m_pyAll.size() < kMaxMatch; ++it) {
+            if (it->py.size() < m_pyTyped.size()) continue;
+            if (it->py.compare(0, m_pyTyped.size(), m_pyTyped) != 0) break;   // 升序，后面都不是这个前缀
+            std::wstring ch = it->ch;
+            // 组字/反查时切了简繁：显示和上屏都用同一份转换结果
+            if (m_tradEnabled && m_trad.Loaded()) ch = m_trad.ToTraditional(ch);
+            m_pyAll.push_back(ch);
+            m_pyAllCodes.push_back(it->code);
         }
     }
 
@@ -2143,8 +2145,11 @@ void CTextService::PyLookupRefresh(ITfContext* pic, bool resetPage) {
     m_candWnd.SetItems(display, m_settings.CandVertical != 0);
     if (QueryCaretRect(m_lastCaret)) m_hasCaret = true;
     m_candWnd.ShowAt(m_lastCaret);
-    LogLine(L"pinyin lookup: '%hs' -> %zu hit(s), page %d/%zu",
-            m_pyTyped.c_str(), m_pyAll.size(), m_pyPage + 1, pages > 0 ? pages : 1);
+    QueryPerformanceCounter(&t1);
+    const double ms = (t1.QuadPart - t0.QuadPart) * 1000.0 / (double)freq.QuadPart;
+    LogLine(L"pinyin lookup: '%hs' -> %zu hit(s), page %d/%zu, %.2f ms (table %zu rows)",
+            m_pyTyped.c_str(), m_pyAll.size(), m_pyPage + 1, pages > 0 ? pages : 1,
+            ms, PinyinTable().size());
 }
 
 bool CTextService::PyLookupFlipPage(ITfContext* pic, int delta) {

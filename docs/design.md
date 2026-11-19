@@ -145,6 +145,22 @@ Blob    { 所有词条 UTF-8 连续存放 }
 => **QQ五笔 的候选顺序存在索引区的桶顺序里，不在记录字段中**，静态不可恢复。
 替代方案：用 Rime 的 Google 词频排序，并在 QQ五笔 仍可运行时做双端对比。
 
+## 二·三十七·十七、数据文件索引盘点
+
+| 文件（安装版路径） | 大小 | 载入方式 | 检索结构 |
+|---|---|---|---|
+| `data\dict-rime.bin` / `dict-qq.bin` | 3.9 MB / 0.35 MB | mmap，不解析 | 头部 + **按码升序**的定长记录，`BinRange()` → **二分** |
+| `data\qqwubi86.dict.tsv` | 3.3 MB | 全量解析进内存 | `buckets_`（code → 下标数组的**哈希表**）+ `sorted_`（按码升序的下标数组，前缀用 `lower_bound`） |
+| `data\char_fullcodes.tsv` | 273 KB | 首次用到时构建 | `charCodes_` **哈希表**（字 → 全码），自定义词取码用 |
+| `data\pinyin.tsv` | 1.9 MB / 95,563 行 | Z 反查首次使用时读入 | 载入后按拼音 `stable_sort`，前缀查询用 **`lower_bound` 定位区间**（本次改的） |
+| `data\eng_words.txt` | 438 KB / 44,016 词 | 全量读入并排序 | 已排序数组 + **二分**（`EnglishDict::Suggest`） |
+| `data\simp2trad.dat` | 128 KB | 一次性读入 | 65,536 项 **数组直接下标**，O(1) |
+| `data\punc.ini` | 764 B | 解析 | 键 → 行 的 `unordered_map` |
+| `%APPDATA%\PandaWubi\user.tsv` | ~15 KB | 并入码表 | 与码表同一套 `buckets_` / `userIndex_` |
+
+唯一"没索引"的是拼音反查表：原来每次按键把 95,563 行全扫一遍。现在改成二分定位前缀区间，
+实测（`znihao` 序列）：`ni` → 0.26 ms、`hao` → 0.2 ms（首次调用含窗口创建，约 12–16 ms）。
+
 ## 二·三十七·十六、大写锁定（CapsLock）下全键直通
 
 用户要求："如果是大写锁定状态输入的，直通就可以"。
