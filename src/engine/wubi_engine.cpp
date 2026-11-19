@@ -1077,7 +1077,9 @@ bool Punctuation::Load(const std::wstring& path) {
         if (header) { header = false; continue; }     // 跳过表头
         if (line.size() < 3) continue;
         const char key = (char)line[0];
-        size_t eq = line.find(L'=');
+        // 分隔符要从第 2 个字符开始找：等号那一行本身长这样 `==1=1＝1＝`，
+        // 从 0 开始找会把键名当成分隔符，解析出 "1"（用户报告：打 = 出来 1）。
+        size_t eq = line.find(L'=', 1);
         if (eq == std::wstring::npos || eq + 1 >= line.size()) continue;
 
         // payload: 3 组，每组 = 数字 + 该数量码元（顺序: 中文半角 / 英文全角 / 中文全角）

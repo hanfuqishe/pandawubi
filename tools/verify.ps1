@@ -162,6 +162,8 @@ $out = & $cli $dict punc 2>&1 | Out-String
 Check 'punc 逗号' ($out -match '\[1\]，') 'comma -> ，'
 Check 'punc 省略号' ($out -match '\[1\]……') '^ -> ……'
 Check 'punc 引号成对' ($out -match 'toggles: “ ” “') '“ ” “'
+# punc.ini 里等号那行是 "==1=1＝1＝"，分隔符必须从第 2 个字符开始找，否则会解析成 1
+Check 'punc 等号' ($out -match "'=' ->\s+\[0\]=") '打 = 不再输出 1'
 
 "— 用户词自学习 + 持久化 —"
 $out = & $cli $dict userdemo 2>&1 | Out-String

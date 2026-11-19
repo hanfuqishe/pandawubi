@@ -698,7 +698,7 @@ int wmain(int argc, wchar_t** argv) {
         bool loadedFile = pm.Load(L"data\\punc.ini");
         if (!loadedFile) loadedFile = pm.Load(L"..\\data\\punc.ini");
         std::printf("punc.ini loaded=%d (fallback=builtin)\n", (int)loadedFile);
-        const char* keys = ",.;:?!()[]<>-\"'^_";
+        const char* keys = ",.;:?!()[]<>-\"'^_=+";
         for (const char* p = keys; *p; ++p) {
             std::printf("  '%c' ->", *p);
             for (int m = 0; m < 4; ++m) {
