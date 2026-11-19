@@ -1135,6 +1135,9 @@ private:
     int                       m_pyPage = 0;
     bool            m_quickMode = false;       // 分号进入的"便捷输入"
     std::string     m_quickDigits;
+    // 便捷输入里按"其他可打印键"进入：原样记录，不限长，回车整段半角输出
+    bool            m_rawMode = false;
+    std::wstring    m_rawText;
     #define m_eng g_eng
     std::wstring    m_engTyped;                // 英文补全已输入的字母（保留实际大小写）
     bool            m_engActive = false;      // 英文单词补全模式（区别于自由英文 m_english）
@@ -1196,6 +1199,8 @@ private:
     void BeginQuick();
     void RefreshQuickCandidates(ITfContext* pic);
     void ExitQuick(ITfContext* pic, bool cancel);
+    void RefreshRawHint(ITfContext* pic);       // 原样记录模式的提示
+    void ExitRaw(ITfContext* pic, bool commit); // 结束原样记录（commit=回车输出）
     TfGuidAtom      m_attrAtom = 0;        // 组码显示属性 atom
     bool            m_attrTried = false;
     CCandidateWindow m_candWnd;
@@ -1562,6 +1567,10 @@ void CTextService::Reset() {
         m_customChars.clear();
         m_customWord.clear();
         LogLine(L"Reset: custom word mode cleared");
+    }
+    if (m_rawMode) {
+        m_rawMode = false;
+        m_rawText.clear();
     }
     if (m_pyLookup) {
         m_pyLookup = false;
@@ -2195,6 +2204,56 @@ void CTextService::ExitQuick(ITfContext* pic, bool cancel) {
     }
 }
 
+// 全角 -> 半角（"回车后完整半角输出"）：FF01–FF5E 直接减 0xFEE0，再补几个常用标点
+static std::wstring ToHalfWidth(const std::wstring& in) {
+    std::wstring out;
+    out.reserve(in.size());
+    for (wchar_t c : in) {
+        if (c >= 0xFF01 && c <= 0xFF5E) { out.push_back((wchar_t)(c - 0xFEE0)); continue; }
+        switch (c) {
+        case 0x3000: out.push_back(L' '); break;        // 全角空格
+        case 0x3001: out += L","; break;                // 、
+        case 0x3002: out += L"."; break;                // 。
+        case 0x300A: out += L"<"; break;                // 《
+        case 0x300B: out += L">"; break;                // 》
+        case 0x300C: out += L"["; break;                // 「
+        case 0x300D: out += L"]"; break;                // 」
+        case 0x2018: case 0x2019: out += L"'"; break;   // ‘ ’
+        case 0x201C: case 0x201D: out += L"\""; break;   // “ ”
+        case 0x2026: out += L"..."; break;              // …
+        case 0x2014: out += L"-"; break;                // —
+        case 0x00B7: out += L"."; break;                // ·
+        default: out.push_back(c); break;
+        }
+    }
+    return out;
+}
+
+void CTextService::RefreshRawHint(ITfContext* pic) {
+    (void)pic;
+    // 提示里只显示前 48 个字符，但 m_rawText 本身不限长（提交的是完整内容）
+    std::wstring shown = m_rawText;
+    bool truncated = false;
+    if (shown.size() > 48) { shown = shown.substr(0, 48); truncated = true; }
+    std::vector<std::wstring> lines;
+    lines.push_back(L"原样记录：" + shown + (truncated ? std::wstring(L"…") : std::wstring()));
+    lines.push_back(L"继续输入任意字符（不限长）· 回车整段半角输出 · Backspace 删一个 · Esc 取消");
+    m_letterLabels = false;
+    ShowCandidateList(lines);
+    LogLine(L"raw: %zu char(s)", m_rawText.size());
+}
+
+void CTextService::ExitRaw(ITfContext* pic, bool commit) {
+    const std::wstring text = ToHalfWidth(m_rawText);
+    m_rawMode = false;
+    m_rawText.clear();
+    m_candWnd.Hide();
+    if (!commit || text.empty()) return;
+    CommitString(pic, text);
+    RememberRecentCommit(text);
+    LogLine(L"raw commit: %zu char(s)", text.size());
+}
+
 void CTextService::ShowCandidateList(const std::vector<std::wstring>& display) {
     // 位置兜底：拿不到插入点坐标时退到鼠标位置。
     // 否则提示窗会跑到屏幕左上角(0,2)，用户看着像"根本没弹出来"，
@@ -2772,6 +2831,11 @@ static bool IsPrintableVk(UINT vk) {
 
 // 与 OnKeyDown 同一口径：只在"这个键一定会被吃掉"时才向宿主声明。
 bool CTextService::WantsKey(UINT vk, LPARAM lp) {
+    // 原样记录模式：所有键都由输入法处理（回车整段输出、退格删、Esc 取消）
+    if (m_rawMode) {
+        return vk != VK_SHIFT && vk != VK_CONTROL && vk != VK_MENU &&
+               vk != VK_LWIN && vk != VK_RWIN && vk != VK_CAPITAL;
+    }
     // Z 拼音反查期间：字母、退格、空格、回车、Esc、数字都由输入法处理
     if (m_pyLookup) {
         return (vk >= 'A' && vk <= 'Z') || (vk >= '0' && vk <= '9') ||
@@ -3051,6 +3115,30 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
     }
 
     // —— 分号便捷输入：数字转三种中文形式 ——
+    // —— 便捷输入里"原样记录"模式：任意字符照记，回车整段半角输出 ——
+    if (m_rawMode) {
+        if (vk == VK_RETURN) { ExitRaw(pic, true);  *pfEaten = TRUE; return S_OK; }
+        if (vk == VK_ESCAPE) { ExitRaw(pic, false); *pfEaten = TRUE; return S_OK; }
+        if (vk == VK_BACK) {
+            if (!m_rawText.empty()) m_rawText.pop_back();
+            if (m_rawText.empty()) { ExitRaw(pic, false); }
+            else { RefreshRawHint(pic); }
+            *pfEaten = TRUE;
+            return S_OK;
+        }
+        // 其它一律原样记录（字母/数字/标点/空格，不限长）
+        BYTE ks[256] = { 0 };
+        GetKeyboardState(ks);
+        wchar_t ch = 0;
+        if (ToUnicode(vk, (UINT)lParam, ks, &ch, 1, 0) != 1) ch = 0;
+        if (ch >= 0x20 && ch != 0x7F) {
+            m_rawText.push_back(ch);
+            RefreshRawHint(pic);
+        }
+        *pfEaten = TRUE;      // 原样记录模式下所有键都由输入法处理，别漏给应用
+        return S_OK;
+    }
+
     if (m_quickMode) {
         // 连按两次分号 = 其实想打一个全角分号（第一次分号被便捷输入吃掉了，这里补上）
         if (vk == VK_OEM_1 && !shift && m_quickDigits.empty()) {
@@ -3105,9 +3193,26 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
                 else       { CommitString(pic, out); m_candWnd.Hide(); }
             } else {
                 ExitQuick(pic, true);
+                *pfEaten = TRUE;
+                return S_OK;
             }
             *pfEaten = TRUE;
             return S_OK;
+        }
+        // 其它可打印键：进入"原样记录"模式（不限长，回车整段半角输出）
+        {
+            BYTE ks[256] = { 0 };
+            GetKeyboardState(ks);
+            wchar_t produced = 0;
+            if (ToUnicode(vk, (UINT)lParam, ks, &produced, 1, 0) != 1) produced = 0;
+            if (produced >= 0x20 && produced != 0x7F) {
+                ExitQuick(pic, true);
+                m_rawMode = true;
+                m_rawText.assign(1, produced);
+                RefreshRawHint(pic);
+                *pfEaten = TRUE;
+                return S_OK;
+            }
         }
         // 其它键：退出便捷输入，继续按正常流程处理这个键
         ExitQuick(pic, true);
