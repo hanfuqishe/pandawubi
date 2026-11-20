@@ -194,9 +194,11 @@ static void LogLine(const wchar_t* fmt, ...) {
 
     SYSTEMTIME st;
     GetLocalTime(&st);
+    static volatile LONG seq = 0;
+    const LONG n = InterlockedIncrement(&seq);
     wchar_t line[1200];
-    swprintf_s(line, L"[%02d:%02d:%02d.%03d] %s\r\n",
-               st.wHour, st.wMinute, st.wSecond, st.wMilliseconds, msg);
+    swprintf_s(line, L"[%02d:%02d:%02d.%03d #%ld] %s\r\n",
+               st.wHour, st.wMinute, st.wSecond, st.wMilliseconds, n, msg);
 
     HANDLE h = CreateFileW(path, FILE_APPEND_DATA,
                            FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr,
@@ -1612,6 +1614,10 @@ HRESULT CTextService::DoEdit(ITfContext* pic, std::function<HRESULT(TfEditCookie
     HRESULT hrSession = E_FAIL;
     HRESULT hr = pic->RequestEditSession(m_tid, s, TF_ES_SYNC | TF_ES_READWRITE, &hrSession);
     s->Release();
+    if (FAILED(hr) || FAILED(hrSession)) {
+        LogLine(L"DoEdit: RequestEditSession hr=0x%08lX session=0x%08lX",
+                (unsigned long)hr, (unsigned long)hrSession);
+    }
     if (FAILED(hr)) return hr;
     return hrSession;
 }
@@ -1664,11 +1670,13 @@ HRESULT CTextService::StartComposition(ITfContext* pic, const std::wstring& text
                 }
             }
         }
-        LogLine(L"StartComposition: start=0x%08X text=0x%08X comp=%p",
+    LogLine(L"StartComposition: start=0x%08X text=0x%08X comp=%p",
                 (unsigned)hr2, (unsigned)(self->m_comp ? 0u : 1u), (void*)self->m_comp);
         pRange->Release();
         return hr2;
     });
+    if (FAILED(hr)) LogLine(L"StartComposition failed hr=0x%08lX", (unsigned long)hr);
+
     return hr;
 }
 
@@ -1798,6 +1806,7 @@ HRESULT CTextService::CommitString(ITfContext* pic, const std::wstring& text) {
         RememberCommitted(text);        // 供"自定义词组"用 ← 回取
         RememberRecentCommit(text);     // 供 Z 键候选用
     }
+    if (FAILED(hr)) LogLine(L"CommitString failed hr=0x%08lX len=%zu", (unsigned long)hr, text.size());
     return hr;
 }
 
@@ -3731,7 +3740,18 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID) {
     if (reason == DLL_PROCESS_ATTACH) {
         g_hInst = hModule;
         DisableThreadLibraryCalls(hModule);
-        LogLine(L"DllMain: attach pid=%lu", GetCurrentProcessId());
+        {
+            // 把宿主 exe 名也记下来：出问题时按进程 pid / exe 名找日志
+            wchar_t exe[MAX_PATH] = { 0 };
+            GetModuleFileNameW(nullptr, exe, ARRAYSIZE(exe) - 1);
+            const wchar_t* base = wcsrchr(exe, L'\\');
+            LogLine(L"DllMain: attach pid=%lu exe=%s", GetCurrentProcessId(), base ? base + 1 : exe);
+        }
     }
+    if (reason == DLL_PROCESS_DETACH) {
+        // 正常退出（进程结束/FreeLibrary）会写这一行；日志里最后没有它 = 宿主异常终止
+        LogLine(L"DllMain: detach pid=%lu (clean exit)", GetCurrentProcessId());
+    }
+
     return TRUE;
 }

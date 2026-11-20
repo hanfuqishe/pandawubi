@@ -1,4 +1,4 @@
-# 测试指南（v0.1：TSF 外壳 + 引擎）
+﻿# 测试指南（v0.1：TSF 外壳 + 引擎）
 
 ## 当前状态
 
@@ -59,6 +59,35 @@ TSF 的输入法目录是机器级的：`ITfInputProcessorProfiles` 读写
 - 未实现：简繁转换、拼音混输、标点矩阵、用户词持久化、皮肤
 - 词库首次使用时加载（约 3.3 MB TSV），每个宿主进程各一份；
   后续应改为共享内存只读映射
+
+## 宿主应用崩溃时怎么查
+
+日志：`%LOCALAPPDATA%\PandaWubi\panda_tsf_<pid>.log`（一个宿主进程一个文件，UTF-16LE）。
+
+**找哪个文件**：第一行现在是
+
+```
+[hh:mm:ss.mmm #1] DllMain: attach pid=12345 exe=notepad.exe
+```
+
+按 exe 名 / 崩溃时间挑对应的 pid。
+
+**判断是否异常终止**：正常退出会在末尾写 `DllMain: detach pid=… (clean exit)`；
+**没有这一行** 就是被强杀/崩溃的 —— 最后几行就是崩溃前输入法做的最后动作。
+
+**每行都有递增序号 `#N`**：序号连续但停在中途 = 崩在这一步；同一 pid 内序号跳跃 = 有写入失败。
+
+**会打印的关键失败点（都在 HRESULT 层面）**：
+
+| 日志 | 含义 |
+|---|---|
+| `DoEdit: RequestEditSession hr=… session=…` | 编辑会话被宿主拒绝/超时（最常见的兼容性问题） |
+| `StartComposition failed hr=…` | 开不了组合串 |
+| `CommitString failed hr=… len=…` | 直接插入文本失败（标点、简繁上屏走这条） |
+| `OnCompositionTerminated: …` | 宿主把组合串掐了（含 stale callback 判定） |
+| `pass-through: ctrl=… alt=… vk=…` | 这个键交给应用了 |
+
+排查顺序：最后 5 行 → 有没有 `detach` → 有没有 HRESULT 失败 → 崩溃前那串 `OnKeyDown vk=…` 是哪个键触发的。
 
 ## 自定义词组 / 自定义短语
 
