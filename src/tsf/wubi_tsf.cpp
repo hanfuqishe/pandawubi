@@ -160,6 +160,9 @@ static LONG      g_cRef  = 0;
 // ---------------------------------------------------------------- 诊断日志
 // 目的: 我没有可用的激活环境，日志是唯一能从现场取证的通道。
 // 位置: %TEMP%\wubi_tsf_<pid>.log ；每次写入即 flush，崩了也能留下线索。
+static wchar_t      g_logPath[MAX_PATH] = { 0 };   // 当前进程的日志文件路径（attach 行里打印）
+static const wchar_t* LogFilePath() { return g_logPath; }
+
 static void LogLine(const wchar_t* fmt, ...) {
     static wchar_t path[MAX_PATH] = { 0 };
     if (path[0] == 0) {
@@ -200,12 +203,23 @@ static void LogLine(const wchar_t* fmt, ...) {
     swprintf_s(line, L"[%02d:%02d:%02d.%03d #%ld] %s\r\n",
                st.wHour, st.wMinute, st.wSecond, st.wMilliseconds, n, msg);
 
+    wcscpy_s(g_logPath, path);      // 供 attach 行打印（路径长度 < MAX_PATH）
     HANDLE h = CreateFileW(path, FILE_APPEND_DATA,
                            FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr,
                            OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
     if (h == INVALID_HANDLE_VALUE) return;
     LARGE_INTEGER sz = {};
     GetFileSizeEx(h, &sz);
+    // 超过 16 MB 就滚一份 .old：正常的崩溃诊断只看尾部，文件太大反而不好打开
+    if (sz.QuadPart > (16LL << 20)) {
+        CloseHandle(h);
+        std::wstring bak = std::wstring(path) + L".old";
+        MoveFileExW(path, bak.c_str(), MOVEFILE_REPLACE_EXISTING);
+        h = CreateFileW(path, FILE_APPEND_DATA, FILE_SHARE_READ | FILE_SHARE_WRITE,
+                        nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+        if (h == INVALID_HANDLE_VALUE) return;
+        sz.QuadPart = 0;
+    }
     DWORD wrote = 0;
     if (sz.QuadPart == 0) {
         const WORD bom = 0xFEFF;
@@ -1611,12 +1625,21 @@ STDMETHODIMP CTextService::OnCompositionTerminated(TfEditCookie, ITfComposition*
 
 HRESULT CTextService::DoEdit(ITfContext* pic, std::function<HRESULT(TfEditCookie)> fn) {
     CEditSession* s = new CEditSession(std::move(fn));
+    // 打一行"进入编辑会话"再调用：宿主卡死（用户只能强杀进程）时，日志会停在这一行，
+    // 一眼就能看出"卡在 RequestEditSession（宿主没响应编辑请求）"，而不是我们自己的逻辑。
+    LARGE_INTEGER freq = {}, t0 = {}, t1 = {};
+    QueryPerformanceFrequency(&freq);
+    QueryPerformanceCounter(&t0);
+    LogLine(L"DoEdit: begin (RequestEditSession SYNC)");
     HRESULT hrSession = E_FAIL;
     HRESULT hr = pic->RequestEditSession(m_tid, s, TF_ES_SYNC | TF_ES_READWRITE, &hrSession);
+    QueryPerformanceCounter(&t1);
     s->Release();
-    if (FAILED(hr) || FAILED(hrSession)) {
-        LogLine(L"DoEdit: RequestEditSession hr=0x%08lX session=0x%08lX",
-                (unsigned long)hr, (unsigned long)hrSession);
+    const double ms = (freq.QuadPart > 0)
+        ? (t1.QuadPart - t0.QuadPart) * 1000.0 / (double)freq.QuadPart : 0.0;
+    if (FAILED(hr) || FAILED(hrSession) || ms >= 300.0) {
+        LogLine(L"DoEdit: done hr=0x%08lX session=0x%08lX %.1f ms", 
+                (unsigned long)hr, (unsigned long)hrSession, ms);
     }
     if (FAILED(hr)) return hr;
     return hrSession;
@@ -3746,6 +3769,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID) {
             GetModuleFileNameW(nullptr, exe, ARRAYSIZE(exe) - 1);
             const wchar_t* base = wcsrchr(exe, L'\\');
             LogLine(L"DllMain: attach pid=%lu exe=%s", GetCurrentProcessId(), base ? base + 1 : exe);
+            LogLine(L"DllMain: log file = %s", LogFilePath());
         }
     }
     if (reason == DLL_PROCESS_DETACH) {
