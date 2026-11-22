@@ -170,6 +170,13 @@ Blob    { 所有词条 UTF-8 连续存放 }
 - 选择路径（数字键 / 鼠标点选）先看下标是否越过 `m_candSessionStart`：
   `PickSessionCandidate()` 命中就 `AddUserWord` + `SaveUserWords` 落盘、从会话表移除、上屏。
 
+**2026-11 追加**：支持 4 字词（用户要求）。`NoteCommittedForLearning` 多保留一个 `m_lastChar3`，
+一次上屏同时尝试拼 2/3/4 字；`AddSessionWord` 长度上限放宽到 4。
+
+实测：`一`+`地`+`一`+`地` 依次上屏，一次会话里学出 `一地`(ggfb)、`地一`(fbgg)、`一地一`(gfgg)、
+`地一地`(fgfb)、`一地一地`(gfgf)；打 `gfgf` 时 4 个正常候选（一动不动/不堪一击/堊/𤨹）不动，
+`一地一地` 排在第 5；按 `5` 上屏并在 `user.tsv` 里出现 `gfgf<TAB>一地一地`。
+
 实测：`一`+`地` → 学出 `一地`(ggfb)；打 `ggfb` 时 `天王老子` 仍第 1、`一地` 第 2；
 按 `2` 后 `user.tsv` 出现 `ggfb	一地`；不选它则 `user.tsv` 不变。
 

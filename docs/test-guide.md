@@ -1,4 +1,4 @@
-﻿# 测试指南（v0.1：TSF 外壳 + 引擎）
+# 测试指南（v0.1：TSF 外壳 + 引擎）
 
 ## 当前状态
 
@@ -493,7 +493,9 @@ powershell -ExecutionPolicy Bypass -File .\tools\hide-stale-bars.ps1 -List    # 
 
 实测：打「一」再打「地」→ 日志 `session word: 一地 (code=ggfb)`；再打 `ggfb` → `天王老子` 仍第 1、
 `一地` 第 2，按 `2` 上屏并在 `user.tsv` 里出现 `ggfb<TAB>一地`；不选它则 `user.tsv` 不变；
-打「一」「地」「一」会同时学出 `地一`(fbgg) 与 `一地一`(gfgg)。
+打「一」「地」「一」会同时学出 `地一`(fbgg) 与 `一地一`(gfgg)；
+打「一」「地」「一」「地」还会学出 `地一地`(fgfb) 和 4 字的 `一地一地`(gfgf)，
+打 `gfgf` 时 4 个正常候选不动、`一地一地` 排第 5，按 `5` 选它就落盘。
 
 ## 英文单词补全（Shift+字母）
 

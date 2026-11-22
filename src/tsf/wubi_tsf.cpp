@@ -1163,6 +1163,7 @@ private:
     std::vector<SessionWord> m_sessionWords;
     wchar_t         m_lastChar1 = 0;    // 最近上屏的单字
     wchar_t         m_lastChar2 = 0;    // 再往前一个
+    wchar_t         m_lastChar3 = 0;    // 再往前一个（拼 4 字词用）
     size_t          m_candSessionStart = 0;   // display 里从这一项起是会话词
     #define m_eng g_eng
     std::wstring    m_engTyped;                // 英文补全已输入的字母（保留实际大小写）
@@ -2855,26 +2856,31 @@ static std::string W2U8(const std::wstring& s) {
 
 void CTextService::NoteCommittedForLearning(const std::wstring& text) {
     // 只把"单个汉字"接进链：多字词/标点会打断链，避免把词的内部和词边界混起来
-    if (text.size() != 1) { m_lastChar1 = m_lastChar2 = 0; return; }
+    if (text.size() != 1) { m_lastChar1 = m_lastChar2 = m_lastChar3 = 0; return; }
     const wchar_t c = text[0];
-    if (c < 0x3400 || c > 0x9FFF) { m_lastChar1 = m_lastChar2 = 0; return; }
+    if (c < 0x3400 || c > 0x9FFF) { m_lastChar1 = m_lastChar2 = m_lastChar3 = 0; return; }
+    // 2 字
     if (m_lastChar1) {
-        std::wstring w2; w2 += m_lastChar1; w2 += c;
-        AddSessionWord(w2);
+        std::wstring w; w += m_lastChar1; w += c;
+        AddSessionWord(w);
     }
+    // 3 字
     if (m_lastChar1 && m_lastChar2) {
-        std::wstring w3; w3 += m_lastChar2; w3 += m_lastChar1; w3 += c;
-        AddSessionWord(w3);
+        std::wstring w; w += m_lastChar2; w += m_lastChar1; w += c;
+        AddSessionWord(w);
     }
-    if (m_lastChar1 && m_lastChar2) {
-        // 4 字词（"人名/地名"也有四个字的），用上一步再往前一个字符没有保留，这里只做到 3 字
+    // 4 字
+    if (m_lastChar1 && m_lastChar2 && m_lastChar3) {
+        std::wstring w; w += m_lastChar3; w += m_lastChar2; w += m_lastChar1; w += c;
+        AddSessionWord(w);
     }
+    m_lastChar3 = m_lastChar2;
     m_lastChar2 = m_lastChar1;
     m_lastChar1 = c;
 }
 
 void CTextService::AddSessionWord(const std::wstring& w) {
-    if (w.size() < 2 || w.size() > 3) return;                 // 先做 2~3 字
+    if (w.size() < 2 || w.size() > 4) return;                 // 2~4 字
     const std::string w8 = W2U8(w);
     if (w8.empty()) return;
     const std::string code = wubi::PhraseCode(w8, g_dict.Get());
