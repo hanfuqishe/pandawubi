@@ -3166,7 +3166,7 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
     // —— 分号便捷输入：数字转三种中文形式 ——
     // —— 便捷输入里"原样记录"模式：任意字符照记，回车整段半角输出 ——
     if (m_rawMode) {
-        if (vk == VK_RETURN) { ExitRaw(pic, true);  *pfEaten = TRUE; return S_OK; }
+        if (vk == VK_RETURN || vk == VK_SPACE) { ExitRaw(pic, true); *pfEaten = TRUE; return S_OK; }   // 空格/回车都上屏
         if (vk == VK_ESCAPE) { ExitRaw(pic, false); *pfEaten = TRUE; return S_OK; }
         if (vk == VK_BACK) {
             if (!m_rawText.empty()) m_rawText.pop_back();
@@ -3189,16 +3189,7 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
     }
 
     if (m_quickMode) {
-        // 连按两次分号 = 其实想打一个全角分号（第一次分号被便捷输入吃掉了，这里补上）
-        if (vk == VK_OEM_1 && !shift && m_quickDigits.empty()) {
-            ExitQuick(pic, true);
-            const std::wstring semi(L"\uFF1B");   // 分号固定输出全角，不再提供标点开关
-            CommitString(pic, semi);
-            RememberRecentCommit(semi);   // Z 候选里也能取到
-            LogLine(L"double semicolon -> %s", semi.c_str());
-            *pfEaten = TRUE;
-            return S_OK;
-        }
+        // 数字：累积，之后空格/回车选三种中文形式（既有规则）
         if (vk >= '0' && vk <= '9') {
             if (m_quickDigits.size() < 12) m_quickDigits.push_back((char)vk);
             const std::wstring shown = AsciiToWide(m_quickDigits);
@@ -3218,40 +3209,48 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
             return S_OK;
         }
         if (vk == VK_ESCAPE) { ExitQuick(pic, true); *pfEaten = TRUE; return S_OK; }
-        if (vk >= 'A' && vk <= 'Z') {   // 便捷输入里按字母 -> 转入英文单词补全（大小写照抄）
+        // 字母：转入英文单词补全（既有规则）
+        if (vk >= 'A' && vk <= 'Z') {
             ExitQuick(pic, true);
             m_engActive = true;
             EngType(pic, LetterWithCase(vk, shift, caps));
             *pfEaten = TRUE;
             return S_OK;
         }
-        // 选三种数字形式：空格/回车，或"不带 Shift 的 ; 和 '"。
-        // Shift+; 是冒号、Shift+' 是双引号，那些要落到下面的"原样记录"里。
-        if (vk == VK_SPACE || vk == VK_RETURN ||
-            (!shift && !m_quickDigits.empty() && (vk == VK_OEM_1 || vk == VK_OEM_7)) ||
-            false) {
-            size_t idx = 0;
-            if (vk == 'B' || vk == VK_OEM_1)      idx = 1;
-            else if (vk == 'C' || vk == VK_OEM_7) idx = 2;
-            wubi::NumberForms(m_quickDigits, m_quickForms);
-            if (idx < m_quickForms.size()) {
-                const std::wstring out = m_quickForms[idx];
-                const bool hadComp = (m_comp != nullptr);
-                m_quickMode = false;
-                m_letterLabels = false;
-                m_quickDigits.clear();
-                m_quickForms.clear();
-                if (hadComp) CommitText(pic, out);
-                else       { CommitString(pic, out); m_candWnd.Hide(); }
-            } else {
-                ExitQuick(pic, true);
+        // 空格/回车：有数字先选形式；没数字时"空格 = 输出分号、回车 = 退出"
+        if (vk == VK_SPACE || vk == VK_RETURN) {
+            if (!m_quickDigits.empty()) {
+                wubi::NumberForms(m_quickDigits, m_quickForms);
+                if (!m_quickForms.empty()) {
+                    const std::wstring out = m_quickForms[0];
+                    const bool hadComp = (m_comp != nullptr);
+                    m_quickMode = false;
+                    m_letterLabels = false;
+                    m_quickDigits.clear();
+                    m_quickForms.clear();
+                    if (hadComp) CommitText(pic, out);
+                    else       { CommitString(pic, out); m_candWnd.Hide(); }
+                } else {
+                    ExitQuick(pic, true);
+                }
                 *pfEaten = TRUE;
                 return S_OK;
             }
+            if (vk == VK_SPACE) {
+                // 分号 + 空格 = 其实只想要一个分号
+                ExitQuick(pic, true);
+                const std::wstring semi(L"\uFF1B");
+                CommitString(pic, semi);
+                RememberRecentCommit(semi);
+                LogLine(L"quick: semicolon + space -> %s", semi.c_str());
+                *pfEaten = TRUE;
+                return S_OK;
+            }
+            ExitQuick(pic, true);
             *pfEaten = TRUE;
             return S_OK;
         }
-        // 其它可打印键：进入"原样记录"模式（不限长，回车整段半角输出）
+        // 任意标点（含分号本身）-> 进入原样转录模式：之后所有键照收，空格/回车上屏
         {
             BYTE ks[256] = { 0 };
             GetKeyboardState(ks);
@@ -3266,7 +3265,7 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
                 return S_OK;
             }
         }
-        // 其它键：退出便捷输入，继续按正常流程处理这个键
+        // 其它键：退出便捷输入，继续按正常流程处理
         ExitQuick(pic, true);
     }
 
