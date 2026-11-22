@@ -1293,7 +1293,7 @@ void CTextService::OnBarClick(int idx) {
         // 关于
         wchar_t msg[512];
         swprintf_s(msg,
-            L"熊猫五笔 v1.0.0\n\n构建: %hs %hs\n词库: %ls\n词条: %lld\n\n中/英: 单击 Shift 或点状态栏\n简繁: Ctrl+Shift+T",
+            L"熊猫五笔 v" PANDA_WUBI_VERSION L"\n\n构建: %hs %hs\n词库: %ls\n词条: %lld\n\n中/英: 单击 Shift 或点状态栏\n简繁: Ctrl+Shift+T",
             __DATE__, __TIME__,
             m_settings.DictFile.c_str(), (long long)g_dict.Get().EntryCount());
         MessageBoxW(nullptr, msg, L"关于 Panda五笔", MB_OK | MB_ICONINFORMATION);
