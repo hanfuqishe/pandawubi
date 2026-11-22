@@ -1165,6 +1165,7 @@ private:
     wchar_t         m_lastChar2 = 0;    // 再往前一个
     wchar_t         m_lastChar3 = 0;    // 再往前一个（拼 4 字词用）
     size_t          m_candSessionStart = 0;   // display 里从这一项起是会话词
+    std::vector<std::wstring> m_lastLearned;  // 最近一次上屏学到的词（退格时撤销）
     #define m_eng g_eng
     std::wstring    m_engTyped;                // 英文补全已输入的字母（保留实际大小写）
     bool            m_engActive = false;      // 英文单词补全模式（区别于自由英文 m_english）
@@ -1213,9 +1214,10 @@ private:
     void EngCommit(ITfContext* pic, int idx, bool withSpace);
     void LearnEnglishWord(const std::wstring& w, bool hadTrailingSpace);   // 自动学习英文单词
     void NoteCommittedForLearning(const std::wstring& text);   // 记连续上屏的单字，拼会话词
-    void AddSessionWord(const std::wstring& w);
+    bool AddSessionWord(const std::wstring& w);
     bool PickSessionCandidate(ITfContext* pic, int displayIdx); // 选了会话词 -> 正式入词库
     bool HasSessionWordForCode(const std::string& code) const;
+    void UndoLastLearned();   // 退格/删除：把刚学的词撤掉，并把字符退出学习链
     void EngCancel(ITfContext* pic);
     void ShowCandidateList(const std::vector<std::wstring>& display);
     HRESULT UpdateCompositionTextWith(ITfContext* pic, const std::wstring& text);
@@ -2857,44 +2859,65 @@ static std::string W2U8(const std::wstring& s) {
 
 void CTextService::NoteCommittedForLearning(const std::wstring& text) {
     // 只把"单个汉字"接进链：多字词/标点会打断链，避免把词的内部和词边界混起来
+    m_lastLearned.clear();      // 只有"最近一次上屏"学到的词可以被退格撤销
     if (text.size() != 1) { m_lastChar1 = m_lastChar2 = m_lastChar3 = 0; return; }
     const wchar_t c = text[0];
     if (c < 0x3400 || c > 0x9FFF) { m_lastChar1 = m_lastChar2 = m_lastChar3 = 0; return; }
     // 2 字
     if (m_lastChar1) {
         std::wstring w; w += m_lastChar1; w += c;
-        AddSessionWord(w);
+        if (AddSessionWord(w)) m_lastLearned.push_back(w);
     }
     // 3 字
     if (m_lastChar1 && m_lastChar2) {
         std::wstring w; w += m_lastChar2; w += m_lastChar1; w += c;
-        AddSessionWord(w);
+        if (AddSessionWord(w)) m_lastLearned.push_back(w);
     }
     // 4 字
     if (m_lastChar1 && m_lastChar2 && m_lastChar3) {
         std::wstring w; w += m_lastChar3; w += m_lastChar2; w += m_lastChar1; w += c;
-        AddSessionWord(w);
+        if (AddSessionWord(w)) m_lastLearned.push_back(w);
     }
     m_lastChar3 = m_lastChar2;
     m_lastChar2 = m_lastChar1;
     m_lastChar1 = c;
 }
 
-void CTextService::AddSessionWord(const std::wstring& w) {
-    if (w.size() < 2 || w.size() > 4) return;                 // 2~4 字
+// 退格/删除：用户其实不想要刚打的那个字 -> 把这一步学到的会话词撤掉，字符也退出学习链
+void CTextService::UndoLastLearned() {
+    if (m_lastLearned.empty() && !m_lastChar1) return;
+    for (const auto& w : m_lastLearned) {
+        for (size_t i = 0; i < m_sessionWords.size(); ++i) {
+            if (m_sessionWords[i].word == w) {
+                m_sessionWords.erase(m_sessionWords.begin() + (std::ptrdiff_t)i);
+                LogLine(L"session undo: %s", w.c_str());
+                break;
+            }
+        }
+    }
+    m_lastLearned.clear();
+    // 字符退出链：下一个字不会再和"被删掉的字"组词
+    m_lastChar1 = m_lastChar2;
+    m_lastChar2 = m_lastChar3;
+    m_lastChar3 = 0;
+}
+
+bool CTextService::AddSessionWord(const std::wstring& w) {
+    if (w.size() < 2 || w.size() > 4) return false;                // 2~4 字
     const std::string w8 = W2U8(w);
-    if (w8.empty()) return;
+    if (w8.empty()) return false;
     const std::string code = wubi::PhraseCode(w8, g_dict.Get());
-    if (code.empty() || code.size() != 4) return;             // 取不出四码就不学
+    if (code.empty() || code.size() != 4) return false;            // 取不出四码就不学
     for (const auto& c : g_dict.Get().LookupExact(code)) {
-        if (c.word == w8) return;                             // 词库里已有
+        if (c.word == w8) return false;                            // 词库里已有
     }
     for (const auto& sw : m_sessionWords) {
-        if (sw.code == code && sw.word == w) return;          // 已经学过一次
+        if (sw.code == code && sw.word == w) return false;         // 已经学过一次
     }
     if (m_sessionWords.size() >= 64) m_sessionWords.erase(m_sessionWords.begin());
     m_sessionWords.push_back(SessionWord{ code, w });
     LogLine(L"session word: %s (code=%hs, total %zu)", w.c_str(), code.c_str(), m_sessionWords.size());
+    return true;
 }
 
 bool CTextService::HasSessionWordForCode(const std::string& code) const {
@@ -3054,6 +3077,13 @@ bool CTextService::WantsKey(UINT vk, LPARAM lp) {
 
     if (m_english) return false;                       // 自由英文模式：字母键完全不参与
 
+    // 退格/删除：平时不声索（交给应用删字），但"刚学过词、可能要撤销"时声索一次，
+    // 撤销完立刻恢复不声索，避免影响宿主正常删字。
+    if ((vk == VK_BACK || vk == VK_DELETE) && !m_comp && !m_engActive && !m_quickMode &&
+        !m_zPending && !m_customWordMode && (!m_lastLearned.empty() || m_lastChar1)) {
+        return true;
+    }
+
     if (vk >= 'A' && vk <= 'Z') {
         // 'z' 现在也是编码字符（自定义短语的 dz / sfz 要用），所以一律声明。
         // 没有"上次上屏"内容时不会走 Z 重复分支，z 会当作组码首字母。
@@ -3141,11 +3171,44 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
 
     // 退格：不在组码/补全里时这一键是给应用删字的，同时把它从"最近上屏的字"里剔掉——
     // 否则打错一个字退格删掉后，做自定义词组时它还会被 ← 取回来（字序/内容全错）。
-    if (vk == VK_BACK && !*pfEaten &&
-        !m_comp && !m_engActive && !m_quickMode && !m_zPending &&
-        !ctrl && !alt && !m_english && !m_recentChars.empty()) {
-        m_recentChars.pop_back();
-        LogLine(L"recent chars: backspace removed one, %zu left", m_recentChars.size());
+    // 退格（非组码）：撤销刚学的会话词，把字符退出学习链。
+    // 能确认"光标前一个字就是我们刚上屏的那个字"时，自己把它删掉并吞掉这个键（各宿主一致）；
+    // 确认不了就只撤销学习、把键交给应用去删（标准 TSF 约定：声索但 Eaten=FALSE）。
+    if (vk == VK_BACK && !m_comp && !m_engActive && !m_quickMode && !m_zPending &&
+        !m_customWordMode && !m_english && !ctrl && !alt && m_lastChar1) {
+        const wchar_t expect = m_lastChar1;
+        CTextService* self = this;
+        bool deleted = false;
+        DoEdit(pic, [self, expect, &deleted](TfEditCookie ec) -> HRESULT {
+            if (!self->m_context) return E_FAIL;
+            TF_SELECTION sel = {};
+            ULONG got = 0;
+            if (FAILED(self->m_context->GetSelection(ec, TF_DEFAULT_SELECTION, 1, &sel, &got)) ||
+                got == 0 || !sel.range) return E_FAIL;
+            BOOL empty = FALSE;
+            sel.range->IsEmpty(ec, &empty);
+            if (!empty) { sel.range->Release(); return E_FAIL; }   // 有选中内容：交给应用
+            ITfRange* r = nullptr;
+            HRESULT hr = sel.range->Clone(&r);
+            sel.range->Release();
+            if (FAILED(hr) || !r) return E_FAIL;
+            hr = r->Collapse(ec, TF_ANCHOR_START);
+            LONG shifted = 0;
+            if (SUCCEEDED(hr)) hr = r->ShiftStart(ec, -1, &shifted, nullptr);
+            wchar_t buf[8] = { 0 };
+            ULONG n = 0;
+            if (SUCCEEDED(hr) && shifted != 0) hr = r->GetText(ec, 0, buf, ARRAYSIZE(buf) - 1, &n);
+            if (SUCCEEDED(hr) && n == 1 && buf[0] == expect) {
+                if (SUCCEEDED(r->SetText(ec, 0, L"", 0))) deleted = true;
+            }
+            r->Release();
+            return S_OK;
+        });
+        if (!m_recentChars.empty()) m_recentChars.pop_back();
+        UndoLastLearned();
+        LogLine(L"backspace: undo learning (selfDeleted=%d)", (int)deleted);
+        if (deleted) { *pfEaten = TRUE; return S_OK; }   // 已经自己删掉了
+        // 否则让应用去删（*pfEaten 保持 FALSE）
     }
 
     // 其它 Ctrl/Alt 组合键一律交还应用：Ctrl+C 复制、Ctrl+V 粘贴、Alt 菜单等。
