@@ -123,6 +123,28 @@ long long EnglishDict::Load(const std::wstring& path) {
     return (long long)words_.size();
 }
 
+// 词是否已在表里（不区分大小写）
+bool EnglishDict::Has(const std::string& word) const {
+    if (word.empty()) return false;
+    const std::string key = LowerAscii(word);
+    auto it = std::lower_bound(words_.begin(), words_.end(), key,
+        [](const std::string& w, const std::string& k) { return LowerAscii(w) < k; });
+    return it != words_.end() && LowerAscii(*it) == key;
+}
+
+// 加入词表（保持按小写 key 升序，Suggest 的二分才成立）。只在词表里没有时插入。
+bool EnglishDict::Add(const std::string& word) {
+    if (word.size() < 2 || word.size() > 40) return false;
+    for (char c : word) {
+        if (!std::isalpha((unsigned char)c) && c != '\'' && c != '-') return false;
+    }
+    const std::string key = LowerAscii(word);
+    auto it = std::lower_bound(words_.begin(), words_.end(), key,
+        [](const std::string& w, const std::string& k) { return LowerAscii(w) < k; });
+    if (it != words_.end() && LowerAscii(*it) == key) return false;   // 已有
+    words_.insert(it, word);
+    return true;
+}
 std::vector<std::string> EnglishDict::Suggest(const std::string& prefix, size_t limit) const {
     std::vector<std::string> out;
     if (prefix.empty() || words_.empty() || limit == 0) return out;

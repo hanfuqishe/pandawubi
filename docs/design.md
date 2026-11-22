@@ -154,6 +154,22 @@ Blob    { 所有词条 UTF-8 连续存放 }
    Shift+数字 的 vk 仍是数字键。现在先 `ToUnicode` 算出**实际字符**再判断：
    `0-9` 才进数字分支，其余可打印字符进原样转录（`;@abc` → `@abc`、`;_x` → `_x` 实测通过）。
 
+## 二·三十七·十九、英文单词自动学习
+
+用户需求：英文补全模式下输入了词表里没有的串，要加进自定义词表。
+
+实现：
+- `EnglishDict` 加 `Has()` / `Add()`：`Add` 用 `lower_bound` 插到按小写 key 排序的位置
+  （`Suggest()` 的二分依赖这个顺序），重复/非法字符直接拒绝；
+- `EngCommit()` 里区分"用了候选"还是"原样上屏"（`usedCandidate`），
+  只有后者才调 `LearnEnglishWord()`；
+- `LearnEnglishWord()`：只收纯字母（允许 `-`/`'`）、长度 3–32，追加写入
+  `<数据目录>\eng_user.txt`（CRLF，UTF-8），同时加进内存词表；
+- 启动时 `g_eng.Load(data\eng_words.txt)` 之后再 `g_eng.Load(GetDataDir()\eng_user.txt)`，
+  所以用户词天然叠加在内置 4.4 万词上。
+
+日志：`eng learn: <word> (total N)`；启动时 `eng user words: N`。
+
 ## 二·三十七·十八、便捷输入（分号）规则再调整
 
 用户新规则（替换旧的"`;;` 输出分号"）：

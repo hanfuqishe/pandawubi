@@ -21,6 +21,9 @@ public:
     std::vector<std::string> Suggest(const std::string& prefix, size_t limit) const;
     size_t Count() const { return words_.size(); }
     bool   Loaded() const { return !words_.empty(); }
+    // 用户词表（自动学习）：已经存在的词返回 false，没加进去（重复/非法）也返回 false
+    bool   Has(const std::string& word) const;
+    bool   Add(const std::string& word);
 
 private:
     std::vector<std::string> words_;   // 已按不区分大小写的字典序排好

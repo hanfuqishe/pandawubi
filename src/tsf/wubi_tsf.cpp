@@ -1203,6 +1203,7 @@ private:
     void EngUpdate(ITfContext* pic);
     void EngType(ITfContext* pic, wchar_t ch);   // ch 保留真实大小写
     void EngCommit(ITfContext* pic, int idx, bool withSpace);
+    void LearnEnglishWord(const std::wstring& w, bool hadTrailingSpace);   // 自动学习英文单词
     void EngCancel(ITfContext* pic);
     void ShowCandidateList(const std::vector<std::wstring>& display);
     HRESULT UpdateCompositionTextWith(ITfContext* pic, const std::wstring& text);
@@ -1408,6 +1409,9 @@ STDMETHODIMP CTextService::ActivateEx(ITfThreadMgr* ptim, TfClientId tid, DWORD)
             if (slash != std::wstring::npos) {
                 dir.erase(slash);
                 const long long n = g_eng.Load(dir + L"\\data\\eng_words.txt");
+    // 用户自己"打进去过"的英文词（自动学习），存在数据目录里
+    const long long nu = g_eng.Load(wubi::GetDataDir() + L"\\eng_user.txt");
+    LogLine(L"eng user words: %lld", nu > 0 ? nu : 0);
                 LogLine(L"eng load: words=%lld", n);
                 if (n > 0) engLoaded = true;
             }
@@ -2465,11 +2469,43 @@ void CTextService::EngType(ITfContext* pic, wchar_t ch) {
     EngUpdate(pic);
 }
 
+// 英文单词自动学习：用户打出来、词表里没有的串，落地到 <数据目录>\eng_user.txt，
+// 下次就能补全。只收"看起来像词"的串：纯字母（允许 - '），长度 3..32。
+void CTextService::LearnEnglishWord(const std::wstring& w, bool hadTrailingSpace) {
+    std::wstring s = w;
+    if (hadTrailingSpace && !s.empty() && s.back() == L' ') s.pop_back();
+    if (s.size() < 3 || s.size() > 32) return;
+    for (wchar_t c : s) {
+        if (!((c >= L'a' && c <= L'z') || (c >= L'A' && c <= L'Z') || c == L'-' || c == L'\'')) return;
+    }
+    std::string word;
+    {
+        const int n = WideCharToMultiByte(CP_UTF8, 0, s.c_str(), (int)s.size(), nullptr, 0, nullptr, nullptr);
+        if (n <= 0) return;
+        word.resize((size_t)n);
+        WideCharToMultiByte(CP_UTF8, 0, s.c_str(), (int)s.size(), &word[0], n, nullptr, nullptr);
+    }
+    if (word.empty() || g_eng.Has(word)) return;
+    if (!g_eng.Add(word)) return;
+
+    const std::wstring path = wubi::GetDataDir() + L"\\eng_user.txt";
+    CreateDirectoryW(wubi::GetDataDir().c_str(), nullptr);
+    FILE* fp = nullptr;
+    if (_wfopen_s(&fp, path.c_str(), L"ab") == 0 && fp) {
+        std::string line = word;
+        line += "\r\n";
+        fwrite(line.data(), 1, line.size(), fp);
+        fclose(fp);
+    }
+    LogLine(L"eng learn: %hs (total %zu)", word.c_str(), g_eng.Count());
+}
+
 void CTextService::EngCommit(ITfContext* pic, int idx, bool withSpace) {
     const auto words = m_eng.Suggest(EngPrefix(), (size_t)m_candCount);
     std::wstring out;
-    if (idx >= 0 && idx < (int)words.size()) out = wubi::ApplyCase(AsciiToWide(words[(size_t)idx]), m_engTyped);
-    else                                     out = m_engTyped;   // 没候选：原样上屏，大小写照抄
+    const bool usedCandidate = (idx >= 0 && idx < (int)words.size());
+    if (usedCandidate) out = wubi::ApplyCase(AsciiToWide(words[(size_t)idx]), m_engTyped);
+    else               out = m_engTyped;   // 没候选：原样上屏，大小写照抄
 
     m_engTyped.clear();
     m_engActive = false;   // 上屏后回到中文模式
@@ -2479,6 +2515,8 @@ void CTextService::EngCommit(ITfContext* pic, int idx, bool withSpace) {
     if (withSpace) out += L' ';
     CommitString(pic, out);
     LogLine(L"eng commit idx=%d len=%zu out=%s", idx, out.size(), out.c_str());
+    // 学一个"词表里没有的英文串"（idx<0 表示没有候选、原样上屏那条路径）
+    if (!usedCandidate) LearnEnglishWord(out, withSpace);   // 词表里没有 -> 学下来
 }
 
 void CTextService::EngCancel(ITfContext* pic) {
