@@ -1215,6 +1215,7 @@ private:
     void NoteCommittedForLearning(const std::wstring& text);   // 记连续上屏的单字，拼会话词
     void AddSessionWord(const std::wstring& w);
     bool PickSessionCandidate(ITfContext* pic, int displayIdx); // 选了会话词 -> 正式入词库
+    bool HasSessionWordForCode(const std::string& code) const;
     void EngCancel(ITfContext* pic);
     void ShowCandidateList(const std::vector<std::wstring>& display);
     HRESULT UpdateCompositionTextWith(ITfContext* pic, const std::wstring& text);
@@ -1937,7 +1938,7 @@ void CTextService::EnsureComposer() {
         m_composerReady = true;
         // 候选窗鼠标点选：命中第 idx 项 -> 上屏
         m_candWnd.SetOnClick([this](int idx) {
-            if (m_context && idx >= (int)m_candSessionStart && PickSessionCandidate(m_context, idx)) return;
+            if (m_context && idx >= (int)m_composer.Candidates().size() && PickSessionCandidate(m_context, idx)) return;
             auto o = m_composer.SelectDigit(idx + 1);
             if (o.act == wubi::Composer::Act::Committed && m_context) {
                 CommitText(m_context, o.commit, o.commitCode, true);
@@ -2896,13 +2897,19 @@ void CTextService::AddSessionWord(const std::wstring& w) {
     LogLine(L"session word: %s (code=%hs, total %zu)", w.c_str(), code.c_str(), m_sessionWords.size());
 }
 
+bool CTextService::HasSessionWordForCode(const std::string& code) const {
+    for (const auto& sw : m_sessionWords) if (sw.code == code) return true;
+    return false;
+}
+
 bool CTextService::PickSessionCandidate(ITfContext* pic, int displayIdx) {
-    if (displayIdx < (int)m_candSessionStart) return false;
+    const int normalCount = (int)m_composer.Candidates().size();
+    if (displayIdx < normalCount) return false;
     const std::string code = m_composer.Code();
     int seen = 0;
     for (size_t i = 0; i < m_sessionWords.size(); ++i) {
         if (m_sessionWords[i].code != code) continue;
-        if (seen++ != displayIdx - (int)m_candSessionStart) continue;
+        if (seen++ != displayIdx - normalCount) continue;
         const std::wstring word = m_sessionWords[i].word;
         const std::string w8 = W2U8(word);
         // 用户真选了它 -> 正式记入用户词库（和自造词同一套存储）
@@ -3491,7 +3498,9 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
         // 回车/空格：把空码直接清掉（什么都不上屏）；继续打字母：丢掉空码、从这一键重新开始。
         // 空码判定要看"这个码在词库里是否存在"，而不是"当前有没有可显示的候选"：
         // 不足四码时词会被过滤掉，xky 这种只有词的码会一个候选都不剩，但它并不是空码。
+        // 只有会话词、没有正常候选时，这个码**不是空码**（空格/数字要能选会话词）
         const bool deadCode = m_composer.Candidates().empty()
+                              && !HasSessionWordForCode(m_composer.Code())
                               && !g_dict.Get().HasPrefix(m_composer.Code());
         if (deadCode && (vk == VK_RETURN || vk == VK_SPACE)) {
             LogLine(L"dead code cleared by Enter/Space (code=%hs)", m_composer.Code().c_str());
@@ -3509,14 +3518,27 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
             handle(m_composer.TypeCode((char)ch));
             return S_OK;
         }
-        if (vk == VK_SPACE || vk == VK_RETURN) { handle(m_composer.SelectBest());             return S_OK; }
+        if (vk == VK_SPACE || vk == VK_RETURN) {
+            // 没有正常候选、只有会话词（它排在第 1 位）时，空格/回车也选它
+            if (m_composer.Candidates().empty() && PickSessionCandidate(pic, 0)) {
+                *pfEaten = TRUE;
+                return S_OK;
+            }
+            handle(m_composer.SelectBest());
+            return S_OK;
+        }
         // 下面这些是"按住 Shift 就变成另一个符号"的键，必须区分有没有 Shift：
         //   ; -> :   ' -> "   - -> _   = -> +   1 -> !
         // 否则 Shift+; 会被当成"选第 2 候选"，冒号怎么都打不出来。
         if (!shift && vk >= '1' && vk <= '9') {
-            // 数字落在"会话词"那一段就选会话词（选完自动进用户词库）
+            // 数字落在"会话词"那一段就选会话词（选完自动进用户词库）；
+            // 注意这里必须 *pfEaten = TRUE，否则数字会继续交给应用、跟着上屏。
             const int d = (int)(vk - '0');
-            if (d - 1 >= (int)m_candSessionStart && PickSessionCandidate(pic, d - 1)) return S_OK;
+            const int normalCount = (int)m_composer.Candidates().size();
+            if (d - 1 >= normalCount && PickSessionCandidate(pic, d - 1)) {
+                *pfEaten = TRUE;
+                return S_OK;
+            }
             handle(m_composer.SelectDigit(d));
             return S_OK;
         }
