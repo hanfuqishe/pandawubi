@@ -3542,8 +3542,18 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
             handle(m_composer.SelectDigit(d));
             return S_OK;
         }
-        if (!shift && vk == VK_OEM_1)         { handle(m_composer.SelectDigit(2));                return S_OK; }  // 分号 = 第2候选
-        if (!shift && vk == VK_OEM_7)         { handle(m_composer.SelectDigit(3));                return S_OK; }  // 单引号 = 第3候选
+        if (!shift && vk == VK_OEM_1) {   // 分号 = 第 2 个候选（也要能选到会话词）
+            const int normal2 = (int)m_composer.Candidates().size();
+            if (1 >= normal2 && PickSessionCandidate(pic, 1)) { *pfEaten = TRUE; return S_OK; }
+            handle(m_composer.SelectDigit(2));
+            return S_OK;
+        }
+        if (!shift && vk == VK_OEM_7) {   // 单引号 = 第 3 个候选
+            const int normal3 = (int)m_composer.Candidates().size();
+            if (2 >= normal3 && PickSessionCandidate(pic, 2)) { *pfEaten = TRUE; return S_OK; }
+            handle(m_composer.SelectDigit(3));
+            return S_OK;
+        }
         if (!shift && vk == VK_OEM_MINUS)     { handle(m_composer.PrevPage());                    return S_OK; }  // - 上一页
         if (!shift && vk == VK_OEM_PLUS)      { handle(m_composer.NextPage());                    return S_OK; }  // = 下一页
         if (vk == VK_ESCAPE)               { handle(m_composer.Escape());                      return S_OK; }
