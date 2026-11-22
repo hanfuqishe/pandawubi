@@ -3025,6 +3025,30 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
         LogLine(L"pass-through: ctrl=%d alt=%d vk=0x%02X", (int)ctrl, (int)alt, vk);
         return S_OK;   // *pfEaten 保持 FALSE，按键继续交给应用
     }
+
+    // —— 便捷输入里"原样记录"模式：任意字符照记，回车整段半角输出 ——
+    if (m_rawMode) {
+        if (vk == VK_RETURN || vk == VK_SPACE) { ExitRaw(pic, true); *pfEaten = TRUE; return S_OK; }   // 空格/回车都上屏
+        if (vk == VK_ESCAPE) { ExitRaw(pic, false); *pfEaten = TRUE; return S_OK; }
+        if (vk == VK_BACK) {
+            if (!m_rawText.empty()) m_rawText.pop_back();
+            if (m_rawText.empty()) { ExitRaw(pic, false); }
+            else { RefreshRawHint(pic); }
+            *pfEaten = TRUE;
+            return S_OK;
+        }
+        // 其它一律原样记录（字母/数字/标点/空格，不限长）
+        BYTE ks[256] = { 0 };
+        GetKeyboardState(ks);
+        wchar_t ch = 0;
+        if (ToUnicode(vk, (UINT)lParam, ks, &ch, 1, 0) != 1) ch = 0;
+        if (ch >= 0x20 && ch != 0x7F) {
+            m_rawText.push_back(ch);
+            RefreshRawHint(pic);
+        }
+        *pfEaten = TRUE;      // 原样记录模式下所有键都由输入法处理，别漏给应用
+        return S_OK;
+    }
     // Shift+字母（或 CapsLock）-> 进入"英文单词补全"模式（不是自由英文模式）
     if (vk >= 'A' && vk <= 'Z' && !m_engActive && (shift || caps)) {
         if (m_comp) CancelComposition(pic);   // 放弃正在进行的中文组码
@@ -3164,34 +3188,18 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
     }
 
     // —— 分号便捷输入：数字转三种中文形式 ——
-    // —— 便捷输入里"原样记录"模式：任意字符照记，回车整段半角输出 ——
-    if (m_rawMode) {
-        if (vk == VK_RETURN || vk == VK_SPACE) { ExitRaw(pic, true); *pfEaten = TRUE; return S_OK; }   // 空格/回车都上屏
-        if (vk == VK_ESCAPE) { ExitRaw(pic, false); *pfEaten = TRUE; return S_OK; }
-        if (vk == VK_BACK) {
-            if (!m_rawText.empty()) m_rawText.pop_back();
-            if (m_rawText.empty()) { ExitRaw(pic, false); }
-            else { RefreshRawHint(pic); }
-            *pfEaten = TRUE;
-            return S_OK;
-        }
-        // 其它一律原样记录（字母/数字/标点/空格，不限长）
-        BYTE ks[256] = { 0 };
-        GetKeyboardState(ks);
-        wchar_t ch = 0;
-        if (ToUnicode(vk, (UINT)lParam, ks, &ch, 1, 0) != 1) ch = 0;
-        if (ch >= 0x20 && ch != 0x7F) {
-            m_rawText.push_back(ch);
-            RefreshRawHint(pic);
-        }
-        *pfEaten = TRUE;      // 原样记录模式下所有键都由输入法处理，别漏给应用
-        return S_OK;
-    }
 
     if (m_quickMode) {
-        // 数字：累积，之后空格/回车选三种中文形式（既有规则）
-        if (vk >= '0' && vk <= '9') {
-            if (m_quickDigits.size() < 12) m_quickDigits.push_back((char)vk);
+        // 先算出这个键实际产生什么字符：Shift+数字 是 # @ ! 之类，不能当数字
+        BYTE ksQuick[256] = { 0 };
+        GetKeyboardState(ksQuick);
+        wchar_t produced = 0;
+        if (ToUnicode(vk, (UINT)lParam, ksQuick, &produced, 1, 0) != 1) produced = 0;
+
+        // 数字（按实际字符判断）：累积，之后空格/回车选三种中文形式（既有规则）
+        if (produced >= L'0' && produced <= L'9') {
+            const char digit = (char)produced;
+            if (m_quickDigits.size() < 12) m_quickDigits.push_back(digit);
             const std::wstring shown = AsciiToWide(m_quickDigits);
             if (m_comp) UpdateCompositionTextWith(pic, shown);
             else        StartComposition(pic, shown);
@@ -3252,10 +3260,6 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
         }
         // 任意标点（含分号本身）-> 进入原样转录模式：之后所有键照收，空格/回车上屏
         {
-            BYTE ks[256] = { 0 };
-            GetKeyboardState(ks);
-            wchar_t produced = 0;
-            if (ToUnicode(vk, (UINT)lParam, ks, &produced, 1, 0) != 1) produced = 0;
             if (produced >= 0x20 && produced != 0x7F) {
                 ExitQuick(pic, true);
                 m_rawMode = true;
