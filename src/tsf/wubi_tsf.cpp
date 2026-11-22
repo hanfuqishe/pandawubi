@@ -1157,6 +1157,13 @@ private:
     // 便捷输入里按"其他可打印键"进入：原样记录，不限长，回车整段半角输出
     bool            m_rawMode = false;
     std::wstring    m_rawText;
+    // 会话级"自动学到的词"：从连续上屏的单字里拼出来（2~4 字），只存在于本进程，
+    // 候选里排在**最后**；只有用户真的选了它才写进 user.tsv，否则进程结束就没了。
+    struct SessionWord { std::string code; std::wstring word; };
+    std::vector<SessionWord> m_sessionWords;
+    wchar_t         m_lastChar1 = 0;    // 最近上屏的单字
+    wchar_t         m_lastChar2 = 0;    // 再往前一个
+    size_t          m_candSessionStart = 0;   // display 里从这一项起是会话词
     #define m_eng g_eng
     std::wstring    m_engTyped;                // 英文补全已输入的字母（保留实际大小写）
     bool            m_engActive = false;      // 英文单词补全模式（区别于自由英文 m_english）
@@ -1204,6 +1211,9 @@ private:
     void EngType(ITfContext* pic, wchar_t ch);   // ch 保留真实大小写
     void EngCommit(ITfContext* pic, int idx, bool withSpace);
     void LearnEnglishWord(const std::wstring& w, bool hadTrailingSpace);   // 自动学习英文单词
+    void NoteCommittedForLearning(const std::wstring& text);   // 记连续上屏的单字，拼会话词
+    void AddSessionWord(const std::wstring& w);
+    bool PickSessionCandidate(ITfContext* pic, int displayIdx); // 选了会话词 -> 正式入词库
     void EngCancel(ITfContext* pic);
     void ShowCandidateList(const std::vector<std::wstring>& display);
     HRESULT UpdateCompositionTextWith(ITfContext* pic, const std::wstring& text);
@@ -1893,6 +1903,7 @@ HRESULT CTextService::CommitText(ITfContext* pic, const std::wstring& textIn,
 
     if (SUCCEEDED(hr)) RememberRecentCommit(w);   // 记住最近几次上屏（Z 键候选）
     if (SUCCEEDED(hr)) RememberCommitted(w);             // 供"自定义词组"用 ← 回取
+    if (SUCCEEDED(hr)) NoteCommittedForLearning(w);        // 连续单字 -> 会话级自动学词
     if (resetComposer) m_composer.Reset();
     m_code.clear();
     m_candWnd.Hide();
@@ -1925,6 +1936,7 @@ void CTextService::EnsureComposer() {
         m_composerReady = true;
         // 候选窗鼠标点选：命中第 idx 项 -> 上屏
         m_candWnd.SetOnClick([this](int idx) {
+            if (m_context && idx >= (int)m_candSessionStart && PickSessionCandidate(m_context, idx)) return;
             auto o = m_composer.SelectDigit(idx + 1);
             if (o.act == wubi::Composer::Act::Committed && m_context) {
                 CommitText(m_context, o.commit, o.commitCode, true);
@@ -2832,6 +2844,75 @@ void CTextService::SetInputModeCompartments(bool chinese) {
     cm->Release();
 }
 // 组码候选：把 Composer 的候选转成宽字符后交给 ShowCandidateList
+// —— 会话级自动学词：连续上屏的单字拼成 2~4 字词，只在本进程里当"最后的候选" ——
+static std::string W2U8(const std::wstring& s) {
+    const int n = WideCharToMultiByte(CP_UTF8, 0, s.c_str(), (int)s.size(), nullptr, 0, nullptr, nullptr);
+    if (n <= 0) return std::string();
+    std::string out((size_t)n, '\0');
+    WideCharToMultiByte(CP_UTF8, 0, s.c_str(), (int)s.size(), &out[0], n, nullptr, nullptr);
+    return out;
+}
+
+void CTextService::NoteCommittedForLearning(const std::wstring& text) {
+    // 只把"单个汉字"接进链：多字词/标点会打断链，避免把词的内部和词边界混起来
+    if (text.size() != 1) { m_lastChar1 = m_lastChar2 = 0; return; }
+    const wchar_t c = text[0];
+    if (c < 0x3400 || c > 0x9FFF) { m_lastChar1 = m_lastChar2 = 0; return; }
+    if (m_lastChar1) {
+        std::wstring w2; w2 += m_lastChar1; w2 += c;
+        AddSessionWord(w2);
+    }
+    if (m_lastChar1 && m_lastChar2) {
+        std::wstring w3; w3 += m_lastChar2; w3 += m_lastChar1; w3 += c;
+        AddSessionWord(w3);
+    }
+    if (m_lastChar1 && m_lastChar2) {
+        // 4 字词（"人名/地名"也有四个字的），用上一步再往前一个字符没有保留，这里只做到 3 字
+    }
+    m_lastChar2 = m_lastChar1;
+    m_lastChar1 = c;
+}
+
+void CTextService::AddSessionWord(const std::wstring& w) {
+    if (w.size() < 2 || w.size() > 3) return;                 // 先做 2~3 字
+    const std::string w8 = W2U8(w);
+    if (w8.empty()) return;
+    const std::string code = wubi::PhraseCode(w8, g_dict.Get());
+    if (code.empty() || code.size() != 4) return;             // 取不出四码就不学
+    for (const auto& c : g_dict.Get().LookupExact(code)) {
+        if (c.word == w8) return;                             // 词库里已有
+    }
+    for (const auto& sw : m_sessionWords) {
+        if (sw.code == code && sw.word == w) return;          // 已经学过一次
+    }
+    if (m_sessionWords.size() >= 64) m_sessionWords.erase(m_sessionWords.begin());
+    m_sessionWords.push_back(SessionWord{ code, w });
+    LogLine(L"session word: %s (code=%hs, total %zu)", w.c_str(), code.c_str(), m_sessionWords.size());
+}
+
+bool CTextService::PickSessionCandidate(ITfContext* pic, int displayIdx) {
+    if (displayIdx < (int)m_candSessionStart) return false;
+    const std::string code = m_composer.Code();
+    int seen = 0;
+    for (size_t i = 0; i < m_sessionWords.size(); ++i) {
+        if (m_sessionWords[i].code != code) continue;
+        if (seen++ != displayIdx - (int)m_candSessionStart) continue;
+        const std::wstring word = m_sessionWords[i].word;
+        const std::string w8 = W2U8(word);
+        // 用户真选了它 -> 正式记入用户词库（和自造词同一套存储）
+        g_dict.Get().AddUserWord(code, w8, 0x7FFFFFFF);
+        const bool saved = g_dict.Get().SaveUserWords(GetUserWordsPath());
+        m_sessionWords.erase(m_sessionWords.begin() + (std::ptrdiff_t)i);
+        if (m_comp) CancelComposition(pic);
+        CommitString(pic, word);
+        RememberRecentCommit(word);
+        m_candWnd.Hide();
+        LogLine(L"session word committed: %s (code=%hs saved=%d)", word.c_str(), code.c_str(), (int)saved);
+        return true;
+    }
+    return false;
+}
+
 void CTextService::RefreshCandidates(ITfContext* pic) {
     (void)pic;
     m_letterLabels = false;
@@ -2850,6 +2931,18 @@ void CTextService::RefreshCandidates(ITfContext* pic) {
         m_candPinned[i] = e.IsPinned() ? 1 : 0;
         if (m_tradEnabled && m_trad.Loaded()) w = m_trad.ToTraditional(w);   // 候选显示与上屏保持一致的简繁
         display.push_back(w);
+    }
+    // 会话级自动学的词：码相同才出现，而且**排在最后**，不影响正常候选顺序
+    m_candSessionStart = display.size();
+    {
+        const std::string cc = m_composer.Code();
+        for (const auto& sw : m_sessionWords) {
+            if (sw.code != cc) continue;
+            std::wstring w = sw.word;
+            if (m_tradEnabled && m_trad.Loaded()) w = m_trad.ToTraditional(w);
+            display.push_back(w);
+            m_candPinned.push_back(0);
+        }
     }
     {
         const std::string cc = m_composer.Code();
@@ -3414,7 +3507,13 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
         // 下面这些是"按住 Shift 就变成另一个符号"的键，必须区分有没有 Shift：
         //   ; -> :   ' -> "   - -> _   = -> +   1 -> !
         // 否则 Shift+; 会被当成"选第 2 候选"，冒号怎么都打不出来。
-        if (!shift && vk >= '1' && vk <= '9') { handle(m_composer.SelectDigit((int)(vk - '0'))); return S_OK; }
+        if (!shift && vk >= '1' && vk <= '9') {
+            // 数字落在"会话词"那一段就选会话词（选完自动进用户词库）
+            const int d = (int)(vk - '0');
+            if (d - 1 >= (int)m_candSessionStart && PickSessionCandidate(pic, d - 1)) return S_OK;
+            handle(m_composer.SelectDigit(d));
+            return S_OK;
+        }
         if (!shift && vk == VK_OEM_1)         { handle(m_composer.SelectDigit(2));                return S_OK; }  // 分号 = 第2候选
         if (!shift && vk == VK_OEM_7)         { handle(m_composer.SelectDigit(3));                return S_OK; }  // 单引号 = 第3候选
         if (!shift && vk == VK_OEM_MINUS)     { handle(m_composer.PrevPage());                    return S_OK; }  // - 上一页
