@@ -898,13 +898,18 @@ bool Dictionary::BetterCand(const Candidate& a, const Candidate& b, size_t input
 }
 
 void Dictionary::CollectUserCandidates(std::string_view code, std::vector<Candidate>& out, bool allowWords) const {
+    (void)allowWords;   // 用户词一律出，不按"不足四码不出词"过滤
     for (const auto& kv : userIndex_) {
         const uint32_t idx = kv.second;
         if (idx >= entries_.size()) continue;
         const Entry& e = entries_[idx];
         if (e.code.size() < code.size()) continue;
         if (e.code.compare(0, code.size(), code) != 0) continue;
-        if (!allowWords && Utf8CharCount(e.word) >= 2) continue;   // 不足四码不出词（用户词也一样）
+        // 用户词（Ctrl+= 自造词、Ctrl+Shift+= 自定义短语）不受"不足四码不出词"限制：
+
+        // 那是用户自己指定要的，两码也该直接出。
+        // 1 码时让位给一级简码：否则"打 a 出 苹果"会顶掉最常用的单字
+        if (code.size() < 2 && Utf8CharCount(e.word) >= 2) continue;
         out.push_back(Candidate{ e.word, e.code, e.weight, true });
     }
 }
