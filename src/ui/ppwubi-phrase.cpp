@@ -25,6 +25,7 @@
 
 static const int ID_CODE  = 101;
 static const int ID_PHRASE = 102;
+static const int ID_EN    = 103;   // 短语框"英文直通"开关（摘掉输入法，直接敲 ASCII）
 static const int ID_OK    = IDOK;
 static const int ID_CANCEL = IDCANCEL;
 
@@ -32,6 +33,8 @@ static HWND g_hwnd = nullptr;
 static HWND g_code = nullptr;
 static HWND g_phrase = nullptr;
 static HWND g_hint = nullptr;
+static HWND g_chkEn = nullptr;      // "英文直通"复选框
+static bool g_phraseRaw = false;    // 短语框当前是否摘掉输入法
 static HFONT g_font = nullptr;
 static int   g_dpi = 96;
 
@@ -208,6 +211,12 @@ static void CreateChildren(HWND hwnd) {
     HWND lblPhrase = CreateWindowExW(0, L"STATIC", L"短语",
                                      WS_CHILD | WS_VISIBLE | SS_LEFT,
                                      pad, y, S(60), labelH, hwnd, nullptr, nullptr, nullptr);
+    // 右边放一个"英文直通"复选框：勾上就把输入法从短语框里摘掉，直接敲 ASCII
+    //（这个窗口是普通顶层窗口，Shift 切中英在这里收不到，只能给个显式开关）
+    g_chkEn = CreateWindowExW(0, L"BUTTON", L"英文直通（不经过输入法）",
+                              WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_AUTOCHECKBOX,
+                              pad + S(60) + S(70), y - S(2), S(200), labelH + S(4),
+                              hwnd, (HMENU)(INT_PTR)ID_EN, nullptr, nullptr);
     const int phraseH = S(96);
     g_phrase = CreateWindowExW(WS_EX_CLIENTEDGE, MSFTEDIT_CLASS, L"",
                                WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_MULTILINE |
@@ -223,7 +232,7 @@ static void CreateChildren(HWND hwnd) {
     y += labelH + phraseH + S(8);
 
     // 提示行（校验失败的原因写在这里）
-    g_hint = CreateWindowExW(0, L"STATIC", L"中文直接打（本输入法在框里可用），邮箱/身份证号也能写；回车保存，Esc 取消。z 打头的编码与 Z 重复冲突。",
+    g_hint = CreateWindowExW(0, L"STATIC", L"中文直接打（本输入法在框里可用）；要打纯英文就勾上面的“英文直通”。回车保存，Esc 取消。z 打头的编码与 Z 重复冲突。",
                              WS_CHILD | WS_VISIBLE | SS_LEFT,
                              pad, y, w, S(34), hwnd, nullptr, nullptr, nullptr);
     y += S(34) + S(10);
@@ -268,6 +277,14 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         switch (LOWORD(wp)) {
         case ID_OK:     OnSave(); return 0;
         case ID_CANCEL: DestroyWindow(hwnd); return 0;
+        case ID_EN: {
+            // 勾上：短语框摘掉输入法（直接敲英文/符号/数字）；
+            // 取消：把输入法还回去（打中文）
+            g_phraseRaw = (SendMessageW(g_chkEn, BM_GETCHECK, 0, 0) == BST_CHECKED);
+            ImmAssociateContextEx(g_phrase, nullptr, g_phraseRaw ? 0 : IACE_DEFAULT);
+            SetFocus(g_phrase);
+            return 0;
+        }
         }
         return 0;
     case WM_APP + 1:                   // 编码框清洗（延后执行，避免重入）
