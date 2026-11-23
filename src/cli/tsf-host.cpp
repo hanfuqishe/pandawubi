@@ -132,7 +132,7 @@ static void SendStep(const Step& st) {
 //   a..z        字母键（A..Z = 按住 Shift）
 //   ' ' 空格 · ',' '.' ';' '\'' '/' '-' '=' '@' '_' 标点 · '!' Esc
 //   [C] Ctrl+=（自定义词组）   [S] Ctrl+Shift+=（自定义短语）
-//   [L] ←  [D] Del  [E] 回车  [B] 退格  [X] Esc  [H] 单击 Shift（切中英）
+//   [L] ←  [D] Del  [E] 回车  [B] 退格  [X] Esc  [H] 单击左 Shift（切中英）  [J] 单击右 Shift（切简繁）
 static void ParseScript(const std::wstring& s) {
     g_steps.clear();
     for (size_t i = 0; i < s.size();) {
