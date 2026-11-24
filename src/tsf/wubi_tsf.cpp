@@ -3744,12 +3744,11 @@ bool CTextService::WantsKey(UINT vk, LPARAM lp) {
 
     if (m_english) return false;                       // 自由英文模式：字母键完全不参与
 
-    // 退格/删除：平时不声索（交给应用删字），但"刚学过词、可能要撤销"时声索一次，
-    // 撤销完立刻恢复不声索，避免影响宿主正常删字。
-    if ((vk == VK_BACK || vk == VK_DELETE) && !m_comp && !m_engActive && !m_quickMode &&
-        !m_zPending && !m_customWordMode && (!m_lastLearned.empty() || m_lastChar1)) {
-        return true;
-    }
+    // 退格/删除：**一律不声索**，删字交给应用。
+    // 以前"刚学过词"时会声索一次，然后在 OnKeyDown 里自己删字+吞键；只要 TSF 的编辑会话
+    // 拿不到 context（微信这类宿主焦点一直在抖）就会变成"声索了但没删、应用又把键丢了"，
+    // 表现就是用户说的"输入汉字后第一次退格被吃掉"。记账改在 OnKeyDown 里做（键能进来就记）。
+    // 组码/补全期间的退格在下面 busy 分支里照旧声索（那是删编码，不是删字）。
 
     // Shift 必须声明（TestKeyDown=TRUE），否则微信这类宿主根本不把 Shift 转给输入法，
     // 单击切换中/英、简/繁就永远不触发。OnKeyDown 里对 Shift 仍然不吞（*pfEaten 保持 FALSE）。
@@ -3844,46 +3843,16 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
     // 自定义模式里的键优先处理；返回 false 表示交给下面的常规流程（组码/选词）
     if (CustomKey(pic, vk, lParam, shift, pfEaten)) return S_OK;
 
-    // 退格：不在组码/补全里时这一键是给应用删字的，同时把它从"最近上屏的字"里剔掉——
-    // 否则打错一个字退格删掉后，做自定义词组时它还会被 ← 取回来（字序/内容全错）。
-    // 退格（非组码）：撤销刚学的会话词，把字符退出学习链。
-    // 能确认"光标前一个字就是我们刚上屏的那个字"时，自己把它删掉并吞掉这个键（各宿主一致）；
-    // 确认不了就只撤销学习、把键交给应用去删（标准 TSF 约定：声索但 Eaten=FALSE）。
+    // 退格：不在组码/补全里时这一键是给应用删字的。输入法**不声索**退格
+    //（声明了宿主就把这一键交给输入法、不再删字 —— 用户反馈的"输入汉字后第一次退格被吃掉"）。
+    // 有些宿主仍会把退格转进来，这时只做记账：撤销刚学的会话词、把字符退出学习链、
+    // 把刚上屏的字从"最近上屏"里剔掉（否则做自定义词组时 ← 还会把它取回来）。
+    // *pfEaten 保持 FALSE，删字始终交给应用。
     if (vk == VK_BACK && !m_comp && !m_engActive && !m_quickMode && !m_zPending &&
         !m_customWordMode && !m_english && !ctrl && !alt && m_lastChar1) {
-        const wchar_t expect = m_lastChar1;
-        CTextService* self = this;
-        bool deleted = false;
-        DoEdit(pic, [self, expect, &deleted](TfEditCookie ec) -> HRESULT {
-            if (!self->m_context) return E_FAIL;
-            TF_SELECTION sel = {};
-            ULONG got = 0;
-            if (FAILED(self->m_context->GetSelection(ec, TF_DEFAULT_SELECTION, 1, &sel, &got)) ||
-                got == 0 || !sel.range) return E_FAIL;
-            BOOL empty = FALSE;
-            sel.range->IsEmpty(ec, &empty);
-            if (!empty) { sel.range->Release(); return E_FAIL; }   // 有选中内容：交给应用
-            ITfRange* r = nullptr;
-            HRESULT hr = sel.range->Clone(&r);
-            sel.range->Release();
-            if (FAILED(hr) || !r) return E_FAIL;
-            hr = r->Collapse(ec, TF_ANCHOR_START);
-            LONG shifted = 0;
-            if (SUCCEEDED(hr)) hr = r->ShiftStart(ec, -1, &shifted, nullptr);
-            wchar_t buf[8] = { 0 };
-            ULONG n = 0;
-            if (SUCCEEDED(hr) && shifted != 0) hr = r->GetText(ec, 0, buf, ARRAYSIZE(buf) - 1, &n);
-            if (SUCCEEDED(hr) && n == 1 && buf[0] == expect) {
-                if (SUCCEEDED(r->SetText(ec, 0, L"", 0))) deleted = true;
-            }
-            r->Release();
-            return S_OK;
-        });
         if (!m_recentChars.empty()) m_recentChars.pop_back();
         UndoLastLearned();
-        LogLine(L"backspace: undo learning (selfDeleted=%d)", (int)deleted);
-        if (deleted) { *pfEaten = TRUE; return S_OK; }   // 已经自己删掉了
-        // 否则让应用去删（*pfEaten 保持 FALSE）
+        LogLine(L"backspace: undo learning (pass-through)");
     }
 
     // 其它 Ctrl/Alt 组合键一律交还应用：Ctrl+C 复制、Ctrl+V 粘贴、Alt 菜单等。

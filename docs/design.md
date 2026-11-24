@@ -1875,6 +1875,31 @@ idle status: en=0 trad=1 at 292,623 tsf=1   ← 再按一下 Down
 
 `tsf=%d` 是这次新加的日志字段：1 = TSF 拿到了光标，0 = 退回旧路径（这时窗口不会跟）。
 
+## 二·四十四、上屏后第一次退格被吃掉：退格不再声索
+
+用户反馈：输入汉字之后按退格，第一次没反应（吃掉一个），第二次才删。
+
+原因（`WantsKey` + `OnKeyDown` 的旧实现）：
+
+- "刚学过词"时把退格 `TestKeyDown=TRUE` 声索下来，然后在 `OnKeyDown` 里自己用
+  `m_context->GetSelection` + `SetText("")` 删掉光标前那个字，删成功就 `*pfEaten=TRUE`；
+- 只要拿不到 context（微信这类宿主焦点一直在抖，`Reset()` 会把 `m_context` 清空），
+  自己删失败 → `*pfEaten` 保持 FALSE；
+- 可宿主已经按"输入法要这个键"处理过了：**声明了却不吃，宿主就把这一键丢掉**，
+  于是既没删字、键也没了 —— 表现就是"第一次退格被吃掉"。
+  （同一个坑里还躺着 `VK_DELETE`：旧代码声索了它，却从来没有处理分支。）
+
+修法：退格（非组码）**一律不声索**，删字始终交给应用；`OnKeyDown` 里如果宿主仍然把
+退格转进来，只做记账（撤销刚学的会话词、把字符退出学习链、从"最近上屏"里弹掉），
+`*pfEaten` 保持 FALSE。组码/补全期间的退格照旧声索（那是删编码，不是删字）。
+
+验证（tsf-host，隐藏控制台以免抢前台）：
+
+```powershell
+.\build\tsf-host.exe -send "trnt "       # exit=0，edit text = 我
+.\build\tsf-host.exe -send "trnt [B]"    # exit=1，edit text = 空（那个字被退格删掉了）
+```
+
 ## 三、TSF 外壳（已实现，真机已验证工作）
 
 ```
