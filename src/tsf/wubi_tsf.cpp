@@ -916,7 +916,7 @@ LRESULT CALLBACK CCandidateWindow::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARA
                 for (size_t i = 0; i < self->statusZones_.size(); ++i) {
                     const RECT& z = self->statusZones_[i];
                     if (pt.x >= z.left && pt.x < z.right && pt.y >= z.top && pt.y < z.bottom) {
-                        auto fn = self->onStatusClick_;
+                        auto fn = self->onStatusClick_;   // 拷贝：回调里可能重入改状态
                         if (fn) fn((int)i);
                         break;
                     }
@@ -1323,6 +1323,7 @@ private:
     bool m_keepCodeOnTerminate = false;
     bool m_shiftDown = false;
     bool m_shiftUsed = false;
+    bool m_menuOpen = false;   // 右键菜单正开着（期间不要因为丢焦点把状态窗收起）
     std::wstring m_iconPath;   // 当前主题图标路径（合并窗状态条左侧那个）
     int  m_shiftSide = 1;      // 1 = 左 Shift，2 = 右 Shift（按下时记录）
     bool m_shiftBoth = false;  // 本次单击期间两个 Shift 都按下了
@@ -1404,11 +1405,14 @@ void CTextService::ShowIdleStatus(ITfContext* pic) {
     m_candWnd.SetCode(std::wstring());
     m_candWnd.SetItems({ L"\u4e2d\u6587" }, false);   // 占位：实际绘制在 PaintStatus 里
     m_candWnd.SetStatusInfo(m_english, m_tradEnabled, m_iconPath);
+    m_candWnd.SetOnMenu([this](POINT pt) { ShowStatusMenu(pt); });   // 右键菜单（原来悬浮栏那套）
     m_candWnd.SetOnStatusClick([this](int zone) {
-        if (zone == 3)      OnBarClick(2);          // ⚙ 设置
-        else if (zone == 1) OnBarClick(0);          // 中 / 英
-        else if (zone == 2) OnBarClick(1);          // 简 / 繁
-        else { POINT p; GetCursorPos(&p); ShowStatusMenu(p); }   // 点图标 = 弹菜单
+        if (zone == 3)      { OnBarClick(2); }                       // ⚙ 设置
+        else if (zone == 1) { OnBarClick(0); }                       // 中 / 英
+        else if (zone == 2) { OnBarClick(1); }                       // 简 / 繁
+        else { POINT p; GetCursorPos(&p); ShowStatusMenu(p); }       // 点图标 = 弹菜单
+        // 点完再摆一次：设置窗口/菜单会让宿主短暂失去焦点，窗口可能已被收起
+        ShowIdleStatus(nullptr);
     });
     m_candWnd.ShowAt(caret);
     m_statusShown = false;
@@ -1436,10 +1440,16 @@ void CTextService::ShowStatusMenu(POINT pt) {
 
     HWND owner = m_candWnd.Hwnd();
     HWND prevFg = GetForegroundWindow();
+    // 弹菜单前必须把前台抢过来，否则点空白处菜单不消失/干脆不弹；
+    // 结束后把前台还回去，宿主的 TSF 才会重新拿到"有文档焦点"。
+    m_menuOpen = true;
+    if (owner) SetForegroundWindow(owner);
     const int cmd = (int)TrackPopupMenu(menu, TPM_RETURNCMD | TPM_RIGHTBUTTON,
                                         pt.x, pt.y, 0, owner, nullptr);
+    m_menuOpen = false;
     DestroyMenu(menu);
-    if (prevFg) SetForegroundWindow(prevFg);
+    if (owner) PostMessageW(owner, WM_NULL, 0, 0);
+    if (prevFg && prevFg != owner) SetForegroundWindow(prevFg);
     if (cmd >= 1 && cmd <= 4) OnBarClick(cmd - 1);
     else if (cmd >= 100 && cmd <= 103) OnBarClick(cmd);
 }
@@ -1509,7 +1519,7 @@ STDMETHODIMP CTextService::OnKillThreadFocus() {
         BarGuardScope guard;
         owned = (g_barOwner == this);
         if (owned) SharedBar().HideNow();
-        m_candWnd.Hide();      // 合并窗（状态徽标）也一起收起
+        if (!m_menuOpen) m_candWnd.Hide();   // 菜单打开时别收（否则菜单跟着消失）
     }
     LogLine(L"OnKillThreadFocus: tid=%u owned=%d", m_tid, (int)owned);
     return S_OK;
