@@ -1059,8 +1059,14 @@ public:
         if (vk == VK_SHIFT || vk == VK_LSHIFT || vk == VK_RSHIFT) {
             // 抬起时 GetKeyState 可能已经复位，所以以按下时记录的 side 为准
             const int side = (vk == VK_LSHIFT) ? 1 : (vk == VK_RSHIFT) ? 2 : m_shiftSide;
+            // 另一侧是否还按着：按下时记录（m_shiftBoth）+ 此刻的实时状态，两者取或，
+            // 这样即便只收到一次 KeyDown（或只有 KeyUp），也能判断出"两个 Shift 一起按"。
+            const bool otherDown = (side == 1) ? ((GetKeyState(VK_RSHIFT) & 0x8000) != 0)
+                                             : ((GetKeyState(VK_LSHIFT) & 0x8000) != 0);
+            LogLine(L"shift tap: vk=0x%02X side=%d both=%d other=%d",
+                    (unsigned)vk, side, (int)m_shiftBoth, (int)otherDown);
             if (m_shiftDown && !m_shiftUsed) {
-                const bool both = m_shiftBoth;
+                const bool both = m_shiftBoth || otherDown;
                 if (both) {
                     ToggleTrad(pic);
                     ToggleEnglish(pic);
