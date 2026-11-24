@@ -332,6 +332,15 @@ Blob    { 所有词条 UTF-8 连续存放 }
 `idle status: en=0 trad=1 at 222,266`；`bar: ... visible=0`、输入时 `show list: items=9 ...`。
 测试宿主新增 `-hold <ms>`（跑完脚本保持窗口存活），方便人眼看空闲状态条。
 
+**第四轮（鼠标交互与英文模式跟随）**：
+
+- 右键菜单：`ShowIdleStatus()` 里补 `SetOnMenu(...)`（之前接口加了却没调用），
+  `ShowStatusMenu()` 弹菜单前 `SetForegroundWindow(合并窗)`、结束后 `PostMessage(WM_NULL)` 并还原前台；
+  新增 `m_menuOpen`，菜单打开时 `OnKillThreadFocus` 不隐藏状态窗；左键点击后再 `ShowIdleStatus()` 摆一次。
+- 英文直通模式下状态窗跟着光标走：英文模式按键不进输入法（收不到任何通知），
+  所以给候选窗加了 `kFollowTimerId`（200ms）轮询，`ShowIdleStatus()` 里按
+  `m_english && !m_comp` 决定开关；`Hide()` 时自动停掉。
+
 verify.ps1 105 项 PASS。
 
 ## 二·三十七·十九、英文单词自动学习

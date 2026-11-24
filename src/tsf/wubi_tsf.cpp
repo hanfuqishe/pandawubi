@@ -340,6 +340,14 @@ public:
     void SetOnClick(std::function<void(int)> fn) { onClick_ = std::move(fn); }
     // 右键菜单（合并后状态栏的菜单挂到这里）
     void SetOnMenu(std::function<void(POINT)> fn) { onMenu_ = std::move(fn); }
+    void SetOnFollow(std::function<void()> fn) { onFollow_ = std::move(fn); }
+    // 英文直通时不经过输入法，收不到按键 -> 用定时器轮询光标位置，让状态窗跟着走
+    void SetFollowTimer(bool on) {
+        Ensure();
+        if (!hwnd_) return;
+        if (on) { if (!followOn_) { SetTimer(hwnd_, kFollowTimerId, 200, nullptr); followOn_ = true; } }
+        else    { if (followOn_) { KillTimer(hwnd_, kFollowTimerId); followOn_ = false; } }
+    }
     HWND Hwnd() { Ensure(); return hwnd_; }
     // 状态模式：空闲时就显示在光标附近，只放"中/英·简/繁"这类基本信息
     // 状态条内容：熊猫图标 + 中/英 + 简/繁 + 设置齿轮（和原来的悬浮栏一致）
@@ -451,6 +459,9 @@ private:
     std::function<void(int)> onClick_;
     std::function<void(POINT)> onMenu_;
     std::function<void(int)> onStatusClick_;
+    std::function<void()> onFollow_;
+    bool followOn_ = false;
+    static const UINT kFollowTimerId = 0xB2;   // 跟光标轮询
     bool statusMode_ = false;
     bool stEnglish_ = false;      // 状态条：当前中/英
     bool stTrad_ = false;         // 状态条：当前简/繁
@@ -893,6 +904,11 @@ LRESULT CALLBACK CCandidateWindow::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARA
         if (wp == CCandidateWindow::kBriefTimerId) {
             KillTimer(hwnd, CCandidateWindow::kBriefTimerId);
             if (self) self->Hide();
+            return 0;
+        }
+        if (wp == CCandidateWindow::kFollowTimerId) {
+            if (self && self->onFollow_) { auto fn = self->onFollow_; fn(); }
+            return 0;
         }
         return 0;
         return MA_NOACTIVATE;
@@ -1000,6 +1016,7 @@ void CCandidateWindow::ShowAt(const RECT& caret) {
 }
 
 void CCandidateWindow::Hide() {
+    if (hwnd_ && followOn_) { KillTimer(hwnd_, kFollowTimerId); followOn_ = false; }
     if (hwnd_) ShowWindow(hwnd_, SW_HIDE);
 }
 
@@ -1415,6 +1432,12 @@ void CTextService::ShowIdleStatus(ITfContext* pic) {
         ShowIdleStatus(nullptr);
     });
     m_candWnd.ShowAt(caret);
+    // 英文直通模式下按键根本不进输入法，收不到任何通知 -> 用定时器让状态窗跟着光标走
+    m_candWnd.SetOnFollow([this] {
+        if (m_english && !m_comp && !m_customWordMode) ShowIdleStatus(nullptr);
+        else m_candWnd.SetFollowTimer(false);
+    });
+    m_candWnd.SetFollowTimer(m_english && !m_comp);
     m_statusShown = false;
     LogLine(L"idle status: en=%d trad=%d at %ld,%ld", (int)m_english, (int)m_tradEnabled, (long)caret.left, (long)caret.bottom);
 }
