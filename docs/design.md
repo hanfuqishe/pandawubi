@@ -306,7 +306,19 @@ Blob    { 所有词条 UTF-8 连续存放 }
   搬到合并窗：`CCandidateWindow::SetOnMenu(cb)` → `CTextService::ShowStatusMenu(pt)`，
   命令仍走原来的 `OnBarClick(idx)`。
 
-实测日志：`bar: ... visible=0`、`idle status: 中 简 at 222,266`、输入时 `show list: items=9 ...`、
+**状态条内容与悬浮栏对齐（第二轮）**：用户要求保留原悬浮栏的"熊猫图标 + 设置按钮 + 右键菜单"。
+
+- `CCandidateWindow` 新增 `SetStatusInfo(english, trad, iconPath)` 与 `PaintStatus()`：
+  状态模式下自绘一条小条：**主题图标 + 中/英 + 简/繁 + ⚙**（颜色和原来悬浮栏一致：
+  激活项用 200,70,40 的高亮色），并把每一段的位置记进 `statusZones_`；
+- `SetOnStatusClick(cb)`：左键命中哪一段就回调 `zone`（0=图标 1=中英 2=简繁 3=设置）；
+  TSF 侧映射回原来的 `OnBarClick(0/1/2)`，点图标则弹右键菜单；
+- 右键仍走 `SetOnMenu` → `ShowStatusMenu()`（中/英、简/繁、主题、设置…、版本号），
+  与悬浮栏菜单完全一致；
+- 图标路径来自 `ApplySettings()` 里算出的主题图标（存到 `m_iconPath`），
+  用 `LoadImageW(LR_LOADFROMFILE)` 载入 16×16。
+
+实测日志：`bar: ... visible=0`、`idle status: en=0 trad=1 at 222,266`、输入时 `show list: items=9 ...`、
 上屏后又回到 `idle status`。verify.ps1 105 项 PASS。
 
 ## 二·三十七·十九、英文单词自动学习

@@ -342,6 +342,9 @@ public:
     void SetOnMenu(std::function<void(POINT)> fn) { onMenu_ = std::move(fn); }
     HWND Hwnd() { Ensure(); return hwnd_; }
     // 状态模式：空闲时就显示在光标附近，只放"中/英·简/繁"这类基本信息
+    // 状态条内容：熊猫图标 + 中/英 + 简/繁 + 设置齿轮（和原来的悬浮栏一致）
+    void SetStatusInfo(bool english, bool trad, const std::wstring& iconPath);
+    void SetOnStatusClick(std::function<void(int)> fn) { onStatusClick_ = std::move(fn); }
     void SetStatusMode(bool on) {
         if (statusMode_ == on) return;
         statusMode_ = on;
@@ -413,6 +416,7 @@ private:
     void Destroy();
     void RecalcAndResize();
     void Paint(HDC dc);
+    void PaintStatus(HDC dc);
     void PaintPinnedStar(HDC dc, int x, const RECT& row, UINT dpi);
     UINT Dpi() const;
     int  padX_ = 4, padY_ = 2;
@@ -446,7 +450,13 @@ private:
     static const UINT kBriefTimerId = 0xB1;  // 徽标自动隐藏定时器
     std::function<void(int)> onClick_;
     std::function<void(POINT)> onMenu_;
+    std::function<void(int)> onStatusClick_;
     bool statusMode_ = false;
+    bool stEnglish_ = false;      // 状态条：当前中/英
+    bool stTrad_ = false;         // 状态条：当前简/繁
+    HICON statusIcon_ = nullptr;  // 状态条左侧的产品图标
+    std::wstring statusIconPath_;
+    std::vector<RECT> statusZones_;   // 0=图标 1=中/英 2=简/繁 3=齿轮
     int  width_ = 0, height_ = 0;
 };
 
@@ -504,9 +514,32 @@ void CCandidateWindow::Destroy() {
 void CCandidateWindow::RecalcAndResize() {
     Ensure();
     // 允许"只有顶部小框、没有候选行"的状态：英文模式没匹配到单词时也要显示输入内容
-    if (!hwnd_ || (items_.empty() && code_.empty())) {
+    if (!hwnd_ || (items_.empty() && code_.empty() && !statusMode_)) {
         layout_ = wubi::CandLayout();
         width_ = height_ = 0;
+        return;
+    }
+    // 状态条（空闲时的小窗）：图标 + 中/英 + 简/繁 + 齿轮
+    if (statusMode_) {
+        const UINT dpiS = Dpi();
+        padX_ = MulDiv(6, (int)dpiS, 96);
+        padY_ = MulDiv(3, (int)dpiS, 96);
+        HDC dcS = GetDC(hwnd_);
+        HGDIOBJ oldS = SelectObject(dcS, font_);
+        SIZE sCn = {0,0}, sTr = {0,0}, sGear = {0,0};
+        GetTextExtentPoint32W(dcS, L"\u4e2d", 1, &sCn);
+        GetTextExtentPoint32W(dcS, L"\u7b80", 1, &sTr);
+        GetTextExtentPoint32W(dcS, L"\u2699", 1, &sGear);
+        SelectObject(dcS, oldS);
+        ReleaseDC(hwnd_, dcS);
+        const int iconSz = MulDiv(16, (int)dpiS, 96);
+        const int gap = padX_ / 2;
+        width_ = padX_ * 2 + iconSz + padX_ + sCn.cx + padX_ + sTr.cx + padX_ + sGear.cx;
+        height_ = ((sCn.cy > iconSz) ? sCn.cy : iconSz) + padY_ * 2;
+        (void)gap;
+        layout_ = wubi::CandLayout();
+        layout_.width = width_;
+        layout_.height = height_;
         return;
     }
 
@@ -589,6 +622,66 @@ void CCandidateWindow::RecalcAndResize() {
     layout_.height = height_;
 }
 // 人工锁定的小星号：淡蓝色、比正文小一号，画在词尾
+// 状态条：图标 + 中/英 + 简/繁 + 齿轮（原悬浮栏的外观，搬到这个窗口里）
+void CCandidateWindow::PaintStatus(HDC dc) {
+    RECT rc;
+    GetClientRect(hwnd_, &rc);
+    const UINT dpi = Dpi();
+    HBRUSH bg = CreateSolidBrush(bgCol_);
+    FillRect(dc, &rc, bg);
+    DeleteObject(bg);
+    HBRUSH bd = CreateSolidBrush(borderCol_);
+    FrameRect(dc, &rc, bd);
+    DeleteObject(bd);
+
+    statusZones_.clear();
+    const int padX = MulDiv(6, (int)dpi, 96);
+    const int iconSz = MulDiv(16, (int)dpi, 96);
+    int x = padX;
+    int y = (rc.bottom - iconSz) / 2;
+
+    // 图标区
+    RECT zIcon = { x - MulDiv(2,(int)dpi,96), 0, x + iconSz + MulDiv(2,(int)dpi,96), rc.bottom };
+    if (statusIcon_) DrawIconEx(dc, x, y, statusIcon_, iconSz, iconSz, 0, nullptr, DI_NORMAL);
+    statusZones_.push_back(zIcon);
+    x += iconSz + padX;
+
+    SetBkMode(dc, TRANSPARENT);
+    HGDIOBJ oldFont = SelectObject(dc, font_);
+    const wchar_t* texts[3] = { stEnglish_ ? L"\u82f1" : L"\u4e2d", stTrad_ ? L"\u7e41" : L"\u7b80", L"\u2699" };
+    const bool act[3] = { stEnglish_, stTrad_, false };
+    for (int i = 0; i < 3; ++i) {
+        SIZE sz = { 0, 0 };
+        GetTextExtentPoint32W(dc, texts[i], 1, &sz);
+        RECT z = { x - padX / 2, 0, x + sz.cx + padX / 2, rc.bottom };
+        RECT tr = { x, 0, x + sz.cx, rc.bottom };
+        SetTextColor(dc, act[i] ? RGB(200, 70, 40) : textCol_);
+        DrawTextW(dc, texts[i], -1, &tr, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+        statusZones_.push_back(z);
+        x += sz.cx + padX;
+    }
+    SelectObject(dc, oldFont);
+}
+
+void CCandidateWindow::SetStatusInfo(bool english, bool trad, const std::wstring& iconPath) {
+    const bool changed = (stEnglish_ != english) || (stTrad_ != trad) || (statusIconPath_ != iconPath);
+    stEnglish_ = english;
+    stTrad_ = trad;
+    if (statusIconPath_ != iconPath) {
+        statusIconPath_ = iconPath;
+        if (statusIcon_) { DestroyIcon(statusIcon_); statusIcon_ = nullptr; }
+        if (!iconPath.empty()) {
+            statusIcon_ = (HICON)LoadImageW(nullptr, iconPath.c_str(), IMAGE_ICON,
+                                           MulDiv(16, (int)Dpi(), 96), MulDiv(16, (int)Dpi(), 96),
+                                           LR_LOADFROMFILE | LR_DEFAULTCOLOR);
+        }
+    }
+    if (changed) {
+        RecalcAndResize();
+        if (hwnd_) InvalidateRect(hwnd_, nullptr, FALSE);
+    }
+}
+
 void CCandidateWindow::PaintPinnedStar(HDC dc, int x, const RECT& row, UINT dpi) {
     if (!starFont_) return;
     HGDIOBJ oldFont = SelectObject(dc, starFont_);
@@ -600,6 +693,7 @@ void CCandidateWindow::PaintPinnedStar(HDC dc, int x, const RECT& row, UINT dpi)
 }
 
 void CCandidateWindow::Paint(HDC dc) {
+    if (statusMode_) { PaintStatus(dc); return; }
     RECT rc;
     GetClientRect(hwnd_, &rc);
     const int W = rc.right, H = rc.bottom;
@@ -817,6 +911,18 @@ LRESULT CALLBACK CCandidateWindow::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARA
     case WM_LBUTTONUP: {
         ReleaseCapture();
         if (self) {
+            if (self->statusMode_) {
+                POINT pt = { GET_X_LPARAM(lp), GET_Y_LPARAM(lp) };
+                for (size_t i = 0; i < self->statusZones_.size(); ++i) {
+                    const RECT& z = self->statusZones_[i];
+                    if (pt.x >= z.left && pt.x < z.right && pt.y >= z.top && pt.y < z.bottom) {
+                        auto fn = self->onStatusClick_;
+                        if (fn) fn((int)i);
+                        break;
+                    }
+                }
+                return 0;
+            }
             POINT pt = { GET_X_LPARAM(lp), GET_Y_LPARAM(lp) };
             int idx = self->layout_.HitTest(pt.x, pt.y);
             if (idx >= 0 && self->onClick_) {
@@ -1219,6 +1325,7 @@ private:
     bool m_keepCodeOnTerminate = false;
     bool m_shiftDown = false;
     bool m_shiftUsed = false;
+    std::wstring m_iconPath;   // 当前主题图标路径（合并窗状态条左侧那个）
     int  m_shiftSide = 1;      // 1 = 左 Shift，2 = 右 Shift（按下时记录）
     bool m_shiftBoth = false;  // 本次单击期间两个 Shift 都按下了
     bool m_statusShown = false;
@@ -1293,19 +1400,21 @@ void CTextService::ShowIdleStatus(ITfContext* pic) {
     m_hasCaret = true;
     m_lastCaret = caret;
 
-    std::wstring t = m_english ? L"\u82f1" : L"\u4e2d";
-    t += L" ";
-    t += m_tradEnabled ? L"\u7e41" : L"\u7b80";
-
     m_candWnd.SetStatusMode(true);
     m_candWnd.SetPlain(true);
     m_candWnd.SetLetterLabels(false);
     m_candWnd.SetCode(std::wstring());
-    m_candWnd.SetItems({ t }, false);
-    m_candWnd.SetOnClick([this](int) { ShowStatusMenu(([]() { POINT p; GetCursorPos(&p); return p; })()); });
+    m_candWnd.SetItems({ L"\u4e2d\u6587" }, false);   // 占位：实际绘制在 PaintStatus 里
+    m_candWnd.SetStatusInfo(m_english, m_tradEnabled, m_iconPath);
+    m_candWnd.SetOnStatusClick([this](int zone) {
+        if (zone == 3)      OnBarClick(2);          // ⚙ 设置
+        else if (zone == 1) OnBarClick(0);          // 中 / 英
+        else if (zone == 2) OnBarClick(1);          // 简 / 繁
+        else { POINT p; GetCursorPos(&p); ShowStatusMenu(p); }   // 点图标 = 弹菜单
+    });
     m_candWnd.ShowAt(caret);
     m_statusShown = false;
-    LogLine(L"idle status: %s at %ld,%ld", t.c_str(), (long)caret.left, (long)caret.bottom);
+    LogLine(L"idle status: en=%d trad=%d at %ld,%ld", (int)m_english, (int)m_tradEnabled, (long)caret.left, (long)caret.bottom);
 }
 
 // 合并窗口的右键菜单：内容与原来的悬浮栏一致（中/英、简/繁、主题、设置、版本）
