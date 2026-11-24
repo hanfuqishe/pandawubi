@@ -155,6 +155,23 @@ powershell -ExecutionPolicy Bypass -File .\tools\wechat-shift-sample.ps1
 脚本依次按左、右、两个一起各 150ms，然后把新增的 `testkey` / `shift poll` /
 `switch english` / `toggle trad` 打出来。微信进程必须**重启**过才会加载新 DLL。
 
+## 状态窗跟光标（鼠标点一下移到别处）
+
+悬浮状态窗靠 250ms 轮询贴合光标。光标位置现在先问 TSF
+（`GetSelection` + `GetTextExt`），拿不到才退回 Win32 插入符 —— Qt（微信）、Chromium/Electron、
+UWP 这些宿主根本没有 Win32 插入符，老代码因此只会用上一次的位置，点一下鼠标窗口就不动了。
+
+怎么验：在 **VS Code**（Monaco，无 Win32 插入符）里打开任意文件，点进编辑区，然后在不同行点几下，
+或者按 `Down`；日志里 `idle status: … at X,Y tsf=1` 的坐标应当跟着变：
+
+```
+idle status: en=0 trad=1 at 285,558 tsf=1
+idle status: en=0 trad=1 at 285,591 tsf=1   ← 按一下 Down
+```
+
+`tsf=0` 表示这一拍没从 TSF 拿到光标（窗口会用旧位置兜底）。
+连续 4 秒都拿不到才停止重试，下一次按键/焦点变化会重新开始。
+
 ## 快捷键切换后悬浮栏要同步
 
 `Ctrl+Shift+T`（简/繁）、`Ctrl+Shift+P`（标点）以前只改内部状态并落盘，**没有刷新悬浮栏**，

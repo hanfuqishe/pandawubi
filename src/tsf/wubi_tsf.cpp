@@ -430,6 +430,7 @@ public:
     // rect 为屏幕坐标（光标插入点）
     void ShowAt(const RECT& caret);
     void Hide();
+    void HideKeepFollow();   // 藏窗口但保留跟光标轮询（宿主暂时取不到光标时用）
 
 private:
     static LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -1136,6 +1137,9 @@ void CCandidateWindow::Hide() {
     if (hwnd_) ShowWindow(hwnd_, SW_HIDE);
 }
 
+// 只藏窗口、保留跟光标轮询：宿主暂时给不出光标时，下一拍还能自己回来
+void CCandidateWindow::HideKeepFollow() { if (hwnd_) ShowWindow(hwnd_, SW_HIDE); }
+
 // ---------------------------------------------------------------- 编辑会话封装
 class CEditSession : public ITfEditSession {
 public:
@@ -1487,6 +1491,9 @@ private:
     // 英文补全
     void SetEnglish(bool on);
     bool QueryCaretRect(RECT& out);
+    bool QueryCaretRectEx(RECT& out);   // 走 TSF（GetSelection + GetTextExt），现代宿主没有 Win32 插入符
+    DWORD m_caretFailTick = 0;          // 诊断日志节流：跟光标失败一秒钟最多记一条
+    int   m_idleMissTicks = 0;          // 连续取不到光标的次数（超过 16 次 ≈4 秒就停止重试）
     std::string EngPrefix() const;            // 查词用的全小写前缀
     void EngUpdate(ITfContext* pic);
     void EngType(ITfContext* pic, wchar_t ch);   // ch 保留真实大小写
@@ -1543,13 +1550,27 @@ static void BroadcastSettingsReload(); // 通知本机所有输入法窗口重�
 // 空闲状态：把"中/英 + 简/繁"贴在光标下方（合并后的悬浮窗；原来是一条独立的悬浮栏）
 void CTextService::ShowIdleStatus(ITfContext* pic) {
     (void)pic;
+    // 焦点不在任何文档上（对话框/桌面/别的进程）：不要贴状态条，也别把旧位置一直挂着
+    if (!m_docFocused) { m_candWnd.Hide(); return; }
     if (m_comp && !m_composer.Code().empty()) return;   // 正在组码：窗口归候选列表用
     if (m_engActive || !m_engTyped.empty() || m_quickMode || m_rawMode || m_zPending || m_pyLookup)
         return;   // 英文补全/便捷输入/原样记录/Z 菜单/拼音反查：窗口归它们用
     RECT caret = {};
-    bool hasCaret = QueryCaretRect(caret);
+    // 先走 TSF（Qt/Chromium 宿主没有 Win32 插入符，只有这条能拿到真实插入点，
+    // 鼠标点一下把光标点走，窗口才会跟着走），再退回 Win32 插入符 / 上次位置。
+    const bool tsfCaret = QueryCaretRectEx(caret);
+    bool hasCaret = tsfCaret || QueryCaretRect(caret);
     if (!hasCaret && m_hasCaret) { caret = m_lastCaret; hasCaret = true; }
-    if (!hasCaret) { if (!m_statusShown) m_candWnd.Hide(); return; }
+    if (!hasCaret) {
+        // 宿主还没画好 / 编辑会话被排成异步（TF_S_ASYNC）时会取不到光标。
+        // 不能就此 Hide+停表：那样窗口永远不回来了（VS Code 新窗口第一次就踩这个）。
+        // 先藏着，但继续每 250ms 试；连续 4 秒都取不到才放弃，等下一次按键/焦点变化重启。
+        if (++m_idleMissTicks > 16) { m_candWnd.Hide(); m_idleMissTicks = 0; return; }
+        m_candWnd.HideKeepFollow();
+        m_candWnd.SetFollowTimer(true);
+        return;
+    }
+    m_idleMissTicks = 0;
     m_hasCaret = true;
     m_lastCaret = caret;
 
@@ -1594,7 +1615,8 @@ void CTextService::ShowIdleStatus(ITfContext* pic) {
     });
     m_candWnd.SetFollowTimer(true);
     m_statusShown = false;
-    LogLine(L"idle status: en=%d trad=%d at %ld,%ld", (int)m_english, (int)m_tradEnabled, (long)caret.left, (long)caret.bottom);
+    LogLine(L"idle status: en=%d trad=%d at %ld,%ld tsf=%d", (int)m_english, (int)m_tradEnabled,
+            (long)caret.left, (long)caret.bottom, (int)tsfCaret);
 }
 
 // 合并窗口的右键菜单：内容与原来的悬浮栏一致（中/英、简/繁、主题、设置、版本）
@@ -1955,7 +1977,15 @@ STDMETHODIMP CTextService::OnSetFocus(ITfDocumentMgr* pimdFocus, ITfDocumentMgr*
             LogLine(L"doc focus: %d (count=%ld)", (int)now, (long)g_docFocusCount);
         }
     }
-    if (shouldReset) Reset();
+    if (shouldReset) {
+        Reset();
+        // 同一进程里点另一个输入框（另一个文档/控件）也会走到这里：Reset 会 Hide 并停掉
+        // 跟随定时器，不补这一下，状态条就永远不回来了（表现为"窗口没跟过来"）。
+        if (pimdFocus) {
+            ShowIdleStatus(nullptr);
+            m_candWnd.SetFollowTimer(true);   // 刚换焦点时可能还取不到光标，留给 250ms 轮询补
+        }
+    }
 
     // 焦点变化时把中/英隔间状态同步到新文档：系统指示器通常在焦点变化时重新查询
     if (pimdFocus) {
@@ -2817,6 +2847,80 @@ void CTextService::ShowCandidateList(const std::vector<std::wstring>& display) {
 // g_eng 定义见文件前部
 // 数据：data\eng_words.txt（48k 词，取自 QQ五笔 engcore.dat 的 NEPQ 词表）
 // 数据：data\eng_words.txt（48k 词，取自 QQ五笔 engcore.dat 的 NEPQ 词表）
+
+// 光标矩形（TSF 版）：GetSelection + ITfContextView::GetTextExt。
+// 为什么必须有这条：Qt（微信 4.x）/ Chromium / UWP 这些宿主根本没有 Win32 插入符，
+// GetGUIThreadInfo 拿不到 hwndCaret —— 空闲状态窗于是只能沿用上一次的 m_lastCaret，
+// 鼠标点一下把光标点到别处，窗口还停在老位置（用户反馈的那条）。
+bool CTextService::QueryCaretRectEx(RECT& out) {
+    // 取"当前焦点上下文"，不能只靠 m_context：空闲状态（没在组码）时它经常是空的，
+    // 以前就是因为这个一路退到 Win32 插入符，Qt/Chromium 上等于没有光标。
+    ITfContext* ctx = nullptr;
+    if (m_tim) {
+        ITfDocumentMgr* dim = nullptr;
+        if (SUCCEEDED(m_tim->GetFocus(&dim)) && dim) {
+            if (FAILED(dim->GetTop(&ctx))) ctx = nullptr;
+            dim->Release();
+        }
+    }
+    if (!ctx && m_context) { ctx = m_context; ctx->AddRef(); }
+    if (!ctx) return false;
+
+    // 注意：RequestEditSession 可能返回 TF_S_ASYNC（会话被排到稍后执行）。
+    // 那种情况下函数已经返回、栈上的局部变量没了，所以结果必须放在堆上（shared_ptr）。
+    struct Fetch { RECT rc = {}; bool got = false; int stage = 0; };
+    auto data = std::make_shared<Fetch>();
+    void* ctxPtr = (void*)ctx;
+    CEditSession* s = new CEditSession([ctx, data](TfEditCookie ec) -> HRESULT {
+        ITfContextView* view = nullptr;
+        if (FAILED(ctx->GetActiveView(&view)) || !view) return E_FAIL;
+        data->stage = 2;
+        // ITfContext::GetSelection 是"批量"签名：(ec, 起始项, 取几项, 数组, 取到几项)
+        TF_SELECTION tsel = {};
+        ULONG fetched = 0;
+        if (SUCCEEDED(ctx->GetSelection(ec, TF_DEFAULT_SELECTION, 1, &tsel, &fetched)) &&
+            fetched == 1 && tsel.range) {
+            data->stage = 3;
+            BOOL clipped = FALSE;
+            // 退化选区（就是一个插入点）也能取到矩形；取不到时宿主通常回 E_FAIL
+            if (SUCCEEDED(view->GetTextExt(ec, tsel.range, &data->rc, &clipped))) {
+                data->stage = 4;
+                // 有些宿主在滚动/切换面板的瞬间会回一个越界的矩形（实测 VS Code 回过 -1052,1162），
+                // 这种必须丢掉，否则状态窗会跳到屏幕边缘。
+                const int vx = GetSystemMetrics(SM_XVIRTUALSCREEN);
+                const int vy = GetSystemMetrics(SM_YVIRTUALSCREEN);
+                const int vw = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+                const int vh = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+                const RECT& rc = data->rc;
+                const bool sane = rc.right >= rc.left && rc.bottom >= rc.top &&
+                                  (rc.left != 0 || rc.top != 0) &&
+                                  rc.left >= vx && rc.top >= vy &&
+                                  rc.left < vx + vw && rc.top < vy + vh;
+                if (sane) data->got = true;
+            }
+            tsel.range->Release();
+        }
+        view->Release();
+        return data->got ? S_OK : E_FAIL;
+    });
+    HRESULT hrSession = E_FAIL;
+    ctx->RequestEditSession(m_tid, s, TF_ES_SYNC | TF_ES_READ, &hrSession);
+    s->Release();
+    ctx->Release();
+    if (hrSession == TF_S_ASYNC) return false;   // 排到稍后再跑：这一拍先放弃，下一拍再取
+    if (!data->got) {
+        // 采样：失败原因一秒钟最多记一条，方便判断"跟不过去"是哪一步断的
+        const DWORD now = GetTickCount();
+        if (now - m_caretFailTick > 1000) {
+            m_caretFailTick = now;
+            LogLine(L"caret ex failed: stage=%d sessHr=0x%08lX ctx=%p", data->stage,
+                    (unsigned long)hrSession, ctxPtr);
+        }
+        return false;
+    }
+    out = data->rc;
+    return true;
+}
 
 bool CTextService::QueryCaretRect(RECT& out) {
     GUITHREADINFO gti = { sizeof(gti) };

@@ -1840,6 +1840,41 @@ shift poll -> both (english=0 trad=0)       ← 两个一起：两个动作都�
 测试宿主配套：`[h]`/`[j]` = 按住 150ms 再松（轮询看得见），
 `[H]`/`[J]` 仍是瞬时注入（只有事件通路能看见）。
 
+## 二·四十三、状态窗跟光标：Win32 插入符靠不住，改走 TSF
+
+用户反馈：鼠标点一下，光标已经移到别处，悬浮状态窗还停在老位置。
+
+三个原因叠在一起：
+
+1. `QueryCaretRect` 只认 `GetGUIThreadInfo` 的 `hwndCaret`（Win32 插入符）。
+   Qt（微信 4.x）、Chromium/Electron、UWP 都没有这个东西，取不到就退回 `m_lastCaret` —— 也就是旧位置。
+2. 取不到光标时 `ShowIdleStatus` 直接 `Hide()`，而 `Hide()` 会顺手杀掉 250ms 跟随定时器；
+   于是"这一拍没取到"变成"以后再也不取"，窗口就永远停在老地方。
+3. `RequestEditSession` 可能返回 `TF_S_ASYNC`（会话被排到稍后执行）。
+   原来把栈上变量的地址交给会话闭包，异步执行时就是悬空引用（UB）。
+
+修法：
+
+- 新增 `QueryCaretRectEx`：`ITfThreadMgr::GetFocus` → `ITfDocumentMgr::GetTop`（不再依赖 `m_context`，
+  空闲状态它经常是空的）→ `ITfContext::GetSelection(TF_DEFAULT_SELECTION)` →
+  `ITfContextView::GetTextExt`。注意 `GetSelection` 是批量签名 `(ec, 起始项, 取几项, 数组, 取到几项)`。
+- 结果放在 `shared_ptr` 里，`TF_S_ASYNC` 时直接放弃这一拍（不读悬空引用）。
+- 矩形做虚拟屏范围校验：VS Code 在切换面板的瞬间回过 `-1052,1162`，不过滤窗口会跳到屏幕边缘。
+- `ShowIdleStatus` 取不到光标时用 `HideKeepFollow()`（藏窗口但保留 250ms 跟随表），
+  连续 4 秒都取不到才停；`m_docFocused` 为假时不贴状态条。
+- `OnSetFocus` 换文档（同一进程里点另一个输入框）后，`Reset()` 会 Hide+停表，这里补一次
+  `ShowIdleStatus` + 重开跟随表。
+
+验证（VS Code / Monaco，没有 Win32 插入符）：
+
+```
+idle status: en=0 trad=1 at 285,558 tsf=1
+idle status: en=0 trad=1 at 285,591 tsf=1   ← 按一下 Down
+idle status: en=0 trad=1 at 292,623 tsf=1   ← 再按一下 Down
+```
+
+`tsf=%d` 是这次新加的日志字段：1 = TSF 拿到了光标，0 = 退回旧路径（这时窗口不会跟）。
+
 ## 三、TSF 外壳（已实现，真机已验证工作）
 
 ```

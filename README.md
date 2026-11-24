@@ -223,6 +223,7 @@ cands: code=wqvb n=3 comp=...
 | 语言栏图标显示「简体」 | 指示器图标路径被删/移动，重装或把 4 个 `.ico` 放回 `%LOCALAPPDATA%\PandaWubi` |
 | 打不出字 | 看日志里 `dict load` 是否失败；源码版需要先生成 `data\qqwubi86.dict.tsv` |
 | 微信里单击 `Shift` 不切换 | 微信只转发字母/标点、连 `KeyUp` 都不给（日志里没有任何 `vk=0x10` 的 `OnKeyUp`），单击判定靠 20ms 轮询兜底。仍无效时先确认微信进程是在本次构建之后启动的（看日志 `build:` 时间） |
+| 鼠标点一下，悬浮窗没跟过去 | 状态窗每 250ms 用 TSF 的光标位置（`GetSelection` + `GetTextExt`）重新贴合，Qt/Chromium 宿主没有 Win32 插入符也能跟。看日志 `idle status: … tsf=1`；`tsf=0` 表示这一拍没取到光标（用旧位置兜底） |
 
 ## 数据位置
 
