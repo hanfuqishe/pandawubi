@@ -1553,16 +1553,32 @@ static volatile LONG g_reloadPending = 0;
 static void RequestSettingsReload();   // 定义见下（需要 CTextService 完整类型）
 static void BroadcastSettingsReload(); // 通知本机所有输入法窗口重读配置
 
+// 前台窗口是不是本进程的：状态条只应该出现在"用户正在用的那个应用"里。
+// 不能只靠 TSF 的 OnKillThreadFocus —— 有的宿主切走时不发，或者被"刚点过状态窗"的
+// 宽限挡掉，于是状态条会挂在别人的窗口上。
+static bool HostForeground() {
+    const HWND fg = GetForegroundWindow();
+    if (!fg) return false;
+    DWORD pid = 0;
+    GetWindowThreadProcessId(fg, &pid);
+    return pid == GetCurrentProcessId();
+}
+
 // 空闲状态：把"中/英 + 简/繁"贴在光标下方（合并后的悬浮窗；原来是一条独立的悬浮栏）
 void CTextService::ShowIdleStatus(ITfContext* pic) {
     (void)pic;
-    // 没有文档焦点（对话框/桌面/别的进程）：这一拍什么都不做。
+    // 前台不是本进程（用户切到别的应用了）：状态条必须收起来。
+    // 不能只靠 OnKillThreadFocus —— 有些宿主切走时不发这个回调，或者被"刚点过状态窗"的
+    // 1.2 秒宽限挡掉；250ms 的轮询里再查一次前台窗口，才不会留一条挂在别人窗口上。
+    if (!HostForeground()) { m_candWnd.HideKeepFollow(); return; }
+    // 没有文档焦点（焦点在本进程的按钮/空白处，或对话框）：这一拍不画。
     // 注意这里**不能 Hide**：Hide 会顺手杀掉跟随定时器，而宿主"点一下鼠标"经常只是
     // 短暂丢了文档焦点再拿回来，定时器一停就再也没人把状态条放回来了
-    // （用户反馈的"鼠标点一下，状态框就没了"就是这个）。
-    if (!m_docFocused) return;
+    // （用户反馈的"鼠标点一下，状态框就没了"就是这个）。只藏窗口，表留着。
+    if (!m_docFocused) { m_candWnd.HideKeepFollow(); return; }
     if (m_candWnd.MenuOpen() || m_candWnd.Briefing()) return;   // 菜单/闪示正占着窗口
     if (m_comp && !m_composer.Code().empty()) return;   // 正在组码：窗口归候选列表用
+    if (m_customWordMode) return;                       // 自定义词组提示占着窗口
     if (m_engActive || !m_engTyped.empty() || m_quickMode || m_rawMode || m_zPending || m_pyLookup)
         return;   // 英文补全/便捷输入/原样记录/Z 菜单/拼音反查：窗口归它们用
     RECT caret = {};
@@ -1886,11 +1902,8 @@ STDMETHODIMP CTextService::ActivateEx(ITfThreadMgr* ptim, TfClientId tid, DWORD)
     // 窗口被藏起来也继续跑，所以"点一下鼠标/换个输入框"之后能自己回来；
     // 真正该停表的地方只有线程失焦（OnKillThreadFocus）和 Deactivate。
     m_candWnd.SetOnFollow([this] {
-        if (!m_docFocused) { m_candWnd.HideKeepFollow(); return; }   // 焦点不在文档上：只藏，不画
-        // 候选/提示在用窗口时让位（否则英文补全、便捷输入、拼音反查会被顶掉）
-        if (m_comp || m_customWordMode || m_engActive || !m_engTyped.empty() ||
-            m_quickMode || m_rawMode || m_zPending || m_pyLookup) return;
-        if (m_candWnd.MenuOpen() || m_candWnd.Briefing()) return;
+        // 前台不是本进程 / 没有文档焦点 / 窗口正被候选提示占用 —— 全交给 ShowIdleStatus 判断，
+        // 它会在该藏的时候 HideKeepFollow（保留轮询，前台回来能自己再出现）。
         ShowIdleStatus(nullptr);
     });
     m_candWnd.SetFollowTimer(true);
@@ -3269,11 +3282,7 @@ void CTextService::BeginCustomWord(ITfContext* pic) {
 // 后台实例不会把别人的 Shift 当成自己的。宿主自己报过 KeyUp 的（记事本/浏览器等）
 // 以事件通路为准，采样只负责"静默宿主"。
 void CTextService::ShiftSampleTick() {
-    const HWND fg = GetForegroundWindow();
-    if (!fg) return;
-    DWORD fgPid = 0;
-    GetWindowThreadProcessId(fg, &fgPid);
-    if (fgPid != GetCurrentProcessId()) return;
+    if (!HostForeground()) return;
     if (!m_docFocused) return;
 
     static const int kVk[2] = { VK_LSHIFT, VK_RSHIFT };
