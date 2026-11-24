@@ -2781,7 +2781,13 @@ void CTextService::SaveCustomWord(ITfContext* pic) {
         LogLine(L"custom word: enter on empty buffer -> exit");
         return;
     }
-    if (m_customChars.size() < 2) { FlashStatus(L"至少两个字：按 ← 从刚输入的字里取"); return; }
+    if (m_customChars.size() < 2) {
+        const size_t had = m_customChars.size();
+        ExitCustom(pic, true);
+        FlashStatus(L"至少两个字，加词取消");
+        LogLine(L"custom word: too short (%zu char), aborted", had);
+        return;
+    }
     const std::string code = wubi::PhraseCode(m_customWord, g_dict.Get());
     if (code.empty()) { FlashStatus(L"取码失败：有字查不到全码"); return; }
 
@@ -2816,6 +2822,7 @@ bool CTextService::CustomKey(ITfContext* pic, UINT vk, LPARAM lp, bool shift, BO
         return true;
     case VK_RIGHT:   // → 缩一个：把最近取回来的那个字（在最前面）退回上屏队列，← 可以再取
         if (!m_customChars.empty()) {
+        if (m_customChars.size() <= 2) { FlashStatus(L"至少两个字，不能再删（Esc 取消，回车保存）"); *pfEaten = TRUE; return true; }
             m_recentChars.push_back(m_customChars.front());
             m_customChars.erase(m_customChars.begin());
             m_customWord.clear();
@@ -2827,6 +2834,7 @@ bool CTextService::CustomKey(ITfContext* pic, UINT vk, LPARAM lp, bool shift, BO
         return true;
     case VK_DELETE:  // Del 删掉最前面那个字（真正丢弃，不回队列）
         if (!m_customChars.empty()) {
+        if (m_customChars.size() <= 2) { FlashStatus(L"至少两个字，不能再删（Esc 取消，回车保存）"); *pfEaten = TRUE; return true; }
             m_customChars.erase(m_customChars.begin());
             m_customWord.clear();
             for (const auto& c : m_customChars) m_customWord += WideToUtf8(c);
@@ -2836,6 +2844,7 @@ bool CTextService::CustomKey(ITfContext* pic, UINT vk, LPARAM lp, bool shift, BO
         *pfEaten = TRUE;
         return true;
     case VK_BACK:    // Backspace 删掉最后面那个字（最容易打错的通常是最近这个）
+        if (m_customChars.size() <= 2) { FlashStatus(L"至少两个字，不能再删（Esc 取消，回车保存）"); *pfEaten = TRUE; return true; }
         if (!m_customChars.empty()) {
             m_customChars.pop_back();
             m_customWord.clear();

@@ -260,6 +260,20 @@ Blob    { 所有词条 UTF-8 连续存放 }
 实测：`[C]` → `custom word: empty buffer, exit immediately`；`[C][E]` 同样立刻退出；
 有字时 `g f [C][E]` 仍正常（`custom word saved: code=ggfb word=一地 ok=1`）。
 
+## 二·三十七·二十五、自定义词组不允许删到 2 个字以下
+
+用户要求：不允许把候选汉字删到 2 个字以下；不足 2 字还要加词，就报错并退出加词状态。
+
+改法（`CustomKey` / `SaveCustomWord`）：
+- `VK_BACK` / `VK_DELETE` / `VK_RIGHT` 三个减字分支开头统一判断：
+  `m_customChars.size() <= 2` → 闪一句「至少两个字，不能再删（Esc 取消，回车保存）」并吞掉按键，不删；
+- `SaveCustomWord` 里 `size() < 2` → 先记下原字数，`ExitCustom(pic, true)` 退出，再闪「至少两个字，加词取消」，
+  日志 `custom word: too short (N char), aborted`；
+- 想放弃就按 Esc（任何时候都能退）。
+
+实测：两个字时按退格 → 不删、仍在加词状态；连按两次退格再回车 → 正常保存 `一地`(ggfb)；
+只有一个字时回车 → 退出并报错；Esc → 退出。
+
 ## 二·三十七·十九、英文单词自动学习
 
 用户需求：英文补全模式下输入了词表里没有的串，要加进自定义词表。
