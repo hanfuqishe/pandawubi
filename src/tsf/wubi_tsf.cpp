@@ -1497,6 +1497,7 @@ private:
     // 英文补全
     void SetEnglish(bool on);
     bool QueryCaretRect(RECT& out);
+    bool QueryCaretRectGdi(RECT& out);  // 只问 Win32 插入符，取不到就 false（不拿旧位置顶替）
     bool QueryCaretRectEx(RECT& out);   // 走 TSF（GetSelection + GetTextExt），现代宿主没有 Win32 插入符
     DWORD m_caretFailTick = 0;          // 诊断日志节流：跟光标失败一秒钟最多记一条
     int   m_idleMissTicks = 0;          // 连续取不到光标的次数（超过 16 次 ≈4 秒就停止重试）
@@ -1582,11 +1583,26 @@ void CTextService::ShowIdleStatus(ITfContext* pic) {
     if (m_engActive || !m_engTyped.empty() || m_quickMode || m_rawMode || m_zPending || m_pyLookup)
         return;   // 英文补全/便捷输入/原样记录/Z 菜单/拼音反查：窗口归它们用
     RECT caret = {};
-    // 先走 TSF（Qt/Chromium 宿主没有 Win32 插入符，只有这条能拿到真实插入点，
-    // 鼠标点一下把光标点走，窗口才会跟着走），再退回 Win32 插入符 / 上次位置。
-    const bool tsfCaret = QueryCaretRectEx(caret);
-    bool hasCaret = tsfCaret || QueryCaretRect(caret);
-    if (!hasCaret && m_hasCaret) { caret = m_lastCaret; hasCaret = true; }
+    // 只认"活的"光标：TSF 的 GetSelection+GetTextExt，退一步是 Win32 插入符。
+    // **不再用 m_lastCaret 兜底** —— 兜底正是"焦点已经不在输入框里了，状态条还挂在
+    // 上一个输入框旁边"的来源（浏览器里点一下网页、点一下按钮就会这样）。
+    bool hasCaret = QueryCaretRectEx(caret);
+    const bool tsfCaret = hasCaret;
+    if (!hasCaret) hasCaret = QueryCaretRectGdi(caret);
+    // 光标矩形必须落在这个前台窗口里（留 120px 余量）。
+    // Chromium 的 TSF 对"整个文档"的选区会回一个几倍屏宽高的包围盒（实测 3839,2075），
+    // 不过滤的话状态条会被钉在屏幕角落 —— 看起来就像"焦点不在输入框里了还挂着"。
+    if (hasCaret) {
+        RECT wr = {};
+        const HWND fg = GetForegroundWindow();
+        if (fg && GetWindowRect(fg, &wr)) {
+            const int margin = 120;
+            if (caret.left < wr.left - margin || caret.left > wr.right + margin ||
+                caret.top  < wr.top  - margin || caret.top  > wr.bottom + margin) {
+                hasCaret = false;
+            }
+        }
+    }
     if (!hasCaret) {
         // 宿主还没画好 / 编辑会话被排成异步（TF_S_ASYNC）时会取不到光标。
         // 不能就此 Hide+停表：那样窗口永远不回来了（VS Code 新窗口第一次就踩这个）。
@@ -2915,6 +2931,9 @@ bool CTextService::QueryCaretRectEx(RECT& out) {
         if (SUCCEEDED(ctx->GetSelection(ec, TF_DEFAULT_SELECTION, 1, &tsel, &fetched)) &&
             fetched == 1 && tsel.range) {
             data->stage = 3;
+            // 收成插入点再取矩形。Chromium 的 TSF 上下文经常给一个"整个文档"的选区，
+            // 对它调 GetTextExt 得到的是几倍屏宽高的包围盒（实测 3839,2075），完全没法用。
+            tsel.range->Collapse(ec, TF_ANCHOR_START);
             BOOL clipped = FALSE;
             // 退化选区（就是一个插入点）也能取到矩形；取不到时宿主通常回 E_FAIL
             if (SUCCEEDED(view->GetTextExt(ec, tsel.range, &data->rc, &clipped))) {
@@ -2956,7 +2975,8 @@ bool CTextService::QueryCaretRectEx(RECT& out) {
     return true;
 }
 
-bool CTextService::QueryCaretRect(RECT& out) {
+// 只取"活的" Win32 插入符（GetGUIThreadInfo）。取不到就是取不到，不拿上次的位置顶替。
+bool CTextService::QueryCaretRectGdi(RECT& out) {
     GUITHREADINFO gti = { sizeof(gti) };
     if (GetGUIThreadInfo(GetCurrentThreadId(), &gti) && gti.hwndCaret) {
         POINT pt = { gti.rcCaret.left, gti.rcCaret.bottom };
@@ -2966,6 +2986,12 @@ bool CTextService::QueryCaretRect(RECT& out) {
             return true;
         }
     }
+    return false;
+}
+
+// 候选列表用的版本：拿不到就退到"上次记录的位置"，至少别让候选框跑到屏幕左上角。
+bool CTextService::QueryCaretRect(RECT& out) {
+    if (QueryCaretRectGdi(out)) return true;
     if (m_hasCaret) { out = m_lastCaret; return true; }
     return false;
 }
