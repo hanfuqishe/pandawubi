@@ -932,6 +932,7 @@ LRESULT CALLBACK CCandidateWindow::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARA
                 for (size_t i = 0; i < self->statusZones_.size(); ++i) {
                     const RECT& z = self->statusZones_[i];
                     if (pt.x >= z.left && pt.x < z.right && pt.y >= z.top && pt.y < z.bottom) {
+                        LogLine(L"status click: zone=%d (zones=%zu)", (int)i, self->statusZones_.size());
                         auto fn = self->onStatusClick_;   // 拷贝：回调里可能重入改状态
                         if (fn) fn((int)i);
                         break;
@@ -1341,6 +1342,7 @@ private:
     bool m_shiftDown = false;
     bool m_shiftUsed = false;
     bool m_menuOpen = false;   // 右键菜单正开着（期间不要因为丢焦点把状态窗收起）
+    DWORD m_statusClickTick = 0;   // 最近一次点/右键状态窗的时刻（点完别被"丢焦点"顺手收起）
     std::wstring m_iconPath;   // 当前主题图标路径（合并窗状态条左侧那个）
     int  m_shiftSide = 1;      // 1 = 左 Shift，2 = 右 Shift（按下时记录）
     bool m_shiftBoth = false;  // 本次单击期间两个 Shift 都按下了
@@ -1422,19 +1424,25 @@ void CTextService::ShowIdleStatus(ITfContext* pic) {
     m_candWnd.SetCode(std::wstring());
     m_candWnd.SetItems({ L"\u4e2d\u6587" }, false);   // 占位：实际绘制在 PaintStatus 里
     m_candWnd.SetStatusInfo(m_english, m_tradEnabled, m_iconPath);
-    m_candWnd.SetOnMenu([this](POINT pt) { ShowStatusMenu(pt); });   // 右键菜单（原来悬浮栏那套）
+    m_candWnd.SetOnMenu([this](POINT pt) { m_statusClickTick = GetTickCount(); ShowStatusMenu(pt); });
     m_candWnd.SetOnStatusClick([this](int zone) {
+        m_statusClickTick = GetTickCount();
         if (zone == 3)      { OnBarClick(2); }                       // ⚙ 设置
         else if (zone == 1) { OnBarClick(0); }                       // 中 / 英
         else if (zone == 2) { OnBarClick(1); }                       // 简 / 繁
         else { POINT p; GetCursorPos(&p); ShowStatusMenu(p); }       // 点图标 = 弹菜单
         // 点完再摆一次：设置窗口/菜单会让宿主短暂失去焦点，窗口可能已被收起
         ShowIdleStatus(nullptr);
+        // 再延后补一次：有些宿主在点击后还会补一个 kill-focus 回调
+        m_candWnd.SetFollowTimer(true);
     });
     m_candWnd.ShowAt(caret);
     // 英文直通模式下按键根本不进输入法，收不到任何通知 -> 用定时器让状态窗跟着光标走
     m_candWnd.SetOnFollow([this] {
-        if (m_english && !m_comp && !m_customWordMode) ShowIdleStatus(nullptr);
+        if (m_english && !m_comp && !m_customWordMode) { ShowIdleStatus(nullptr); return; }
+        // 非英文模式也留着这个"补摆"用：宿主还在前台就把状态窗重新摆出来，然后停表
+        HWND fg = GetForegroundWindow();
+        if (fg && (GetTickCount() - m_statusClickTick < 1500)) ShowIdleStatus(nullptr);
         else m_candWnd.SetFollowTimer(false);
     });
     m_candWnd.SetFollowTimer(m_english && !m_comp);
@@ -1542,7 +1550,8 @@ STDMETHODIMP CTextService::OnKillThreadFocus() {
         BarGuardScope guard;
         owned = (g_barOwner == this);
         if (owned) SharedBar().HideNow();
-        if (!m_menuOpen) m_candWnd.Hide();   // 菜单打开时别收（否则菜单跟着消失）
+        // 菜单打开、或刚点过状态窗（1.2s 内）都不收：点自己家的窗口会让宿主短暂丢焦点
+        if (!m_menuOpen && (GetTickCount() - m_statusClickTick > 1200)) m_candWnd.Hide();
     }
     LogLine(L"OnKillThreadFocus: tid=%u owned=%d", m_tid, (int)owned);
     return S_OK;
