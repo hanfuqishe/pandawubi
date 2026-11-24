@@ -290,6 +290,25 @@ Blob    { 所有词条 UTF-8 连续存放 }
 
 注意：测试宿主注入的 Shift 到不了 TSF key sink，这一条只能在实际应用里验证。
 
+## 二·三十七·二十七、悬浮栏与候选窗合并成一个窗口
+
+用户要求：平时就显示在光标附近、只放"悬浮栏里的基本信息"；开始输入后同一个窗口展开，
+追加显示编码和候选。
+
+实现：
+- 复用候选窗（`CCandidateWindow`）当唯一窗口，加"状态模式"：`SetStatusMode(true)` + `SetPlain(true)`
+  + 单条文本（如 `中 简`），`ShowAt(caret)` 贴到光标下方；
+- `CTextService::ShowIdleStatus(pic)`：组码时不动，否则取光标矩形（`QueryCaretRect`，取不到则用
+  上次的 `m_lastCaret`），显示 `中/英 + 简/繁`；
+- 调用点：ActivateEx、`OnSetThreadFocus`、`CommitText` 结束、`ToggleEnglish`；
+  `RefreshCandidates` 里 `SetStatusMode(false)`（进组码/候选），`OnKillThreadFocus` 里 `Hide()`；
+- 独立悬浮栏不再显示（`SharedBar().Show(false)`），它的右键菜单（中/英、简/繁、主题、设置、版本）
+  搬到合并窗：`CCandidateWindow::SetOnMenu(cb)` → `CTextService::ShowStatusMenu(pt)`，
+  命令仍走原来的 `OnBarClick(idx)`。
+
+实测日志：`bar: ... visible=0`、`idle status: 中 简 at 222,266`、输入时 `show list: items=9 ...`、
+上屏后又回到 `idle status`。verify.ps1 105 项 PASS。
+
 ## 二·三十七·十九、英文单词自动学习
 
 用户需求：英文补全模式下输入了词表里没有的串，要加进自定义词表。

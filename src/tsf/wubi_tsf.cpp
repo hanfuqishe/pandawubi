@@ -338,6 +338,15 @@ public:
         RecalcAndResize();
     }
     void SetOnClick(std::function<void(int)> fn) { onClick_ = std::move(fn); }
+    // 右键菜单（合并后状态栏的菜单挂到这里）
+    void SetOnMenu(std::function<void(POINT)> fn) { onMenu_ = std::move(fn); }
+    HWND Hwnd() { Ensure(); return hwnd_; }
+    // 状态模式：空闲时就显示在光标附近，只放"中/英·简/繁"这类基本信息
+    void SetStatusMode(bool on) {
+        if (statusMode_ == on) return;
+        statusMode_ = on;
+    }
+    bool StatusMode() const { return statusMode_; }
     void SetLetterLabels(bool on) { if (letterLabels_ != on) { letterLabels_ = on; RecalcAndResize(); } }
     // 纯文本徽标：不显示序号（用于中/英状态提示，避免被当成候选词）
     void SetPlain(bool on) { if (plain_ != on) { plain_ = on; RecalcAndResize(); } }
@@ -436,6 +445,8 @@ private:
     int      artW_   = 0;                     // 右下角装饰图尺寸（右侧留白）
     static const UINT kBriefTimerId = 0xB1;  // 徽标自动隐藏定时器
     std::function<void(int)> onClick_;
+    std::function<void(POINT)> onMenu_;
+    bool statusMode_ = false;
     int  width_ = 0, height_ = 0;
 };
 
@@ -791,6 +802,15 @@ LRESULT CALLBACK CCandidateWindow::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARA
         }
         return 0;
         return MA_NOACTIVATE;
+    case WM_RBUTTONUP: {
+        if (self && self->onMenu_) {
+            POINT pt;
+            GetCursorPos(&pt);
+            auto fn = self->onMenu_;
+            fn(pt);
+        }
+        return 0;
+    }
     case WM_LBUTTONDOWN:
         SetCapture(hwnd);
         return 0;
@@ -1189,6 +1209,8 @@ private:
 
     void ToggleTrad(ITfContext* pic);      // 简/繁切换（Ctrl+Shift+T 与单击右 Shift 共用）
     void ToggleEnglish(ITfContext* pic);   // 中/英切换（单击左 Shift）
+    void ShowIdleStatus(ITfContext* pic);  // 空闲时把"中/英·简/繁"贴在光标附近（合并后的悬浮窗）
+    void ShowStatusMenu(POINT pt);         // 合并窗口的右键菜单（原来悬浮栏那套）
     // 中英文切换（单击左 Shift）与状态提示
     bool m_english   = false;
     bool m_docFocused = false;   // 当前是否有"文档焦点"（TSF 的 OnSetFocus 非空）
@@ -1260,6 +1282,61 @@ static volatile LONG g_reloadPending = 0;
 static void RequestSettingsReload();   // 定义见下（需要 CTextService 完整类型）
 static void BroadcastSettingsReload(); // 通知本机所有输入法窗口重读配置
 
+// 空闲状态：把"中/英 + 简/繁"贴在光标下方（合并后的悬浮窗；原来是一条独立的悬浮栏）
+void CTextService::ShowIdleStatus(ITfContext* pic) {
+    (void)pic;
+    if (m_comp && !m_composer.Code().empty()) return;   // 正在组码：窗口归候选列表用
+    RECT caret = {};
+    bool hasCaret = QueryCaretRect(caret);
+    if (!hasCaret && m_hasCaret) { caret = m_lastCaret; hasCaret = true; }
+    if (!hasCaret) { if (!m_statusShown) m_candWnd.Hide(); return; }
+    m_hasCaret = true;
+    m_lastCaret = caret;
+
+    std::wstring t = m_english ? L"\u82f1" : L"\u4e2d";
+    t += L" ";
+    t += m_tradEnabled ? L"\u7e41" : L"\u7b80";
+
+    m_candWnd.SetStatusMode(true);
+    m_candWnd.SetPlain(true);
+    m_candWnd.SetLetterLabels(false);
+    m_candWnd.SetCode(std::wstring());
+    m_candWnd.SetItems({ t }, false);
+    m_candWnd.SetOnClick([this](int) { ShowStatusMenu(([]() { POINT p; GetCursorPos(&p); return p; })()); });
+    m_candWnd.ShowAt(caret);
+    m_statusShown = false;
+    LogLine(L"idle status: %s at %ld,%ld", t.c_str(), (long)caret.left, (long)caret.bottom);
+}
+
+// 合并窗口的右键菜单：内容与原来的悬浮栏一致（中/英、简/繁、主题、设置、版本）
+void CTextService::ShowStatusMenu(POINT pt) {
+    HMENU menu = CreatePopupMenu();
+    AppendMenuW(menu, MF_STRING | (m_english ? 0 : MF_CHECKED), 1, L"\u4e2d\u6587\u8f93\u5165");
+    AppendMenuW(menu, MF_STRING | (m_tradEnabled ? MF_CHECKED : 0), 2, L"\u7b80\u7e41\u8f93\u51fa");
+    HMENU themeMenu = CreatePopupMenu();
+    static const wchar_t* kThemeNames[4] = { L"\u718a\u732b", L"\u72f8\u82b1\u732b", L"\u4e2d\u534e\u7530\u56ed\u72ac", L"\u4e39\u9876\u9e64" };
+    const bool isCrane = (m_settings.Theme == L"crane");
+    const bool isDog   = (m_settings.Theme == L"dog");
+    const bool isCat   = (m_settings.Theme == L"cat");
+    const int curTheme = isCrane ? 3 : (isDog ? 2 : (isCat ? 1 : 0));
+    for (int i = 0; i < 4; ++i) {
+        AppendMenuW(themeMenu, MF_STRING | (curTheme == i ? MF_CHECKED : 0), 100 + i, kThemeNames[i]);
+    }
+    AppendMenuW(menu, MF_POPUP, (UINT_PTR)themeMenu, L"\u4e3b\u9898");
+    AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
+    AppendMenuW(menu, MF_STRING, 3, L"\u8bbe\u7f6e...");
+    AppendMenuW(menu, MF_STRING, 4, PANDA_WUBI_VERSION_FULL);
+
+    HWND owner = m_candWnd.Hwnd();
+    HWND prevFg = GetForegroundWindow();
+    const int cmd = (int)TrackPopupMenu(menu, TPM_RETURNCMD | TPM_RIGHTBUTTON,
+                                        pt.x, pt.y, 0, owner, nullptr);
+    DestroyMenu(menu);
+    if (prevFg) SetForegroundWindow(prevFg);
+    if (cmd >= 1 && cmd <= 4) OnBarClick(cmd - 1);
+    else if (cmd >= 100 && cmd <= 103) OnBarClick(cmd);
+}
+
 void CTextService::BarSync() {
     if (g_barOwner == this)
         SharedBar().SetState(m_english, m_tradEnabled);
@@ -1310,7 +1387,8 @@ STDMETHODIMP CTextService::OnSetThreadFocus() {
         BarGuardScope guard;
         g_barOwner = this;
         BarSync();
-        SharedBar().Show(true);
+        SharedBar().Show(false);      // 合并后不再显示独立悬浮栏
+        ShowIdleStatus(nullptr);      // 状态信息贴到光标附近（同一个窗口）
     }
     LogLine(L"OnSetThreadFocus: tid=%u visible=%d", m_tid, (int)SharedBar().Visible());
     return S_OK;
@@ -1324,6 +1402,7 @@ STDMETHODIMP CTextService::OnKillThreadFocus() {
         BarGuardScope guard;
         owned = (g_barOwner == this);
         if (owned) SharedBar().HideNow();
+        m_candWnd.Hide();      // 合并窗（状态徽标）也一起收起
     }
     LogLine(L"OnKillThreadFocus: tid=%u owned=%d", m_tid, (int)owned);
     return S_OK;
@@ -1468,7 +1547,8 @@ STDMETHODIMP CTextService::ActivateEx(ITfThreadMgr* ptim, TfClientId tid, DWORD)
         }
         g_barOwner = this;
         BarSync();
-        SharedBar().Show(true);
+        SharedBar().Show(false);      // 合并后不再显示独立悬浮栏
+        ShowIdleStatus(nullptr);      // 状态信息贴到光标附近（同一个窗口）
     }
     LogLine(L"bar: users=%d owner=%p visible=%d", g_barUsers, (void*)this,
             (int)SharedBar().Visible());
@@ -1911,6 +1991,7 @@ HRESULT CTextService::CommitText(ITfContext* pic, const std::wstring& textIn,
     m_code.clear();
     m_candWnd.Hide();
     if (m_comp) { m_comp->Release(); m_comp = nullptr; }
+    ShowIdleStatus(nullptr);   // 上屏完回到"只显示状态"的小窗
     return hr;
 }
 
@@ -3020,6 +3101,7 @@ bool CTextService::PickSessionCandidate(ITfContext* pic, int displayIdx) {
 }
 
 void CTextService::RefreshCandidates(ITfContext* pic) {
+    m_candWnd.SetStatusMode(false);    // 组码时窗口归候选列表用
     (void)pic;
     m_letterLabels = false;
     const auto& cands = m_composer.Candidates();
