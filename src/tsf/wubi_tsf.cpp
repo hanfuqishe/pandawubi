@@ -1196,13 +1196,11 @@ public:
                 if (both) {
                     ToggleTrad(pic);
                     ToggleEnglish(pic);
-                    std::wstring s = m_english ? L"\u82f1" : L"\u4e2d";
-                    s += m_tradEnabled ? L"\u7e41" : L"\u7b80";
-                    FlashStatus(s.c_str());
+                    // 不再用 FlashStatus：它会挂 700ms 定时器把窗口藏掉（状态条由 Toggle* 里的 ShowIdleStatus 刷新）
                     LogLine(L"both shift: english=%d trad=%d", (int)m_english, (int)m_tradEnabled);
                 } else if (side == 2) {
                     ToggleTrad(pic);
-                    FlashStatus(m_tradEnabled ? L"\u7e41" : L"\u7b80");
+                    // 同上：简/繁的状态显示交给 ShowIdleStatus
                 } else {
                     ToggleEnglish(pic);
                 }
