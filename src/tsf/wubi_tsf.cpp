@@ -341,11 +341,16 @@ public:
     // 右键菜单（合并后状态栏的菜单挂到这里）
     void SetOnMenu(std::function<void(POINT)> fn) { onMenu_ = std::move(fn); }
     void SetOnFollow(std::function<void()> fn) { onFollow_ = std::move(fn); }
+    void ClearHitArea() { layout_ = wubi::CandLayout(); }   // 状态条：没有任何可点的候选格
+    // 自绘菜单（不用系统 TrackPopupMenu：那玩意要抢前台，会把宿主的焦点/光标弄丢）
+    void ShowMenuAt(const std::vector<std::wstring>& items, const std::vector<char>& checked,
+                    const RECT& anchor, std::function<void(int)> pick);
+    bool MenuOpen() const { return menuMode_; }
     // 英文直通时不经过输入法，收不到按键 -> 用定时器轮询光标位置，让状态窗跟着走
     void SetFollowTimer(bool on) {
         Ensure();
         if (!hwnd_) return;
-        if (on) { if (!followOn_) { SetTimer(hwnd_, kFollowTimerId, 200, nullptr); followOn_ = true; } }
+        if (on) { if (!followOn_) { SetTimer(hwnd_, kFollowTimerId, 250, nullptr); followOn_ = true; } }
         else    { if (followOn_) { KillTimer(hwnd_, kFollowTimerId); followOn_ = false; } }
     }
     HWND Hwnd() { Ensure(); return hwnd_; }
@@ -425,6 +430,7 @@ private:
     void RecalcAndResize();
     void Paint(HDC dc);
     void PaintStatus(HDC dc);
+    void PaintMenu(HDC dc);
     void PaintPinnedStar(HDC dc, int x, const RECT& row, UINT dpi);
     UINT Dpi() const;
     int  padX_ = 4, padY_ = 2;
@@ -461,6 +467,12 @@ private:
     std::function<void(int)> onStatusClick_;
     std::function<void()> onFollow_;
     bool followOn_ = false;
+    bool menuMode_ = false;
+    std::vector<std::wstring> menuItems_;
+    std::vector<char> menuChecked_;
+    std::vector<RECT> menuZones_;
+    int menuHover_ = -1;
+    std::function<void(int)> onMenuPick_;
     static const UINT kFollowTimerId = 0xB2;   // 跟光标轮询
     bool statusMode_ = false;
     bool stEnglish_ = false;      // 状态条：当前中/英
@@ -528,6 +540,24 @@ void CCandidateWindow::RecalcAndResize() {
     if (!hwnd_ || (items_.empty() && code_.empty() && !statusMode_)) {
         layout_ = wubi::CandLayout();
         width_ = height_ = 0;
+        return;
+    }
+    // 自绘菜单：按条目算尺寸
+    if (menuMode_) {
+        const UINT dpiM = Dpi();
+        HDC dcM = GetDC(hwnd_);
+        HGDIOBJ oldM = SelectObject(dcM, font_);
+        int w = MulDiv(120, (int)dpiM, 96);
+        for (const auto& it : menuItems_) {
+            SIZE sz = {0,0};
+            GetTextExtentPoint32W(dcM, it.c_str(), (int)it.size(), &sz);
+            int need = sz.cx + MulDiv(48, (int)dpiM, 96);
+            if (need > w) w = need;
+        }
+        SelectObject(dcM, oldM);
+        ReleaseDC(hwnd_, dcM);
+        width_ = w;
+        height_ = MulDiv(4, (int)dpiM, 96) * 2 + (int)menuItems_.size() * MulDiv(22, (int)dpiM, 96);
         return;
     }
     // 状态条（空闲时的小窗）：图标 + 中/英 + 简/繁 + 齿轮
@@ -674,6 +704,42 @@ void CCandidateWindow::PaintStatus(HDC dc) {
     SelectObject(dc, oldFont);
 }
 
+void CCandidateWindow::ShowMenuAt(const std::vector<std::wstring>& items, const std::vector<char>& checked,
+                                  const RECT& anchorRect, std::function<void(int)> pick) {
+    menuMode_ = true; menuItems_ = items; menuChecked_ = checked; menuHover_ = -1;
+    onMenuPick_ = std::move(pick);
+    RecalcAndResize();
+    ShowAt(anchorRect);
+}
+
+void CCandidateWindow::PaintMenu(HDC dc) {
+    RECT rc; GetClientRect(hwnd_, &rc);
+    const UINT dpi = Dpi();
+    HBRUSH bg = CreateSolidBrush(RGB(0xFC, 0xFD, 0xFF)); FillRect(dc, &rc, bg); DeleteObject(bg);
+    HBRUSH bd = CreateSolidBrush(borderCol_); FrameRect(dc, &rc, bd); DeleteObject(bd);
+    menuZones_.clear();
+    SetBkMode(dc, TRANSPARENT);
+    HGDIOBJ oldFont = SelectObject(dc, font_);
+    const int padX = MulDiv(8, (int)dpi, 96);
+    const int rowH = MulDiv(22, (int)dpi, 96);
+    int y = MulDiv(4, (int)dpi, 96);
+    for (size_t i = 0; i < menuItems_.size(); ++i) {
+        RECT row = { 0, y, rc.right, y + rowH };
+        if ((int)i == menuHover_) {
+            HBRUSH hi = CreateSolidBrush(RGB(0xE4, 0xF0, 0xE4)); FillRect(dc, &row, hi); DeleteObject(hi);
+        }
+        const bool dis = (i + 1 == menuItems_.size());
+        SetTextColor(dc, dis ? RGB(0x8A, 0x8E, 0x96) : textCol_);
+        std::wstring txt = menuItems_[i];
+        txt = ((i < menuChecked_.size() && menuChecked_[i]) ? L"\u2713 " : L"   ") + txt;
+        RECT tr = { padX, y, rc.right - padX, y + rowH };
+        DrawTextW(dc, txt.c_str(), -1, &tr, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+        menuZones_.push_back(row);
+        y += rowH;
+    }
+    SelectObject(dc, oldFont);
+}
+
 void CCandidateWindow::SetStatusInfo(bool english, bool trad, const std::wstring& iconPath) {
     const bool changed = (stEnglish_ != english) || (stTrad_ != trad) || (statusIconPath_ != iconPath);
     stEnglish_ = english;
@@ -704,6 +770,7 @@ void CCandidateWindow::PaintPinnedStar(HDC dc, int x, const RECT& row, UINT dpi)
 }
 
 void CCandidateWindow::Paint(HDC dc) {
+    if (menuMode_)   { PaintMenu(dc);   return; }
     if (statusMode_) { PaintStatus(dc); return; }
     RECT rc;
     GetClientRect(hwnd_, &rc);
@@ -900,6 +967,9 @@ LRESULT CALLBACK CCandidateWindow::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARA
         return 0;
     }
     case WM_MOUSEACTIVATE:
+        // 关键：必须回 MA_NOACTIVATE。之前这个分支和 WM_TIMER 合并、最后 return 0，
+        // 等于"让系统去激活"，点一下窗口宿主就丢焦点 -> OnKillThreadFocus 把窗口藏掉。
+        return MA_NOACTIVATE;
     case WM_TIMER:
         if (wp == CCandidateWindow::kBriefTimerId) {
             KillTimer(hwnd, CCandidateWindow::kBriefTimerId);
@@ -911,7 +981,22 @@ LRESULT CALLBACK CCandidateWindow::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARA
             return 0;
         }
         return 0;
-        return MA_NOACTIVATE;
+    case WM_MOUSEMOVE: {
+        if (self && self->menuMode_) {
+            POINT pt = { GET_X_LPARAM(lp), GET_Y_LPARAM(lp) };
+            int hot = -1;
+            for (size_t i = 0; i < self->menuZones_.size(); ++i) {
+                const RECT& z = self->menuZones_[i];
+                if (pt.x >= z.left && pt.x < z.right && pt.y >= z.top && pt.y < z.bottom) { hot = (int)i; break; }
+            }
+            if (hot != self->menuHover_) { self->menuHover_ = hot; InvalidateRect(hwnd, nullptr, FALSE); }
+        }
+        return 0;
+    }
+    case WM_MOUSELEAVE: {
+        if (self && self->menuMode_) { self->menuMode_ = false; self->Hide(); }
+        return 0;
+    }
     case WM_RBUTTONUP: {
         if (self && self->onMenu_) {
             POINT pt;
@@ -927,7 +1012,20 @@ LRESULT CALLBACK CCandidateWindow::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARA
     case WM_LBUTTONUP: {
         ReleaseCapture();
         if (self) {
-            if (self->statusMode_) {
+            if (self->menuMode_) {
+                POINT pt = { GET_X_LPARAM(lp), GET_Y_LPARAM(lp) };
+                int pick = -1;
+                for (size_t i = 0; i < self->menuZones_.size(); ++i) {
+                    const RECT& z = self->menuZones_[i];
+                    if (pt.x >= z.left && pt.x < z.right && pt.y >= z.top && pt.y < z.bottom) { pick = (int)i; break; }
+                }
+                self->menuMode_ = false;
+                self->Hide();
+                auto fn = self->onMenuPick_;
+                if (pick >= 0 && fn) fn(pick);
+                return 0;
+            }
+            if (self->statusMode_ || (self->plain_ && self->items_.size() <= 1)) {
                 POINT pt = { GET_X_LPARAM(lp), GET_Y_LPARAM(lp) };
                 for (size_t i = 0; i < self->statusZones_.size(); ++i) {
                     const RECT& z = self->statusZones_[i];
@@ -982,8 +1080,10 @@ LRESULT CALLBACK CCandidateWindow::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARA
 }
 
 void CCandidateWindow::ShowAt(const RECT& caret) {
+    LogLine(L"cand show: items=%zu code=%zu status=%d menu=%d plain=%d %dx%d",
+            items_.size(), code_.size(), (int)statusMode_, (int)menuMode_, (int)plain_, width_, height_);
     Ensure();
-    if (!hwnd_ || (items_.empty() && code_.empty())) { Hide(); return; }
+    if (!hwnd_ || (items_.empty() && code_.empty() && !statusMode_ && !menuMode_)) { Hide(); return; }
     if (width_ <= 0 || height_ <= 0) RecalcAndResize();
 
     int x = caret.left;
@@ -1411,6 +1511,8 @@ static void BroadcastSettingsReload(); // 通知本机所有输入法窗口重�
 void CTextService::ShowIdleStatus(ITfContext* pic) {
     (void)pic;
     if (m_comp && !m_composer.Code().empty()) return;   // 正在组码：窗口归候选列表用
+    if (m_engActive || !m_engTyped.empty() || m_quickMode || m_rawMode || m_zPending || m_pyLookup)
+        return;   // 英文补全/便捷输入/原样记录/Z 菜单/拼音反查：窗口归它们用
     RECT caret = {};
     bool hasCaret = QueryCaretRect(caret);
     if (!hasCaret && m_hasCaret) { caret = m_lastCaret; hasCaret = true; }
@@ -1423,7 +1525,14 @@ void CTextService::ShowIdleStatus(ITfContext* pic) {
     m_candWnd.SetLetterLabels(false);
     m_candWnd.SetCode(std::wstring());
     m_candWnd.SetItems({ L"\u4e2d\u6587" }, false);   // 占位：实际绘制在 PaintStatus 里
+    m_candWnd.ClearHitArea();                          // 状态条不该有可点击的候选格
     m_candWnd.SetStatusInfo(m_english, m_tradEnabled, m_iconPath);
+    // 状态条期间把"候选点击"也接管：万一命中判定走了候选路径，也只是重新摆一次状态条，
+    // 绝不上屏、不会因为 commit 后的 Hide() 把窗口弄没。
+    m_candWnd.SetOnClick([this](int) {
+        m_statusClickTick = GetTickCount();
+        ShowIdleStatus(nullptr);
+    });
     m_candWnd.SetOnMenu([this](POINT pt) { m_statusClickTick = GetTickCount(); ShowStatusMenu(pt); });
     m_candWnd.SetOnStatusClick([this](int zone) {
         m_statusClickTick = GetTickCount();
@@ -1438,51 +1547,55 @@ void CTextService::ShowIdleStatus(ITfContext* pic) {
     });
     m_candWnd.ShowAt(caret);
     // 英文直通模式下按键根本不进输入法，收不到任何通知 -> 用定时器让状态窗跟着光标走
+    // 常开轮询：回车换行、鼠标移动光标、方向键这些都不经过输入法（或不被声索），
+    // 只能靠定时器重新取光标位置，否则窗口会停在上一行。
     m_candWnd.SetOnFollow([this] {
-        if (m_english && !m_comp && !m_customWordMode) { ShowIdleStatus(nullptr); return; }
-        // 非英文模式也留着这个"补摆"用：宿主还在前台就把状态窗重新摆出来，然后停表
-        HWND fg = GetForegroundWindow();
-        if (fg && (GetTickCount() - m_statusClickTick < 1500)) ShowIdleStatus(nullptr);
-        else m_candWnd.SetFollowTimer(false);
+        // 任何"窗口正在显示候选/提示"的模式都不能被状态条覆盖（否则英文补全、
+        // 便捷输入、拼音反查、Z 菜单会被顶掉，表现为"按大写/分号进不去"）。
+        if (m_comp || m_customWordMode || m_engActive || !m_engTyped.empty() ||
+            m_quickMode || m_rawMode || m_zPending || m_pyLookup) {
+            m_candWnd.SetFollowTimer(false);
+            return;
+        }
+        ShowIdleStatus(nullptr);
     });
-    m_candWnd.SetFollowTimer(m_english && !m_comp);
+    m_candWnd.SetFollowTimer(true);
     m_statusShown = false;
     LogLine(L"idle status: en=%d trad=%d at %ld,%ld", (int)m_english, (int)m_tradEnabled, (long)caret.left, (long)caret.bottom);
 }
 
 // 合并窗口的右键菜单：内容与原来的悬浮栏一致（中/英、简/繁、主题、设置、版本）
 void CTextService::ShowStatusMenu(POINT pt) {
-    HMENU menu = CreatePopupMenu();
-    AppendMenuW(menu, MF_STRING | (m_english ? 0 : MF_CHECKED), 1, L"\u4e2d\u6587\u8f93\u5165");
-    AppendMenuW(menu, MF_STRING | (m_tradEnabled ? MF_CHECKED : 0), 2, L"\u7b80\u7e41\u8f93\u51fa");
-    HMENU themeMenu = CreatePopupMenu();
-    static const wchar_t* kThemeNames[4] = { L"\u718a\u732b", L"\u72f8\u82b1\u732b", L"\u4e2d\u534e\u7530\u56ed\u72ac", L"\u4e39\u9876\u9e64" };
-    const bool isCrane = (m_settings.Theme == L"crane");
-    const bool isDog   = (m_settings.Theme == L"dog");
-    const bool isCat   = (m_settings.Theme == L"cat");
-    const int curTheme = isCrane ? 3 : (isDog ? 2 : (isCat ? 1 : 0));
+    (void)pt;
+    // 自绘菜单：完全不碰前台/焦点（系统 TrackPopupMenu 要抢前台，会把宿主的输入焦点弄丢，
+    // 表现为"没有光标、字母直接上屏、打不出中文"）。
+    std::vector<std::wstring> items;
+    std::vector<char> checked;
+    items.push_back(L"\u4e2d\u6587\u8f93\u5165");                 checked.push_back(m_english ? 0 : 1);
+    items.push_back(L"\u7b80\u7e41\u8f93\u51fa");                 checked.push_back(m_tradEnabled ? 1 : 0);
+    static const wchar_t* kThemes[4] = { L"\u718a\u732b", L"\u72f8\u82b1\u732b", L"\u4e2d\u534e\u7530\u56ed\u72ac", L"\u4e39\u9876\u9e64" };
+    const int cur = (m_settings.Theme == L"crane") ? 3 : (m_settings.Theme == L"dog") ? 2 : (m_settings.Theme == L"cat") ? 1 : 0;
     for (int i = 0; i < 4; ++i) {
-        AppendMenuW(themeMenu, MF_STRING | (curTheme == i ? MF_CHECKED : 0), 100 + i, kThemeNames[i]);
+        items.push_back(std::wstring(L"\u4e3b\u9898\uff1a") + kThemes[i]);
+        checked.push_back(cur == i ? 1 : 0);
     }
-    AppendMenuW(menu, MF_POPUP, (UINT_PTR)themeMenu, L"\u4e3b\u9898");
-    AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
-    AppendMenuW(menu, MF_STRING, 3, L"\u8bbe\u7f6e...");
-    AppendMenuW(menu, MF_STRING, 4, PANDA_WUBI_VERSION_FULL);
+    items.push_back(L"\u8bbe\u7f6e...");                          checked.push_back(0);
+    items.push_back(PANDA_WUBI_VERSION_FULL);                      checked.push_back(0);
 
-    HWND owner = m_candWnd.Hwnd();
-    HWND prevFg = GetForegroundWindow();
-    // 弹菜单前必须把前台抢过来，否则点空白处菜单不消失/干脆不弹；
-    // 结束后把前台还回去，宿主的 TSF 才会重新拿到"有文档焦点"。
-    m_menuOpen = true;
-    if (owner) SetForegroundWindow(owner);
-    const int cmd = (int)TrackPopupMenu(menu, TPM_RETURNCMD | TPM_RIGHTBUTTON,
-                                        pt.x, pt.y, 0, owner, nullptr);
-    m_menuOpen = false;
-    DestroyMenu(menu);
-    if (owner) PostMessageW(owner, WM_NULL, 0, 0);
-    if (prevFg && prevFg != owner) SetForegroundWindow(prevFg);
-    if (cmd >= 1 && cmd <= 4) OnBarClick(cmd - 1);
-    else if (cmd >= 100 && cmd <= 103) OnBarClick(cmd);
+    RECT anchor = m_lastCaret;
+    m_candWnd.SetStatusMode(false);
+    m_candWnd.SetPlain(false);
+    m_statusClickTick = GetTickCount();
+    m_candWnd.ShowMenuAt(items, checked, anchor, [this](int idx) {
+        m_statusClickTick = GetTickCount();
+        if (idx == 0)      OnBarClick(0);
+        else if (idx == 1) OnBarClick(1);
+        else if (idx >= 2 && idx <= 5) OnBarClick(100 + (idx - 2));
+        else if (idx == 6) OnBarClick(2);
+        // 7 = 版本号：不处理
+        ShowIdleStatus(nullptr);
+        m_candWnd.SetFollowTimer(true);
+    });
 }
 
 void CTextService::BarSync() {
@@ -2560,6 +2673,8 @@ void CTextService::ExitRaw(ITfContext* pic, bool commit) {
 }
 
 void CTextService::ShowCandidateList(const std::vector<std::wstring>& display) {
+    m_candWnd.SetStatusMode(false);   // 任何提示/候选都退出状态条模式，否则会被画成空的状态条
+    m_candWnd.SetPlain(false);
     // 位置兜底：拿不到插入点坐标时退到鼠标位置。
     // 否则提示窗会跑到屏幕左上角(0,2)，用户看着像"根本没弹出来"，
     // 可输入法其实已经在等按键了（自定义词组 / 便捷输入都踩过这个坑）。
@@ -2704,6 +2819,11 @@ static double NowMs() {
 }
 
 void CTextService::EngUpdate(ITfContext* pic) {
+    m_candWnd.SetFollowTimer(false);   // 英文补全期间不要状态条轮询（否则会把候选挤掉）
+    // 关键：英文补全不走 ShowCandidateList，必须自己退出"状态条模式"，
+    // 否则窗口仍按状态条绘制（窄条、无候选）。
+    m_candWnd.SetStatusMode(false);
+    m_candWnd.SetPlain(false);
     if (m_engTyped.empty()) { EngCancel(pic); return; }
     const double t0 = NowMs();
     // 组码预览就显示用户实际打出来的大小写，不再一律小写
@@ -2778,6 +2898,7 @@ void CTextService::EngCommit(ITfContext* pic, int idx, bool withSpace) {
     m_candWnd.Hide();
     if (withSpace) out += L' ';
     CommitString(pic, out);
+    ShowIdleStatus(pic);   // 英文单词上屏后回到中文：把状态条摆回来（补全期间轮询是关掉的）
     LogLine(L"eng commit idx=%d len=%zu out=%s", idx, out.size(), out.c_str());
     // 学一个"词表里没有的英文串"（idx<0 表示没有候选、原样上屏那条路径）
     if (!usedCandidate) LearnEnglishWord(out, withSpace);   // 词表里没有 -> 学下来
@@ -3577,7 +3698,7 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
         return S_OK;
     }
     // Shift+字母（或 CapsLock）-> 进入"英文单词补全"模式（不是自由英文模式）
-    if (vk >= 'A' && vk <= 'Z' && !m_engActive && (shift || caps)) {
+    if (vk >= 'A' && vk <= 'Z' && !m_engActive && !m_english && !caps && shift) {   // 大写锁定/英文直通：字母一律直通，不进补全
         if (m_comp) CancelComposition(pic);   // 放弃正在进行的中文组码
         m_shiftDown = false;                  // 本次 Shift 不参与"单击"判定
         m_shiftUsed = true;
