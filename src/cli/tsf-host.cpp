@@ -222,6 +222,9 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             KillTimer(hwnd, 3);
             keybd_event((BYTE)g_holdVk, 0, KEYEVENTF_KEYUP, 0);
             std::printf("  released vk=0x%02X (held)\n", g_holdVk);
+        } else if (wp == 4) {
+            KillTimer(hwnd, 4);
+            PostQuitMessage(0);
         } else if (wp == 2) {
             KillTimer(hwnd, 2);
             wchar_t buf[512] = { 0 };
@@ -230,6 +233,9 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             std::string u8((size_t)(n > 0 ? n - 1 : 0), '\0');
             if (n > 1) WideCharToMultiByte(CP_UTF8, 0, buf, -1, &u8[0], n, nullptr, nullptr);
             std::printf("[RESULT] edit text = \"%s\"\n", u8.c_str());
+            // -hold：脚本跑完后让窗口多活一会儿（别在这里 Sleep，Sleep 会把消息循环连同
+            // 输入法的定时器一起堵住，就没法观察状态条跟光标了）
+            if (g_holdMs > 0) { SetTimer(hwnd, 4, (UINT)g_holdMs, nullptr); return 0; }
             PostQuitMessage(u8.empty() ? 1 : 0);
         }
         return 0;

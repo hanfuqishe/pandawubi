@@ -329,6 +329,7 @@ public:
         vertical_ = vertical;
         // 取消"徽标短暂显示"的定时器：否则中/英状态提示的 700ms 定时器会在组码过程中把窗口藏掉
         if (hwnd_) KillTimer(hwnd_, kBriefTimerId);
+        briefOn_ = false;
         RecalcAndResize();
     }
     // 与 items_ 一一对应：1 = 人工锁定（自造词/自定义短语），词尾加个小淡蓝星号
@@ -346,6 +347,7 @@ public:
     void ShowMenuAt(const std::vector<std::wstring>& items, const std::vector<char>& checked,
                     const RECT& anchor, std::function<void(int)> pick);
     bool MenuOpen() const { return menuMode_; }
+    bool Briefing() const { return briefOn_; }   // 正在闪示一条提示（这期间别被状态条顶掉）
     // 英文直通时不经过输入法，收不到按键 -> 用定时器轮询光标位置，让状态窗跟着走
     void SetFollowTimer(bool on) {
         Ensure();
@@ -425,12 +427,14 @@ public:
     // 短暂显示后自动隐藏
     void ShowBriefly(const RECT& caret, UINT ms) {
         ShowAt(caret);
+        briefOn_ = true;
         if (hwnd_) SetTimer(hwnd_, kBriefTimerId, ms ? ms : 700, nullptr);
     }
     // rect 为屏幕坐标（光标插入点）
     void ShowAt(const RECT& caret);
     void Hide();
     void HideKeepFollow();   // 藏窗口但保留跟光标轮询（宿主暂时取不到光标时用）
+    void StopFollow() { if (hwnd_ && followOn_) { KillTimer(hwnd_, kFollowTimerId); followOn_ = false; } }
 
 private:
     static LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -487,6 +491,7 @@ private:
     std::function<void(int)> onMenuPick_;
     static const UINT kFollowTimerId = 0xB2;   // 跟光标轮询
     bool statusMode_ = false;
+    bool briefOn_ = false;        // 正在"闪示一条提示"（kBriefTimerId 活着）：这期间状态条让位
     bool stEnglish_ = false;      // 状态条：当前中/英
     bool stTrad_ = false;         // 状态条：当前简/繁
     HICON statusIcon_ = nullptr;  // 状态条左侧的产品图标
@@ -985,7 +990,7 @@ LRESULT CALLBACK CCandidateWindow::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARA
     case WM_TIMER:
         if (wp == CCandidateWindow::kBriefTimerId) {
             KillTimer(hwnd, CCandidateWindow::kBriefTimerId);
-            if (self) self->Hide();
+            if (self) { self->briefOn_ = false; self->Hide(); }
             return 0;
         }
         if (wp == CCandidateWindow::kFollowTimerId) {
@@ -1133,7 +1138,8 @@ void CCandidateWindow::ShowAt(const RECT& caret) {
 }
 
 void CCandidateWindow::Hide() {
-    if (hwnd_ && followOn_) { KillTimer(hwnd_, kFollowTimerId); followOn_ = false; }
+    // 不再顺手停掉跟随表：隐藏只是"这一拍不画"，表停掉之后就没有人负责把窗口放回来了
+    //（用户反馈的"鼠标点一下状态框就没了"就是表被 Hide 停掉）。停表只在失焦/卸载时做。
     if (hwnd_) ShowWindow(hwnd_, SW_HIDE);
 }
 
@@ -1550,8 +1556,12 @@ static void BroadcastSettingsReload(); // 通知本机所有输入法窗口重�
 // 空闲状态：把"中/英 + 简/繁"贴在光标下方（合并后的悬浮窗；原来是一条独立的悬浮栏）
 void CTextService::ShowIdleStatus(ITfContext* pic) {
     (void)pic;
-    // 焦点不在任何文档上（对话框/桌面/别的进程）：不要贴状态条，也别把旧位置一直挂着
-    if (!m_docFocused) { m_candWnd.Hide(); return; }
+    // 没有文档焦点（对话框/桌面/别的进程）：这一拍什么都不做。
+    // 注意这里**不能 Hide**：Hide 会顺手杀掉跟随定时器，而宿主"点一下鼠标"经常只是
+    // 短暂丢了文档焦点再拿回来，定时器一停就再也没人把状态条放回来了
+    // （用户反馈的"鼠标点一下，状态框就没了"就是这个）。
+    if (!m_docFocused) return;
+    if (m_candWnd.MenuOpen() || m_candWnd.Briefing()) return;   // 菜单/闪示正占着窗口
     if (m_comp && !m_composer.Code().empty()) return;   // 正在组码：窗口归候选列表用
     if (m_engActive || !m_engTyped.empty() || m_quickMode || m_rawMode || m_zPending || m_pyLookup)
         return;   // 英文补全/便捷输入/原样记录/Z 菜单/拼音反查：窗口归它们用
@@ -1565,7 +1575,7 @@ void CTextService::ShowIdleStatus(ITfContext* pic) {
         // 宿主还没画好 / 编辑会话被排成异步（TF_S_ASYNC）时会取不到光标。
         // 不能就此 Hide+停表：那样窗口永远不回来了（VS Code 新窗口第一次就踩这个）。
         // 先藏着，但继续每 250ms 试；连续 4 秒都取不到才放弃，等下一次按键/焦点变化重启。
-        if (++m_idleMissTicks > 16) { m_candWnd.Hide(); m_idleMissTicks = 0; return; }
+        if (++m_idleMissTicks > 16) { m_idleMissTicks = 0; m_candWnd.Hide(); return; }
         m_candWnd.HideKeepFollow();
         m_candWnd.SetFollowTimer(true);
         return;
@@ -1603,16 +1613,7 @@ void CTextService::ShowIdleStatus(ITfContext* pic) {
     // 英文直通模式下按键根本不进输入法，收不到任何通知 -> 用定时器让状态窗跟着光标走
     // 常开轮询：回车换行、鼠标移动光标、方向键这些都不经过输入法（或不被声索），
     // 只能靠定时器重新取光标位置，否则窗口会停在上一行。
-    m_candWnd.SetOnFollow([this] {
-        // 任何"窗口正在显示候选/提示"的模式都不能被状态条覆盖（否则英文补全、
-        // 便捷输入、拼音反查、Z 菜单会被顶掉，表现为"按大写/分号进不去"）。
-        if (m_comp || m_customWordMode || m_engActive || !m_engTyped.empty() ||
-            m_quickMode || m_rawMode || m_zPending || m_pyLookup) {
-            m_candWnd.SetFollowTimer(false);
-            return;
-        }
-        ShowIdleStatus(nullptr);
-    });
+    // 回调本身在 ActivateEx 里装（激活期间一直有效），这里只保证表是开着的。
     m_candWnd.SetFollowTimer(true);
     m_statusShown = false;
     LogLine(L"idle status: en=%d trad=%d at %ld,%ld tsf=%d", (int)m_english, (int)m_tradEnabled,
@@ -1704,6 +1705,9 @@ STDMETHODIMP CTextService::OnSetThreadFocus() {
         g_barOwner = this;
         BarSync();
         SharedBar().Show(false);      // 合并后不再显示独立悬浮栏
+        // 先无条件把跟随表打开：这一拍可能还没有文档焦点（微信点一下鼠标就是 1→0→1），
+        // ShowIdleStatus 会提前返回，表不开就没人负责把状态条放回来了。
+        m_candWnd.SetFollowTimer(true);
         ShowIdleStatus(nullptr);      // 状态信息贴到光标附近（同一个窗口）
     }
     LogLine(L"OnSetThreadFocus: tid=%u visible=%d", m_tid, (int)SharedBar().Visible());
@@ -1719,7 +1723,10 @@ STDMETHODIMP CTextService::OnKillThreadFocus() {
         owned = (g_barOwner == this);
         if (owned) SharedBar().HideNow();
         // 菜单打开、或刚点过状态窗（1.2s 内）都不收：点自己家的窗口会让宿主短暂丢焦点
-        if (!m_menuOpen && (GetTickCount() - m_statusClickTick > 1200)) m_candWnd.Hide();
+        if (!m_menuOpen && (GetTickCount() - m_statusClickTick > 1200)) {
+            m_candWnd.Hide();
+            m_candWnd.StopFollow();   // 线程失焦才真正停表（回到前台会由 ShowIdleStatus 重开）
+        }
     }
     LogLine(L"OnKillThreadFocus: tid=%u owned=%d", m_tid, (int)owned);
     return S_OK;
@@ -1875,12 +1882,25 @@ STDMETHODIMP CTextService::ActivateEx(ITfThreadMgr* ptim, TfClientId tid, DWORD)
     // 只在前台是本进程且文档有焦点时才动作，见 ShiftSampleTick。
     m_candWnd.SetOnShiftTick([this] { ShiftSampleTick(); });
     m_candWnd.SetShiftSampler(true);
+    // 状态条跟随/自愈：回调只在激活时装一次，250ms 表在激活期间一直开着。
+    // 窗口被藏起来也继续跑，所以"点一下鼠标/换个输入框"之后能自己回来；
+    // 真正该停表的地方只有线程失焦（OnKillThreadFocus）和 Deactivate。
+    m_candWnd.SetOnFollow([this] {
+        if (!m_docFocused) { m_candWnd.HideKeepFollow(); return; }   // 焦点不在文档上：只藏，不画
+        // 候选/提示在用窗口时让位（否则英文补全、便捷输入、拼音反查会被顶掉）
+        if (m_comp || m_customWordMode || m_engActive || !m_engTyped.empty() ||
+            m_quickMode || m_rawMode || m_zPending || m_pyLookup) return;
+        if (m_candWnd.MenuOpen() || m_candWnd.Briefing()) return;
+        ShowIdleStatus(nullptr);
+    });
+    m_candWnd.SetFollowTimer(true);
     g_service = this;
     return S_OK;
 }
 
 STDMETHODIMP CTextService::Deactivate() {
     m_candWnd.SetShiftSampler(false);   // 停掉 Shift 轮询（窗口可能已被销毁，函数里自己判）
+    m_candWnd.StopFollow();             // 停掉状态条跟随（窗口留着，只停表）
     // 归还这条栏：最后一个实例走人时才真正销毁窗口
     int usersLeft = 0;
     {
@@ -1966,10 +1986,12 @@ STDMETHODIMP CTextService::OnSetFocus(ITfDocumentMgr* pimdFocus, ITfDocumentMgr*
             (void*)pimdFocus, (void*)pimdPrev, (void*)m_comp, (int)shouldReset);
 
     // 文档焦点进出：维护进程级计数，让悬浮栏"焦点不在输入框上就收起"
+    bool gainedFocus = false;
     {
         const bool now = (pimdFocus != nullptr);
         if (now != m_docFocused) {
             m_docFocused = now;
+            gainedFocus = now;
             InterlockedIncrement(&g_docFocusEvents);
             if (now) InterlockedIncrement(&g_docFocusCount);
             else     InterlockedDecrement(&g_docFocusCount);
@@ -1977,14 +1999,13 @@ STDMETHODIMP CTextService::OnSetFocus(ITfDocumentMgr* pimdFocus, ITfDocumentMgr*
             LogLine(L"doc focus: %d (count=%ld)", (int)now, (long)g_docFocusCount);
         }
     }
-    if (shouldReset) {
-        Reset();
-        // 同一进程里点另一个输入框（另一个文档/控件）也会走到这里：Reset 会 Hide 并停掉
-        // 跟随定时器，不补这一下，状态条就永远不回来了（表现为"窗口没跟过来"）。
-        if (pimdFocus) {
-            ShowIdleStatus(nullptr);
-            m_candWnd.SetFollowTimer(true);   // 刚换焦点时可能还取不到光标，留给 250ms 轮询补
-        }
+    if (shouldReset) Reset();
+    // 焦点落到文档上（或从"没有文档"回到文档：宿主点一下鼠标经常就是 1→0→1）、
+    // 或换到另一个输入框，都要把状态条摆回来并重开跟随表 —— Reset()/OnKillThreadFocus
+    // 都会 Hide 并停表，不补这一下，状态框就再也不出现了（"点一下就没了"）。
+    if (pimdFocus && (gainedFocus || shouldReset)) {
+        ShowIdleStatus(nullptr);
+        m_candWnd.SetFollowTimer(true);   // 刚换焦点时可能还取不到光标，留给 250ms 轮询补
     }
 
     // 焦点变化时把中/英隔间状态同步到新文档：系统指示器通常在焦点变化时重新查询
