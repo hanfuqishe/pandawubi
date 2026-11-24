@@ -2238,6 +2238,25 @@ void CTextService::ApplySettings() {
     m_candWnd.SetBottomBand(themeBandId, 130);
     m_candWnd.SetArtId(0);                                      // 不再用角落小图
     SharedBar().SetIconFile(themeIcon);                         // 悬浮栏最左边的 Logo
+        // 合并窗状态条左侧图标：优先 %LOCALAPPDATA%\PandaWubi\<主题>.ico，退路是 DLL 同目录
+        {
+            wchar_t base[MAX_PATH] = { 0 };
+            std::wstring cand;
+            if (GetEnvironmentVariableW(L"LOCALAPPDATA", base, ARRAYSIZE(base)) > 0) {
+                cand = std::wstring(base) + L"\\PandaWubi\\" + themeIcon;
+            }
+            if (cand.empty() || GetFileAttributesW(cand.c_str()) == INVALID_FILE_ATTRIBUTES) {
+                wchar_t mod[MAX_PATH] = { 0 };
+                if (GetModuleFileNameW(g_hInst, mod, ARRAYSIZE(mod)) > 0) {
+                    std::wstring d(mod);
+                    const size_t sl = d.find_last_of(L"\\/");
+                    if (sl != std::wstring::npos) { d.erase(sl + 1); cand = d + themeIcon; }
+                }
+            }
+            m_iconPath = cand;
+            LogLine(L"status icon: %s (exists=%d)", m_iconPath.c_str(),
+                    (int)(GetFileAttributesW(m_iconPath.c_str()) != INVALID_FILE_ATTRIBUTES));
+        }
     SharedBar().SetThemeIndex(crane ? 3 : (dog ? 2 : (cat ? 1 : 0)));   // 右键菜单里打勾
     LogLine(L"theme: %s (band=%d, icon=%s)", m_settings.Theme.c_str(), themeBandId, themeIcon);
     UpdateIndicatorIconFile(themeIcon);   // 系统输入指示器的图标（需重新登录/重启 explorer 才刷新）
@@ -2947,8 +2966,9 @@ void CTextService::ToggleEnglish(ITfContext* pic) {
     }
     LogLine(L"switch english=%d (composing=%d)", (int)m_english, (int)composing);
     SetInputModeCompartments(!m_english);
-    FlashStatus(m_english ? L"\u82f1" : L"\u4e2d");
     BarSync();
+    // 注意：这里不能调 FlashStatus —— 它会挂 700ms 定时器把窗口藏掉（用户反馈"按 Shift 后窗口 1 秒就消失"）
+    if (!composing) ShowIdleStatus(pic);
 }
 
 // 简/繁切换：Ctrl+Shift+T 与"单击右 Shift"共用
@@ -2962,6 +2982,7 @@ void CTextService::ToggleTrad(ITfContext* pic) {
     // 组字中/反查中切换：候选框里的字要立刻跟着换，否则显示与上屏不一致
     if (m_pyLookup) PyLookupRefresh(pic, false);
     else if (!m_composer.Code().empty()) RefreshCandidates(pic);
+    else ShowIdleStatus(pic);      // 不在组码：刷新状态条上的简/繁
 }
 
 void CTextService::ExitCustom(ITfContext* pic, bool cancel) {

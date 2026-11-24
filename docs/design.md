@@ -318,8 +318,21 @@ Blob    { 所有词条 UTF-8 连续存放 }
 - 图标路径来自 `ApplySettings()` 里算出的主题图标（存到 `m_iconPath`），
   用 `LoadImageW(LR_LOADFROMFILE)` 载入 16×16。
 
-实测日志：`bar: ... visible=0`、`idle status: en=0 trad=1 at 222,266`、输入时 `show list: items=9 ...`、
-上屏后又回到 `idle status`。verify.ps1 105 项 PASS。
+**第三轮修复（用户反馈三个问题）**：
+
+1. **看不到熊猫图标**：`m_iconPath` 当时根本没赋值（只在 `ApplySettings` 里当局部变量用了），
+   现在在那里解析出 `%LOCALAPPDATA%\PandaWubi\<主题>.ico`（不存在则退到 DLL 同目录），
+   `SetStatusInfo()` 用 `LoadImageW(LR_LOADFROMFILE)` 载入；日志 `status icon: … (exists=1)`。
+2. **按 Shift 状态不刷新**：`ToggleEnglish` / `ToggleTrad` 末尾原来调的是 `FlashStatus()`
+   （一次性徽标），现在改成 `ShowIdleStatus()`，状态条会重画中/英、简/繁。
+3. **按 Shift 后窗口 1 秒消失**：`FlashStatus()` 会 `ShowBriefly()` 挂 700ms 定时器把窗口 `Hide()`，
+   这正是"1 秒消失"的来源；切换路径不再走它（`ShowIdleStatus` 不挂定时器）。
+
+实测日志：`status icon: …panda.ico (exists=1)`、`toggle trad -> 1` 紧接着
+`idle status: en=0 trad=1 at 222,266`；`bar: ... visible=0`、输入时 `show list: items=9 ...`。
+测试宿主新增 `-hold <ms>`（跑完脚本保持窗口存活），方便人眼看空闲状态条。
+
+verify.ps1 105 项 PASS。
 
 ## 二·三十七·十九、英文单词自动学习
 

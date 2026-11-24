@@ -52,6 +52,7 @@ static void ForceForeground(HWND h) {
         SetFocus(h);
     }
 }
+static int g_holdMs = 0;   // -hold <ms>：脚本跑完后保持窗口存活，便于观察空闲状态条
 static bool g_postMode = false;  // 用 ITfKeystrokeMgr 正规投递（无需前台）
 static ITfKeystrokeMgr* g_ksm = nullptr;
 static TfClientId g_tid = 0;
@@ -229,6 +230,7 @@ int wmain(int argc, wchar_t** argv) {
     for (int i = 1; i < argc; ++i) {
         if (wcscmp(argv[i], L"-send") == 0) useSendInput = true;
         else if (wcscmp(argv[i], L"-post") == 0) postMode = true;   // 不抢前台、不注入按键
+        else if (wcscmp(argv[i], L"-hold") == 0 && i + 1 < argc) g_holdMs = _wtoi(argv[++i]);
         else script = argv[i];
     }
     g_postMode = postMode;
