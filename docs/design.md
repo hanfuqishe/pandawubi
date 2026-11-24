@@ -243,6 +243,23 @@ Blob    { 所有词条 UTF-8 连续存放 }
 `g f [C][L][L][B]`（两个字删一个）→ 不退出。Shift 分流需在真实应用里验证——
 测试宿主注入的 Shift 到不了 TSF key sink。
 
+## 二·三十七·二十四、自定义词组：缓冲区为空就直接退出
+
+用户反馈：按 Ctrl+= 进加词状态时，如果缓冲区是空的（没有可取的"最近上屏的字"），
+屏幕上既没有加词框，按回车也退不出去。
+
+原因：`BeginCustomWord` 只在"自动取到字"时才 `RefreshCustomPrompt()`；取不到字时
+`ShowCandidateList` 拿到的是空列表 → 候选窗根本不显示；回车走 `SaveCustomWord`，
+`m_customChars.size() < 2` 只闪一句提示就 `return`，模式还留着，于是卡住。
+
+改法：
+- `BeginCustomWord` 末尾判空：`m_customChars` 为空 → 直接清状态 + `FlashStatus("没有可取的最近输入…")`
+  并 `return`（不进加词模式）；
+- `SaveCustomWord` 开头判空：空缓冲区按回车 → `ExitCustom(pic, true)`，不再卡住。
+
+实测：`[C]` → `custom word: empty buffer, exit immediately`；`[C][E]` 同样立刻退出；
+有字时 `g f [C][E]` 仍正常（`custom word saved: code=ggfb word=一地 ok=1`）。
+
 ## 二·三十七·十九、英文单词自动学习
 
 用户需求：英文补全模式下输入了词表里没有的串，要加进自定义词表。

@@ -2725,9 +2725,17 @@ void CTextService::BeginCustomWord(ITfContext* pic) {
     m_letterLabels = false;
     if (m_comp) CancelComposition(pic);
     m_candWnd.Hide();
-    RefreshCustomPrompt();
     LogLine(L"custom word: begin, auto-took %zu char(s), %zu left in history",
             m_customChars.size(), m_recentChars.size());
+    // 缓冲区空 = 没有可取的"最近上屏的字"：直接退出，别留一个既没提示框、回车也退不掉的状态
+    if (m_customChars.empty()) {
+        m_customWordMode = false;
+        m_customWord.clear();
+        FlashStatus(L"没有可取的最近输入：先打几个字再按 Ctrl+=");
+        LogLine(L"custom word: empty buffer, exit immediately");
+        return;
+    }
+    RefreshCustomPrompt();
 }
 
 // 简/繁切换：Ctrl+Shift+T 与"单击右 Shift"共用
@@ -2768,6 +2776,11 @@ void CTextService::RefreshCustomPrompt() {
 }
 
 void CTextService::SaveCustomWord(ITfContext* pic) {
+    if (m_customChars.empty()) {   // 空缓冲区按回车：直接退出，不留在加词状态
+        ExitCustom(pic, true);
+        LogLine(L"custom word: enter on empty buffer -> exit");
+        return;
+    }
     if (m_customChars.size() < 2) { FlashStatus(L"至少两个字：按 ← 从刚输入的字里取"); return; }
     const std::string code = wubi::PhraseCode(m_customWord, g_dict.Get());
     if (code.empty()) { FlashStatus(L"取码失败：有字查不到全码"); return; }
