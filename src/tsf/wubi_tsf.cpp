@@ -1053,46 +1053,28 @@ public:
                 m_composer.Code().c_str());
         // 单击 Shift（按下期间没按别的键）：
         //   左 Shift → 中/英切换（组码中按：先把编码原样上屏，再切英文）；
-        //   右 Shift → 简/繁切换（组码中按：候选框里的字立刻跟着换）。
+        //   右 Shift → 简/繁切换（组码中按：候选框里的字立刻跟着换）；
+        //   两个 Shift 一起按 → 两个动作都执行。
         const UINT vk = (UINT)wParam;
         if (vk == VK_SHIFT || vk == VK_LSHIFT || vk == VK_RSHIFT) {
             // 抬起时 GetKeyState 可能已经复位，所以以按下时记录的 side 为准
             const int side = (vk == VK_LSHIFT) ? 1 : (vk == VK_RSHIFT) ? 2 : m_shiftSide;
             if (m_shiftDown && !m_shiftUsed) {
-                if (side == 2) {
+                const bool both = m_shiftBoth;
+                if (both) {
+                    ToggleTrad(pic);
+                    ToggleEnglish(pic);
+                    std::wstring s = m_english ? L"\u82f1" : L"\u4e2d";
+                    s += m_tradEnabled ? L"\u7e41" : L"\u7b80";
+                    FlashStatus(s.c_str());
+                    LogLine(L"both shift: english=%d trad=%d", (int)m_english, (int)m_tradEnabled);
+                } else if (side == 2) {
                     ToggleTrad(pic);
                     FlashStatus(m_tradEnabled ? L"\u7e41" : L"\u7b80");
                 } else {
-                    const bool composing = (m_comp != nullptr) && (m_context != nullptr) &&
-                                           !m_composer.Code().empty();
-                    if (composing && pic) {
-                        // 用户在半路按 Shift，多半是发现"这一串本来就该是英文"，
-                        // 所以上屏的是**编码本身**（wqvb 就是 wqvb），而不是它对应的汉字。
-                        const std::string code = m_composer.Code();      // 先留住：取消组合会清空 composer
-                        const std::wstring raw(code.begin(), code.end());
-                        if (m_comp && m_context) CancelComposition(m_context);
-                        if (!raw.empty()) CommitString(pic, raw);
-                        // 切到"英文直通"：不能把编码留在补全缓冲里 —— 否则下一个字母会进英文补全
-                        // （吃掉按键、弹候选），而不是直接落到文档里。这里全部清干净。
-                        m_engTyped.clear();
-                        m_engActive = false;
-                        m_quickMode = false;
-                        m_zPending = false;
-                        LogLine(L"shift during compose: committed raw code '%ls' (%zu chars), switch to english (pass-through)",
-                                raw.c_str(), raw.size());
-                    }
-                    if (m_comp && m_context) CancelComposition(m_context);
-                    if (composing) {
-                        m_english = true;                 // 组码阶段按 Shift：切到英文
-                        m_candWnd.Hide();
-                    } else {
-                        m_english = !m_english;           // 平时：切换中/英
-                    }
-                    LogLine(L"switch english=%d (composing=%d)", (int)m_english, (int)composing);
-                    SetInputModeCompartments(!m_english);
-                    FlashStatus(m_english ? L"\u82f1" : L"\u4e2d");
-                    BarSync();
+                    ToggleEnglish(pic);
                 }
+                m_shiftBoth = false;
             }
             m_shiftDown = false;
             m_shiftUsed = false;
@@ -1199,7 +1181,8 @@ private:
     ULONGLONG m_userWordsStamp = 0;
     ULONGLONG m_userWordsChecked = 0;
 
-    void ToggleTrad(ITfContext* pic);   // 简/繁切换（Ctrl+Shift+T 与单击右 Shift 共用）
+    void ToggleTrad(ITfContext* pic);      // 简/繁切换（Ctrl+Shift+T 与单击右 Shift 共用）
+    void ToggleEnglish(ITfContext* pic);   // 中/英切换（单击左 Shift）
     // 中英文切换（单击左 Shift）与状态提示
     bool m_english   = false;
     bool m_docFocused = false;   // 当前是否有"文档焦点"（TSF 的 OnSetFocus 非空）
@@ -1209,6 +1192,7 @@ private:
     bool m_shiftDown = false;
     bool m_shiftUsed = false;
     int  m_shiftSide = 1;      // 1 = 左 Shift，2 = 右 Shift（按下时记录）
+    bool m_shiftBoth = false;  // 本次单击期间两个 Shift 都按下了
     bool m_statusShown = false;
     RECT m_lastCaret = {};
     bool m_hasCaret  = false;
@@ -2738,6 +2722,39 @@ void CTextService::BeginCustomWord(ITfContext* pic) {
     RefreshCustomPrompt();
 }
 
+// 中/英切换：单击左 Shift（组码中按 → 先把编码原样上屏，再切英文）
+void CTextService::ToggleEnglish(ITfContext* pic) {
+    const bool composing = (m_comp != nullptr) && (m_context != nullptr) &&
+                           !m_composer.Code().empty();
+    if (composing && pic) {
+        // 用户在半路按 Shift，多半是发现"这一串本来就该是英文"，
+        // 所以上屏的是**编码本身**（wqvb 就是 wqvb），而不是它对应的汉字。
+        const std::string code = m_composer.Code();      // 先留住：取消组合会清空 composer
+        const std::wstring raw(code.begin(), code.end());
+        if (m_comp && m_context) CancelComposition(m_context);
+        if (!raw.empty()) CommitString(pic, raw);
+        // 切到"英文直通"：不能把编码留在补全缓冲里 —— 否则下一个字母会进英文补全
+        // （吃掉按键、弹候选），而不是直接落到文档里。这里全部清干净。
+        m_engTyped.clear();
+        m_engActive = false;
+        m_quickMode = false;
+        m_zPending = false;
+        LogLine(L"shift during compose: committed raw code '%ls' (%zu chars), switch to english (pass-through)",
+                raw.c_str(), raw.size());
+    }
+    if (m_comp && m_context) CancelComposition(m_context);
+    if (composing) {
+        m_english = true;                 // 组码阶段按 Shift：切到英文
+        m_candWnd.Hide();
+    } else {
+        m_english = !m_english;           // 平时：切换中/英
+    }
+    LogLine(L"switch english=%d (composing=%d)", (int)m_english, (int)composing);
+    SetInputModeCompartments(!m_english);
+    FlashStatus(m_english ? L"\u82f1" : L"\u4e2d");
+    BarSync();
+}
+
 // 简/繁切换：Ctrl+Shift+T 与"单击右 Shift"共用
 void CTextService::ToggleTrad(ITfContext* pic) {
     LoadDataOnce();
@@ -3176,6 +3193,9 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
         m_shiftUsed = false;
         m_shiftSide = (vk == VK_LSHIFT) ? 1 : (vk == VK_RSHIFT) ? 2
                     : (((GetKeyState(VK_RSHIFT) & 0x8000) != 0) ? 2 : 1);
+        // 两个 Shift 同时按着：松开时两个动作都执行（先简繁、再中英）
+        m_shiftBoth = ((vk == VK_LSHIFT) || ((GetKeyState(VK_LSHIFT) & 0x8000) != 0)) &&
+                      ((vk == VK_RSHIFT) || ((GetKeyState(VK_RSHIFT) & 0x8000) != 0));
         return S_OK;      // Shift 本身不拦截
     }
     if (m_shiftDown) m_shiftUsed = true;

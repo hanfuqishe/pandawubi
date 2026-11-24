@@ -151,7 +151,8 @@ static void ParseScript(const std::wstring& s) {
                 case L'E': vk = VK_RETURN; break;
                 case L'B': vk = VK_BACK; break;
                 case L'X': vk = VK_ESCAPE; break;
-                case L'H': vk = VK_LSHIFT; break;   // 用 LSHIFT：注入 VK_SHIFT 有时不会作为按键送到 TSF
+                case L'H': vk = VK_LSHIFT; break;
+                case L'J': vk = VK_RSHIFT; break;   // 右 Shift（切简繁）   // 用 LSHIFT：注入 VK_SHIFT 有时不会作为按键送到 TSF
                 case L'F': vk = VK_F2; break;
                 case L'Q': vk = VK_OEM_7; sh = true; break;   // Shift+' = 双引号
                 default: break;

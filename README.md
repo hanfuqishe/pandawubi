@@ -72,6 +72,7 @@ powershell -ExecutionPolicy Bypass -File .\tools\build-setup.ps1
 | 单击**左** `Shift` | 中/英切换（英文态全键直通） |
 | 单击**右** `Shift` | 简/繁切换（组字中也会同步刷新候选） |
 | `Shift` + 字母 | 英文单词补全（内置 4.4 万词表） |
+| 两个 `Shift` 一起按 | 中/英 与 简/繁 **同时**切换 |
 | `Ctrl+Shift+T` | 简/繁切换（与单击右 Shift 等价） |
 | `Ctrl+=` | 自定义词组（← 取最近上屏的字，回车保存） |
 | `Ctrl+Shift+=` | 打开自定义短语窗口（编码 + 短语） |

@@ -274,6 +274,22 @@ Blob    { 所有词条 UTF-8 连续存放 }
 实测：两个字时按退格 → 不删、仍在加词状态；连按两次退格再回车 → 正常保存 `一地`(ggfb)；
 只有一个字时回车 → 退出并报错；Esc → 退出。
 
+## 二·三十七·二十六、两个 Shift 一起按 → 两个动作都执行
+
+用户反馈：两个 Shift 同时按只有右 Shift 生效；问"不能同时生效吗"。
+
+原因：`m_shiftDown`/`m_shiftUsed` 只有一份，两个 Shift 共用同一个"单击"状态，
+而 `m_shiftSide` 后按的那个覆盖前一个（只发 `VK_SHIFT` 的宿主更明显），所以永远只有一侧生效。
+
+改法：
+- `OnKeyDown` 的 Shift 分支额外记录 `m_shiftBoth`：
+  `(vk==VK_LSHIFT || GetKeyState(VK_LSHIFT)) && (vk==VK_RSHIFT || GetKeyState(VK_RSHIFT))`；
+- `OnKeyUp` 的单击判定：`m_shiftBoth` → 先 `ToggleTrad()` 再 `ToggleEnglish()`，
+  提示显示组合状态（如「英繁」/「中简」），并把 `m_shiftBoth` 清掉，避免第二次抬起重复执行；
+- 中/英切换抽成 `ToggleEnglish(pic)`（组码中按还是先把编码原样上屏再切英文）。
+
+注意：测试宿主注入的 Shift 到不了 TSF key sink，这一条只能在实际应用里验证。
+
 ## 二·三十七·十九、英文单词自动学习
 
 用户需求：英文补全模式下输入了词表里没有的串，要加进自定义词表。
