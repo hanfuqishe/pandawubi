@@ -30,7 +30,7 @@ static size_t g_pos = 0;
 static int g_stage = 0;
 
 // 一个按键步骤：虚拟键 + 需要按住的控制键
-struct Step { WORD vk; bool ctrl; bool shift; wchar_t ch; };
+struct Step { WORD vk; bool ctrl; bool shift; wchar_t ch; int holdMs; };
 static std::vector<Step> g_steps;
 
 // 控制台进程创建窗口后常常拿不到前台：用 AttachThreadInput 强制一次
@@ -53,6 +53,7 @@ static void ForceForeground(HWND h) {
     }
 }
 static int g_holdMs = 0;   // -hold <ms>：脚本跑完后保持窗口存活，便于观察空闲状态条
+static WORD g_holdVk = 0;  // "按住"步骤的键：到点由 (timer 3) 松开
 static bool g_postMode = false;  // 用 ITfKeystrokeMgr 正规投递（无需前台）
 static ITfKeystrokeMgr* g_ksm = nullptr;
 static TfClientId g_tid = 0;
@@ -122,6 +123,14 @@ static void SendOne(wchar_t ch) {
 // 一个步骤：按住需要的 Ctrl/Shift，发这个键，再松开。
 // 输入法用 GetKeyState 读修饰键状态，所以必须真的按下去。
 static void SendStep(const Step& st) {
+    if (st.holdMs > 0) {
+        // 真实"单击"：按住一段再松。不能在主线程 Sleep —— 那样会把 20ms 一次的
+        // 轮询采样(timer)全堵住，采样器只会看到"已经松开"，看不到按下。
+        g_holdVk = st.vk;
+        keybd_event((BYTE)st.vk, 0, 0, 0);
+        SetTimer(g_main, 3, (UINT)st.holdMs, nullptr);
+        return;
+    }
     if (st.ctrl)  keybd_event(VK_CONTROL, 0, 0, 0);
     if (st.shift) keybd_event(VK_LSHIFT, 0, 0, 0);
     SendOneRaw(st.vk, st.ch);
@@ -154,11 +163,15 @@ static void ParseScript(const std::wstring& s) {
                 case L'X': vk = VK_ESCAPE; break;
                 case L'H': vk = VK_LSHIFT; break;
                 case L'J': vk = VK_RSHIFT; break;   // 右 Shift（切简繁）   // 用 LSHIFT：注入 VK_SHIFT 有时不会作为按键送到 TSF
+                case L'h': vk = VK_LSHIFT; break;   // 小写 = 按住 150ms 再松（轮询采样才看得见）
+                case L'j': vk = VK_RSHIFT; break;
                 case L'F': vk = VK_F2; break;
                 case L'Q': vk = VK_OEM_7; sh = true; break;   // Shift+' = 双引号
                 default: break;
                 }
-                if (vk) { g_steps.push_back({ vk, ctrl, sh, L' ' }); i = close + 1; continue; }
+                if (vk) { g_steps.push_back({ vk, ctrl, sh, L' ',
+                                              (s[i + 1] == L'h' || s[i + 1] == L'j') ? 150 : 0 });
+                          i = close + 1; continue; }
             }
         }
         const wchar_t ch = s[i];
@@ -171,7 +184,7 @@ static void ParseScript(const std::wstring& s) {
         else if (ch == L'?') { vk = VK_OEM_2; sh = true; }      // Shift+/
         else if (ch == L'<') { vk = VK_OEM_COMMA; sh = true; }  // Shift+,
         else if (ch == L'>') { vk = VK_OEM_PERIOD; sh = true; } // Shift+.
-        g_steps.push_back({ vk, false, sh, ch });
+        g_steps.push_back({ vk, false, sh, ch, 0 });
         ++i;
     }
 }
@@ -205,6 +218,10 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
                 KillTimer(hwnd, 1);
                 SetTimer(hwnd, 2, 400, nullptr);
             }
+        } else if (wp == 3) {
+            KillTimer(hwnd, 3);
+            keybd_event((BYTE)g_holdVk, 0, KEYEVENTF_KEYUP, 0);
+            std::printf("  released vk=0x%02X (held)\n", g_holdVk);
         } else if (wp == 2) {
             KillTimer(hwnd, 2);
             wchar_t buf[512] = { 0 };

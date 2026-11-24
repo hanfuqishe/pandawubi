@@ -1,4 +1,4 @@
-﻿# 测试指南（v0.1：TSF 外壳 + 引擎）
+# 测试指南（v0.1：TSF 外壳 + 引擎）
 
 ## 当前状态
 
@@ -127,6 +127,33 @@ TSF 的输入法目录是机器级的：`ITfInputProcessorProfiles` 读写
 .\dist\panda-phrase.exe                        # 也可以直接手动开
 .\build\tsf-host.exe -send "dz "               # -> 窗口里填的那条短语
 ```
+
+## 微信里单击 Shift 不切换（宿主不发 KeyUp）
+
+微信（`Weixin.exe`，4.x 的 Qt 窗口）只把字母、标点转给 TSF：`OnTestKeyDown` 会来问 Shift
+（`testkey: vk=0x10 … wants=1`），但**从不发 `OnKeyUp`**（连字母的 KeyUp 都没有），
+"按下再抬起"的单击判定永远走不完。输入法因此加了 20ms 一次的轮询采样
+（`ShiftSampleTick`，只在前台是本进程且文档有焦点时动作）。
+
+测试宿主里复现（`[h]`/`[j]` = 按住 150ms 再松；`[H]`/`[J]` 是瞬时注入，采样看不见）：
+
+```powershell
+.\build\tsf-host.exe -send "[h][j]" -hold 3000
+# 日志里应出现：
+#   testkey: vk=0x10 … wants=1
+#   shift poll: side=1 DOWN …  /  UP held=157ms
+#   shift poll -> english=1
+#   shift poll: side=2 …  /  shift poll -> trad=1
+```
+
+真机采样（只发 Shift，不按任何字母；会把微信拉到前台）：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\wechat-shift-sample.ps1
+```
+
+脚本依次按左、右、两个一起各 150ms，然后把新增的 `testkey` / `shift poll` /
+`switch english` / `toggle trad` 打出来。微信进程必须**重启**过才会加载新 DLL。
 
 ## 快捷键切换后悬浮栏要同步
 

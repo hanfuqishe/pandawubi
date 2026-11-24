@@ -222,6 +222,7 @@ cands: code=wqvb n=3 comp=...
 | 装完还是旧版行为 | 有程序还在用旧 DLL：重启该程序；或检查 `HKCU\Software\Classes\CLSID\{7F3B0C21-…}` 是否指向别处 |
 | 语言栏图标显示「简体」 | 指示器图标路径被删/移动，重装或把 4 个 `.ico` 放回 `%LOCALAPPDATA%\PandaWubi` |
 | 打不出字 | 看日志里 `dict load` 是否失败；源码版需要先生成 `data\qqwubi86.dict.tsv` |
+| 微信里单击 `Shift` 不切换 | 微信只转发字母/标点、连 `KeyUp` 都不给（日志里没有任何 `vk=0x10` 的 `OnKeyUp`），单击判定靠 20ms 轮询兜底。仍无效时先确认微信进程是在本次构建之后启动的（看日志 `build:` 时间） |
 
 ## 数据位置
 

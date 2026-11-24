@@ -353,6 +353,14 @@ public:
         if (on) { if (!followOn_) { SetTimer(hwnd_, kFollowTimerId, 250, nullptr); followOn_ = true; } }
         else    { if (followOn_) { KillTimer(hwnd_, kFollowTimerId); followOn_ = false; } }
     }
+    // Shift 采样：微信这类宿主不给输入法任何 Shift 事件，只能定时读键盘状态
+    void SetOnShiftTick(std::function<void()> fn) { onShiftTick_ = std::move(fn); }
+    void SetShiftSampler(bool on) {
+        if (on) Ensure();                 // 开：窗口不存在就建（Deactivate 时不能反着建）
+        if (!hwnd_) return;
+        if (on) { if (!shiftSampleOn_) { SetTimer(hwnd_, kShiftTimerId, 20, nullptr); shiftSampleOn_ = true; } }
+        else    { if (shiftSampleOn_) { KillTimer(hwnd_, kShiftTimerId); shiftSampleOn_ = false; } }
+    }
     HWND Hwnd() { Ensure(); return hwnd_; }
     // 状态模式：空闲时就显示在光标附近，只放"中/英·简/繁"这类基本信息
     // 状态条内容：熊猫图标 + 中/英 + 简/繁 + 设置齿轮（和原来的悬浮栏一致）
@@ -462,11 +470,14 @@ private:
     int      rowH_   = 0;                     // 每行高度
     int      artW_   = 0;                     // 右下角装饰图尺寸（右侧留白）
     static const UINT kBriefTimerId = 0xB1;  // 徽标自动隐藏定时器
+    static const UINT kShiftTimerId = 0xB3;  // Shift 状态采样（轮询，见 SetShiftSampler）
     std::function<void(int)> onClick_;
     std::function<void(POINT)> onMenu_;
     std::function<void(int)> onStatusClick_;
     std::function<void()> onFollow_;
     bool followOn_ = false;
+    std::function<void()> onShiftTick_;
+    bool shiftSampleOn_ = false;
     bool menuMode_ = false;
     std::vector<std::wstring> menuItems_;
     std::vector<char> menuChecked_;
@@ -980,6 +991,10 @@ LRESULT CALLBACK CCandidateWindow::WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARA
             if (self && self->onFollow_) { auto fn = self->onFollow_; fn(); }
             return 0;
         }
+        if (wp == CCandidateWindow::kShiftTimerId) {
+            if (self && self->onShiftTick_) { auto fn = self->onShiftTick_; fn(); }
+            return 0;
+        }
         return 0;
     case WM_MOUSEMOVE: {
         if (self && self->menuMode_) {
@@ -1282,7 +1297,15 @@ public:
     // 于是实测（tsf-host.exe -send）按键根本进不了输入法，打出来的是原样字母。
     // 现在只声明真正会被吃掉的键，口径与 OnKeyDown 保持一致。
     STDMETHODIMP OnTestKeyDown(ITfContext*, WPARAM wParam, LPARAM lParam, BOOL* pfEaten) override {
-        if (pfEaten) *pfEaten = WantsKey((UINT)wParam, lParam) ? TRUE : FALSE;
+        const UINT vk = (UINT)wParam;
+        const bool wants = WantsKey(vk, lParam);
+        if (pfEaten) *pfEaten = wants ? TRUE : FALSE;
+        // 采样：微信到底有没有来问 Shift？有没有把已处理的键报成 VK_PROCESSKEY？
+        // 只记这两类，避免把日志撑爆（其余键看 OnKeyDown 那行就够）。
+        if (vk == VK_SHIFT || vk == VK_LSHIFT || vk == VK_RSHIFT || vk == VK_PROCESSKEY) {
+            LogLine(L"testkey: vk=0x%02X scan=0x%02X wants=%d",
+                    vk, (unsigned)((lParam >> 16) & 0xFF), (int)wants);
+        }
         return S_OK;
     }
     STDMETHODIMP OnKeyDown(ITfContext*, WPARAM, LPARAM, BOOL* pfEaten) override;
@@ -1309,8 +1332,10 @@ public:
                                              : ((GetKeyState(VK_LSHIFT) & 0x8000) != 0);
             LogLine(L"shift tap: vk=0x%02X side=%d both=%d other=%d",
                     (unsigned)vk, side, (int)m_shiftBoth, (int)otherDown);
+            m_hostShiftUpTick = GetTickCount();   // 告诉轮询采样：这一轮事件通路已经处理
             if (m_shiftDown && !m_shiftUsed) {
                 const bool both = m_shiftBoth || otherDown;
+                m_lastShiftActionTick = GetTickCount();
                 if (both) {
                     ToggleTrad(pic);
                     ToggleEnglish(pic);
@@ -1360,6 +1385,7 @@ private:
     void    Reset();
     void    OnBarClick(int idx);   // 悬浮栏点击（回调进入拥有者实例）
     void    BarSync();             // 只在拥有者实例上生效
+    void    ShiftSampleTick();     // 轮询 Shift 状态（微信这类宿主不转发 Shift 事件）
     bool    WantsKey(UINT vk, LPARAM lp);   // OnTestKeyDown 的口径（与 OnKeyDown 一致）
     static bool IsCodeKey(UINT vk, wchar_t* out);
 
@@ -1446,6 +1472,13 @@ private:
     std::wstring m_iconPath;   // 当前主题图标路径（合并窗状态条左侧那个）
     int  m_shiftSide = 1;      // 1 = 左 Shift，2 = 右 Shift（按下时记录）
     bool m_shiftBoth = false;  // 本次单击期间两个 Shift 都按下了
+    // —— Shift 轮询采样（微信这类宿主不把 Shift 交给 TSF，事件通路完全静默）——
+    bool  m_pollShift[2]     = { false, false };   // [0]=左 [1]=右，上一次采样到的按下状态
+    bool  m_pollShiftUsed[2] = { false, false };   // 这一轮按下期间是否打过别的键
+    DWORD m_pollShiftTick[2] = { 0, 0 };           // 按下的时刻（算按住时长）
+    bool  m_pollBoth     = false;                  // 这一轮两个 Shift 同时按住过
+    DWORD m_hostShiftUpTick = 0;                   // 宿主自己报过 Shift KeyUp 的时刻（报了就不重复处理）
+    DWORD m_lastShiftActionTick = 0;               // 最近一次真的执行了切换（事件/采样共用，防重复）
     bool m_statusShown = false;
     RECT m_lastCaret = {};
     bool m_hasCaret  = false;
@@ -1816,11 +1849,16 @@ STDMETHODIMP CTextService::ActivateEx(ITfThreadMgr* ptim, TfClientId tid, DWORD)
             (int)SharedBar().Visible());
     LogLine(L"ActivateEx: tid=%u trad=%d candCount=%d",
             m_tid, (int)m_tradEnabled, m_candCount);
+    // Shift 轮询采样：微信这类宿主一条 Shift 事件都不给，只能自己采键盘状态。
+    // 只在前台是本进程且文档有焦点时才动作，见 ShiftSampleTick。
+    m_candWnd.SetOnShiftTick([this] { ShiftSampleTick(); });
+    m_candWnd.SetShiftSampler(true);
     g_service = this;
     return S_OK;
 }
 
 STDMETHODIMP CTextService::Deactivate() {
+    m_candWnd.SetShiftSampler(false);   // 停掉 Shift 轮询（窗口可能已被销毁，函数里自己判）
     // 归还这条栏：最后一个实例走人时才真正销毁窗口
     int usersLeft = 0;
     {
@@ -3098,6 +3136,67 @@ void CTextService::BeginCustomWord(ITfContext* pic) {
     RefreshCustomPrompt();
 }
 
+// ---------------------------------------------------------------- Shift 轮询采样
+// 背景：微信（Weixin.exe）只把字母/标点转给 TSF，Shift 的 OnTestKeyDown / OnKeyDown /
+// OnKeyUp 一条都没有（13:09 与 16:18 两个构建的日志里都没有 vk=0x10，连 KeyUp 都没有），
+// 所以"单击 Shift 切中/英、简/繁"在微信里永远不触发。
+// 兜底办法：20ms 采一次两侧 Shift 的键盘状态；只在前台是本进程、且文档有焦点时采，
+// 后台实例不会把别人的 Shift 当成自己的。宿主自己报过 KeyUp 的（记事本/浏览器等）
+// 以事件通路为准，采样只负责"静默宿主"。
+void CTextService::ShiftSampleTick() {
+    const HWND fg = GetForegroundWindow();
+    if (!fg) return;
+    DWORD fgPid = 0;
+    GetWindowThreadProcessId(fg, &fgPid);
+    if (fgPid != GetCurrentProcessId()) return;
+    if (!m_docFocused) return;
+
+    static const int kVk[2] = { VK_LSHIFT, VK_RSHIFT };
+    const bool ctrl = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
+    const bool alt  = (GetKeyState(VK_MENU) & 0x8000) != 0;
+
+    for (int i = 0; i < 2; ++i) {
+        const bool down = (GetAsyncKeyState(kVk[i]) & 0x8000) != 0;
+        if (down == m_pollShift[i]) continue;
+        m_pollShift[i] = down;
+        if (down) {
+            m_pollShiftTick[i] = GetTickCount();
+            m_pollShiftUsed[i] = ctrl || alt;      // Ctrl/Alt 组合不算单击
+            if (m_pollShift[1 - i]) m_pollBoth = true;
+            LogLine(L"shift poll: side=%d DOWN other=%d both=%d",
+                    i + 1, (int)m_pollShift[1 - i], (int)m_pollBoth);
+            continue;
+        }
+        const DWORD held = GetTickCount() - m_pollShiftTick[i];
+        const bool hostUp = (m_hostShiftUpTick - m_pollShiftTick[i]) < 0x80000000u;
+        const bool justActed = (GetTickCount() - m_lastShiftActionTick) < 200;
+        LogLine(L"shift poll: side=%d UP held=%lums used=%d hostUp=%d both=%d justActed=%d",
+                i + 1, (unsigned long)held, (int)m_pollShiftUsed[i], (int)hostUp,
+                (int)m_pollBoth, (int)justActed);
+        if (m_pollShift[1 - i]) continue;          // 另一侧还按着：等它抬起来时统一处理
+        const bool both = m_pollBoth;
+        const bool used = m_pollShiftUsed[0] || m_pollShiftUsed[1];
+        m_pollBoth = false;
+        m_pollShiftUsed[0] = m_pollShiftUsed[1] = false;
+        if (hostUp || used || justActed) continue; // 事件通路已经处理过 / 不是单击
+        m_lastShiftActionTick = GetTickCount();
+        if (both) {
+            ToggleTrad(m_context);
+            ToggleEnglish(m_context);
+            LogLine(L"shift poll -> both (english=%d trad=%d)", (int)m_english, (int)m_tradEnabled);
+        } else if (i == 1) {
+            ToggleTrad(m_context);
+            LogLine(L"shift poll -> trad=%d", (int)m_tradEnabled);
+        } else {
+            ToggleEnglish(m_context);
+            LogLine(L"shift poll -> english=%d", (int)m_english);
+        }
+        m_shiftDown = false;
+        m_shiftUsed = false;
+        m_shiftBoth = false;
+    }
+}
+
 // 中/英切换：单击左 Shift（组码中按 → 先把编码原样上屏，再切英文）
 void CTextService::ToggleEnglish(ITfContext* pic) {
     const bool composing = (m_comp != nullptr) && (m_context != nullptr) &&
@@ -3527,6 +3626,9 @@ bool CTextService::WantsKey(UINT vk, LPARAM lp) {
         return true;
     }
 
+    // Shift 必须声明（TestKeyDown=TRUE），否则微信这类宿主根本不把 Shift 转给输入法，
+    // 单击切换中/英、简/繁就永远不触发。OnKeyDown 里对 Shift 仍然不吞（*pfEaten 保持 FALSE）。
+    if (vk == VK_SHIFT || vk == VK_LSHIFT || vk == VK_RSHIFT) return true;
     if (vk >= 'A' && vk <= 'Z') {
         // 'z' 现在也是编码字符（自定义短语的 dz / sfz 要用），所以一律声明。
         // 没有"上次上屏"内容时不会走 Z 重复分支，z 会当作组码首字母。
@@ -3575,9 +3677,16 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
         // 两个 Shift 同时按着：松开时两个动作都执行（先简繁、再中英）
         m_shiftBoth = ((vk == VK_LSHIFT) || ((GetKeyState(VK_LSHIFT) & 0x8000) != 0)) &&
                       ((vk == VK_RSHIFT) || ((GetKeyState(VK_RSHIFT) & 0x8000) != 0));
+        // 采样：微信这类宿主会走到这里（TestKeyDown 返回 1 之后），但**从不发 KeyUp**，
+        // 所以单击判定永远完不成 —— 这就是要轮询采样的原因。
+        LogLine(L"shift down: vk=0x%02X side=%d both=%d l=%d r=%d", vk, m_shiftSide,
+                (int)m_shiftBoth, (int)((GetKeyState(VK_LSHIFT) & 0x8000) != 0),
+                (int)((GetKeyState(VK_RSHIFT) & 0x8000) != 0));
         return S_OK;      // Shift 本身不拦截
     }
     if (m_shiftDown) m_shiftUsed = true;
+    // 轮询采样：这一轮 Shift 按下期间打过别的键，就不算"单击"
+    for (int i = 0; i < 2; ++i) if (m_pollShift[i]) m_pollShiftUsed[i] = true;
 
     const bool ctrl  = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
     const bool shift = (GetKeyState(VK_SHIFT) & 0x8000) != 0;

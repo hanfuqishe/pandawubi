@@ -1,4 +1,4 @@
-﻿# QQ五笔替代输入法 —— 设计与进度
+# QQ五笔替代输入法 —— 设计与进度
 
 目标：在 Windows 11 上提供一个稳定、行为接近 QQ五笔 2.4 的五笔输入法，且不复制它的架构缺陷
 （进程内巨型引擎 + IMM32 + 全局钩子跟踪光标）。
@@ -1799,6 +1799,46 @@ IconIndex = 0
 
 > 语言指示器图标这种"系统帮我们显示"的功能，失败时**不要只看注册表**——
 > 要同时验证：① 路径是否被后续注册覆盖；② 文件本身是否完整；③ 路径是否在系统可读的常规位置。
+
+## 二·四十二、微信 Shift：宿主不发 KeyUp → 20ms 轮询采样
+
+用户反馈：微信里单击左 Shift 不切中/英、单击右 Shift 不切简/繁（别的宿主正常）。
+
+采样办法：日志里加三行（`testkey` / `shift down` / `shift poll`），
+再用 `tools\wechat-shift-sample.ps1` 把微信拉到前台、只发 Shift（不按任何字母）。
+
+真机证据（2026-11-24 16:37:24，微信 4.x `Weixin.exe` pid 21108，build 16:34:51）：
+
+```
+testkey: vk=0x10 scan=0x00 wants=1          ← 微信会来问 Shift，声明也生效
+shift poll: side=1 DOWN other=0 both=0      ← 轮询能看到真实按下
+shift poll: side=1 UP held=157ms used=0 hostUp=0 justActed=0
+switch english=1 (composing=0)              ← 左 Shift：中→英
+toggle trad -> 1 saved=1                    ← 右 Shift：简→繁
+shift poll -> both (english=0 trad=0)       ← 两个一起：两个动作都执行
+```
+
+而同一份日志里**没有任何 `OnKeyUp`**——不只是 Shift，连字母的 KeyUp 都没有。
+`OnKeyUp` 那行是无条件打印的，所以"缺失"就是结论：微信的 Qt 窗口不把 `WM_KEYUP`
+转给 TSF。单击判定（按下→抬起、期间没按别的键）靠的正是 KeyUp，于是永远走不完；
+这也解释了为什么只在 `OnTestKeyDown` 里声明 Shift 没用。
+
+实现（`CTextService::ShiftSampleTick` + `CCandidateWindow::SetShiftSampler`）：
+
+- 候选窗上挂一个 20ms 定时器（`kShiftTimerId = 0xB3`），激活时打开、`Deactivate` 时关掉；
+- 每次读 `GetAsyncKeyState(VK_LSHIFT/VK_RSHIFT)`，down→up 变化即一次单击；
+- 只在前台窗口属于本进程、且 `m_docFocused` 时动作 —— 同一份 DLL 在很多宿主里都有实例，
+  不判这个，后台实例会把前台的 Shift 当成自己的；
+- 让位规则：这一轮按过别的键（`used`）不算单击；宿主自己报过 Shift KeyUp（`hostUp`）
+  以事件通路为准；200ms 内刚切过（`justActed`）不再切，避免事件/轮询各切一次；
+- 两个 Shift 同时按住过（`both`）：等两侧都抬起来时先 `ToggleTrad` 再 `ToggleEnglish`，
+  一轮只执行一次。
+
+边界：短于 20ms 的极快点击可能漏采（人手单击一般 60–150ms）；
+轮询按宿主进程各一份，但只在"前台 + 文档焦点"时才有实际动作。
+
+测试宿主配套：`[h]`/`[j]` = 按住 150ms 再松（轮询看得见），
+`[H]`/`[J]` 仍是瞬时注入（只有事件通路能看见）。
 
 ## 三、TSF 外壳（已实现，真机已验证工作）
 
