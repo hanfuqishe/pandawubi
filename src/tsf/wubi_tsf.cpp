@@ -1568,88 +1568,10 @@ static bool HostForeground() {
 // 空闲状态：把"中/英 + 简/繁"贴在光标下方（合并后的悬浮窗；原来是一条独立的悬浮栏）
 void CTextService::ShowIdleStatus(ITfContext* pic) {
     (void)pic;
-    // 前台不是本进程（用户切到别的应用了）：状态条必须收起来。
-    // 不能只靠 OnKillThreadFocus —— 有些宿主切走时不发这个回调，或者被"刚点过状态窗"的
-    // 1.2 秒宽限挡掉；250ms 的轮询里再查一次前台窗口，才不会留一条挂在别人窗口上。
-    if (!HostForeground()) { m_candWnd.HideKeepFollow(); return; }
-    // 没有文档焦点（焦点在本进程的按钮/空白处，或对话框）：这一拍不画。
-    // 注意这里**不能 Hide**：Hide 会顺手杀掉跟随定时器，而宿主"点一下鼠标"经常只是
-    // 短暂丢了文档焦点再拿回来，定时器一停就再也没人把状态条放回来了
-    // （用户反馈的"鼠标点一下，状态框就没了"就是这个）。只藏窗口，表留着。
-    if (!m_docFocused) { m_candWnd.HideKeepFollow(); return; }
-    if (m_candWnd.MenuOpen() || m_candWnd.Briefing()) return;   // 菜单/闪示正占着窗口
-    if (m_comp && !m_composer.Code().empty()) return;   // 正在组码：窗口归候选列表用
-    if (m_customWordMode) return;                       // 自定义词组提示占着窗口
-    if (m_engActive || !m_engTyped.empty() || m_quickMode || m_rawMode || m_zPending || m_pyLookup)
-        return;   // 英文补全/便捷输入/原样记录/Z 菜单/拼音反查：窗口归它们用
-    RECT caret = {};
-    // 只认"活的"光标：TSF 的 GetSelection+GetTextExt，退一步是 Win32 插入符。
-    // **不再用 m_lastCaret 兜底** —— 兜底正是"焦点已经不在输入框里了，状态条还挂在
-    // 上一个输入框旁边"的来源（浏览器里点一下网页、点一下按钮就会这样）。
-    bool hasCaret = QueryCaretRectEx(caret);
-    const bool tsfCaret = hasCaret;
-    if (!hasCaret) hasCaret = QueryCaretRectGdi(caret);
-    // 光标矩形必须落在这个前台窗口里（留 120px 余量）。
-    // Chromium 的 TSF 对"整个文档"的选区会回一个几倍屏宽高的包围盒（实测 3839,2075），
-    // 不过滤的话状态条会被钉在屏幕角落 —— 看起来就像"焦点不在输入框里了还挂着"。
-    if (hasCaret) {
-        RECT wr = {};
-        const HWND fg = GetForegroundWindow();
-        if (fg && GetWindowRect(fg, &wr)) {
-            const int margin = 120;
-            if (caret.left < wr.left - margin || caret.left > wr.right + margin ||
-                caret.top  < wr.top  - margin || caret.top  > wr.bottom + margin) {
-                hasCaret = false;
-            }
-        }
-    }
-    if (!hasCaret) {
-        // 宿主还没画好 / 编辑会话被排成异步（TF_S_ASYNC）时会取不到光标。
-        // 不能就此 Hide+停表：那样窗口永远不回来了（VS Code 新窗口第一次就踩这个）。
-        // 先藏着，但继续每 250ms 试；连续 4 秒都取不到才放弃，等下一次按键/焦点变化重启。
-        if (++m_idleMissTicks > 16) { m_idleMissTicks = 0; m_candWnd.Hide(); return; }
-        m_candWnd.HideKeepFollow();
-        m_candWnd.SetFollowTimer(true);
-        return;
-    }
-    m_idleMissTicks = 0;
-    m_hasCaret = true;
-    m_lastCaret = caret;
-
-    m_candWnd.SetStatusMode(true);
-    m_candWnd.SetPlain(true);
-    m_candWnd.SetLetterLabels(false);
-    m_candWnd.SetCode(std::wstring());
-    m_candWnd.SetItems({ L"\u4e2d\u6587" }, false);   // 占位：实际绘制在 PaintStatus 里
-    m_candWnd.ClearHitArea();                          // 状态条不该有可点击的候选格
-    m_candWnd.SetStatusInfo(m_english, m_tradEnabled, m_iconPath);
-    // 状态条期间把"候选点击"也接管：万一命中判定走了候选路径，也只是重新摆一次状态条，
-    // 绝不上屏、不会因为 commit 后的 Hide() 把窗口弄没。
-    m_candWnd.SetOnClick([this](int) {
-        m_statusClickTick = GetTickCount();
-        ShowIdleStatus(nullptr);
-    });
-    m_candWnd.SetOnMenu([this](POINT pt) { m_statusClickTick = GetTickCount(); ShowStatusMenu(pt); });
-    m_candWnd.SetOnStatusClick([this](int zone) {
-        m_statusClickTick = GetTickCount();
-        if (zone == 3)      { OnBarClick(2); }                       // ⚙ 设置
-        else if (zone == 1) { OnBarClick(0); }                       // 中 / 英
-        else if (zone == 2) { OnBarClick(1); }                       // 简 / 繁
-        else { POINT p; GetCursorPos(&p); ShowStatusMenu(p); }       // 点图标 = 弹菜单
-        // 点完再摆一次：设置窗口/菜单会让宿主短暂失去焦点，窗口可能已被收起
-        ShowIdleStatus(nullptr);
-        // 再延后补一次：有些宿主在点击后还会补一个 kill-focus 回调
-        m_candWnd.SetFollowTimer(true);
-    });
-    m_candWnd.ShowAt(caret);
-    // 英文直通模式下按键根本不进输入法，收不到任何通知 -> 用定时器让状态窗跟着光标走
-    // 常开轮询：回车换行、鼠标移动光标、方向键这些都不经过输入法（或不被声索），
-    // 只能靠定时器重新取光标位置，否则窗口会停在上一行。
-    // 回调本身在 ActivateEx 里装（激活期间一直有效），这里只保证表是开着的。
-    m_candWnd.SetFollowTimer(true);
-    m_statusShown = false;
-    LogLine(L"idle status: en=%d trad=%d at %ld,%ld tsf=%d", (int)m_english, (int)m_tradEnabled,
-            (long)caret.left, (long)caret.bottom, (int)tsfCaret);
+    // 状态信息改由"固定在屏幕角落"的共享状态栏显示（见 BarSync 与 wubi_bar.cpp）。
+    // 候选窗只负责候选/组码/提示，不再兼职状态条，也不再跟着光标跑。
+    // 这个函数保留下来是因为很多地方（上屏后、切焦点、切中英/简繁、改主题）都要刷新一次状态。
+    BarSync();
 }
 
 // 合并窗口的右键菜单：内容与原来的悬浮栏一致（中/英、简/繁、主题、设置、版本）
@@ -1682,13 +1604,31 @@ void CTextService::ShowStatusMenu(POINT pt) {
         else if (idx == 6) OnBarClick(2);
         // 7 = 版本号：不处理
         ShowIdleStatus(nullptr);
-        m_candWnd.SetFollowTimer(true);
     });
 }
 
+// 主题 -> 状态栏图标文件 / 主题序号（顺序与右键菜单、设置窗口一致：熊猫/狸花猫/田园犬/丹顶鹤）
+static const wchar_t* ThemeIconFile(const std::wstring& theme) {
+    if (theme == L"cat")   return L"cat.ico";
+    if (theme == L"dog")   return L"dog.ico";
+    if (theme == L"crane") return L"crane.ico";
+    return L"panda.ico";
+}
+static int ThemeIndex(const std::wstring& theme) {
+    if (theme == L"cat")   return 1;
+    if (theme == L"dog")   return 2;
+    if (theme == L"crane") return 3;
+    return 0;
+}
+
 void CTextService::BarSync() {
-    if (g_barOwner == this)
-        SharedBar().SetState(m_english, m_tradEnabled);
+    if (g_barOwner != this) return;
+    SharedBar().SetState(m_english, m_tradEnabled);
+    SharedBar().SetIconFile(ThemeIconFile(m_settings.Theme));
+    SharedBar().SetThemeIndex(ThemeIndex(m_settings.Theme));
+    // 固定角落常显：want_ 置真后由 Reconcile（500ms 自检）在前台时放出来，
+    // 位置用 config.ini 里的 [Bar] X/Y，没存过就落在屏幕右下角
+    SharedBar().Show(true);
 }
 
 void CTextService::OnBarClick(int idx) {
@@ -1736,11 +1676,8 @@ STDMETHODIMP CTextService::OnSetThreadFocus() {
         BarGuardScope guard;
         g_barOwner = this;
         BarSync();
-        SharedBar().Show(false);      // 合并后不再显示独立悬浮栏
-        // 先无条件把跟随表打开：这一拍可能还没有文档焦点（微信点一下鼠标就是 1→0→1），
-        // ShowIdleStatus 会提前返回，表不开就没人负责把状态条放回来了。
-        m_candWnd.SetFollowTimer(true);
-        ShowIdleStatus(nullptr);      // 状态信息贴到光标附近（同一个窗口）
+        SharedBar().Show(true);       // 固定角落常显（前台是本进程时）
+        ShowIdleStatus(nullptr);      // 同步一次状态（现在只是刷新栏）
     }
     LogLine(L"OnSetThreadFocus: tid=%u visible=%d", m_tid, (int)SharedBar().Visible());
     return S_OK;
@@ -1903,8 +1840,8 @@ STDMETHODIMP CTextService::ActivateEx(ITfThreadMgr* ptim, TfClientId tid, DWORD)
         }
         g_barOwner = this;
         BarSync();
-        SharedBar().Show(false);      // 合并后不再显示独立悬浮栏
-        ShowIdleStatus(nullptr);      // 状态信息贴到光标附近（同一个窗口）
+        SharedBar().Show(true);       // 固定角落常显（前台是本进程时）
+        ShowIdleStatus(nullptr);      // 同步一次状态（现在只更新栏，不再贴光标）
     }
     LogLine(L"bar: users=%d owner=%p visible=%d", g_barUsers, (void*)this,
             (int)SharedBar().Visible());
@@ -1914,15 +1851,6 @@ STDMETHODIMP CTextService::ActivateEx(ITfThreadMgr* ptim, TfClientId tid, DWORD)
     // 只在前台是本进程且文档有焦点时才动作，见 ShiftSampleTick。
     m_candWnd.SetOnShiftTick([this] { ShiftSampleTick(); });
     m_candWnd.SetShiftSampler(true);
-    // 状态条跟随/自愈：回调只在激活时装一次，250ms 表在激活期间一直开着。
-    // 窗口被藏起来也继续跑，所以"点一下鼠标/换个输入框"之后能自己回来；
-    // 真正该停表的地方只有线程失焦（OnKillThreadFocus）和 Deactivate。
-    m_candWnd.SetOnFollow([this] {
-        // 前台不是本进程 / 没有文档焦点 / 窗口正被候选提示占用 —— 全交给 ShowIdleStatus 判断，
-        // 它会在该藏的时候 HideKeepFollow（保留轮询，前台回来能自己再出现）。
-        ShowIdleStatus(nullptr);
-    });
-    m_candWnd.SetFollowTimer(true);
     g_service = this;
     return S_OK;
 }
@@ -2029,12 +1957,9 @@ STDMETHODIMP CTextService::OnSetFocus(ITfDocumentMgr* pimdFocus, ITfDocumentMgr*
         }
     }
     if (shouldReset) Reset();
-    // 焦点落到文档上（或从"没有文档"回到文档：宿主点一下鼠标经常就是 1→0→1）、
-    // 或换到另一个输入框，都要把状态条摆回来并重开跟随表 —— Reset()/OnKillThreadFocus
-    // 都会 Hide 并停表，不补这一下，状态框就再也不出现了（"点一下就没了"）。
+    // 焦点落到文档上（或换到另一个输入框）：刷新一次固定角落的状态栏。
     if (pimdFocus && (gainedFocus || shouldReset)) {
         ShowIdleStatus(nullptr);
-        m_candWnd.SetFollowTimer(true);   // 刚换焦点时可能还取不到光标，留给 250ms 轮询补
     }
 
     // 焦点变化时把中/英隔间状态同步到新文档：系统指示器通常在焦点变化时重新查询
