@@ -7,26 +7,24 @@ build/
 *.lib
 *.bak
 
-# 发布产物里的二进制
-dist/*.dll
+# 发布产物里的二进�?dist/*.dll
 dist/*.exe
 
-# 生成的数据文件（不进仓库，见 data/README.md）
-data/*.tsv
+# 生成的数据文件（不进仓库，见 data/README.md�?data/*.tsv
 data/*.bin
 data/*.dat
 data/eng_words.txt
 dist/data/
 
-# 运行期文件
-*.log
+# 运行期文�?*.log
 *.old.*
 tray.log
 
-# 编辑器 / 系统
+# 编辑�?/ 系统
 .vs/
 .vscode/
 Thumbs.db
 desktop.ini
 
 dist/*.dll.*
+dist/*.exe.*
