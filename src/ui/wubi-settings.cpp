@@ -48,6 +48,26 @@ static bool         g_hkCapturing = false;
 
 static int S(int v) { return MulDiv(v, g_dpi, 96); }
 
+// 某个显示器的有效 DPI。GetDpiForMonitor 要走 shcore.dll（Win8.1+），拿不到就退回系统 DPI。
+static UINT DpiForMonitor(HMONITOR mon) {
+    if (!mon) mon = MonitorFromPoint(POINT{ 0, 0 }, MONITOR_DEFAULTTOPRIMARY);
+    typedef HRESULT(WINAPI* GetDpiForMonitorFn)(HMONITOR, int, UINT*, UINT*);
+    static GetDpiForMonitorFn getDpi = nullptr;
+    static bool probed = false;
+    if (!probed) {
+        probed = true;
+        if (HMODULE sh = LoadLibraryW(L"shcore.dll")) {
+            getDpi = (GetDpiForMonitorFn)GetProcAddress(sh, "GetDpiForMonitor");
+        }
+    }
+    UINT dx = 96, dy = 96;
+    if (getDpi && SUCCEEDED(getDpi(mon, 0 /* MDT_EFFECTIVE_DPI */, &dx, &dy)) && dx > 0) return dx;
+    HDC dc = GetDC(nullptr);
+    const int sys = dc ? GetDeviceCaps(dc, LOGPIXELSY) : 96;
+    if (dc) ReleaseDC(nullptr, dc);
+    return sys > 0 ? (UINT)sys : 96u;
+}
+
 // 保存之后通知正在运行的输入法：把配置重读一遍（不用重启任何应用）
 static void NotifyReload() {
     const UINT msg = PandaReloadMessage();
@@ -521,8 +541,8 @@ static void BuildChildren(HWND hwnd) {
         makeColor(X,   158, L"背景色", ID_BG,     g_s.CandBgColor,     7);
         makeColor(340, 158, L"文字色", ID_TXT,    g_s.CandTextColor,   7);
         makeColor(X,   192, L"边框色", ID_BORDER, g_s.CandBorderColor, 7);
-        MakeCheck(hwnd, L"内框凹陷", 330, 190, 110, ID_INSET, g_s.CandInset != 0, true);
-        MakeCheck(hwnd, L"候选竖排", 444, 190,  96, ID_VERT,  g_s.CandVertical != 0);
+        MakeCheck(hwnd, L"内框凹陷", X,     232, 110, ID_INSET, g_s.CandInset != 0, true);
+        MakeCheck(hwnd, L"候选竖排", 300,   232,  96, ID_VERT,  g_s.CandVertical != 0);
     }
 
     // ------------------------------------------------ 页 2：热键
@@ -611,6 +631,11 @@ static void BuildChildren(HWND hwnd) {
 static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     switch (msg) {
     case WM_CREATE:
+        // 窗口已经建出来了，这时候问 GetDpiForWindow 才是它真正所在显示器的 DPI；
+        // 建窗之前只能猜（见 RunDialog 里的 MonitorDpi）——猜错会整窗被裁掉一块。
+        {   const UINT wdpi = GetDpiForWindow(hwnd);
+            if (wdpi >= 48) g_dpi = (int)wdpi;
+        }
         BuildChildren(hwnd);
         return 0;
     case WM_SIZE:                      // 侧栏跟着窗口高度走（全高的一条）
@@ -772,12 +797,17 @@ static int RunDialog() {
     INITCOMMONCONTROLSEX icc = { sizeof(icc), ICC_STANDARD_CLASSES };
     InitCommonControlsEx(&icc);
 
+    // 以"鼠标所在显示器"为准：窗口就摆到那一屏中间，DPI 也取那一屏的。
+    // 建窗位置和 DPI 必须来自同一个显示器，否则 WM_CREATE 里的 GetDpiForWindow
+    // 会和这里的缩放算出来不一样，整窗按错的尺寸排布（表现为被裁掉一块）。
+    RECT work = { 0, 0, 1920, 1080 };
     {
-        HDC dc = GetDC(nullptr);
-        g_dpi = dc ? GetDeviceCaps(dc, LOGPIXELSY) : 96;
-        if (dc) ReleaseDC(nullptr, dc);
-        if (g_dpi <= 0) g_dpi = 96;
+        HMONITOR mon = MonitorFromPoint(POINT{ 0, 0 }, MONITOR_DEFAULTTOPRIMARY);
+        MONITORINFO mi = { sizeof(mi) };
+        if (mon && GetMonitorInfoW(mon, &mi)) work = mi.rcWork;
+        g_dpi = (int)DpiForMonitor(mon);
     }
+    if (g_dpi <= 0) g_dpi = 96;
     g_bg = CreateSolidBrush(RGB(0xFF, 0xFF, 0xFF));
 
     WNDCLASSEXW wc = { sizeof(wc) };
@@ -799,12 +829,13 @@ static int RunDialog() {
     MeasureClient(cw, ch);
     RECT rc = { 0, 0, cw, ch };
     AdjustWindowRectEx(&rc, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU, FALSE, 0);
-    const int ww = rc.right - rc.left, wh = rc.bottom - rc.top;
+    int ww = rc.right - rc.left, wh = rc.bottom - rc.top;
 
-    // 先建在屏幕外、不显示，摆好位置再 ShowWindow：避免"先闪一个位于默认位置的空窗"
+    const int x0 = work.left + ((work.right - work.left) - ww) / 2;
+    const int y0 = work.top + ((work.bottom - work.top) - wh) / 2;
     HWND hwnd = CreateWindowExW(0, L"WubiSettingsWnd", kTitle,
                                 WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_CLIPCHILDREN,
-                                -32000, -32000, ww, wh,
+                                x0, y0, ww, wh,
                                 nullptr, nullptr, wc.hInstance, nullptr);
     if (!hwnd) return 1;
 
@@ -830,9 +861,13 @@ static int RunDialog() {
         }
     }
 
-    // 居中到工作区
-    RECT work = { 0, 0, GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN) };
-    SystemParametersInfoW(SPI_GETWORKAREA, 0, &work, 0);
+    // WM_CREATE 里可能已经把 g_dpi 校正成真实显示器 DPI，这里按新 DPI 再量一次
+    {   int nw = 0, nh = 0;
+        MeasureClient(nw, nh);
+        RECT r2 = { 0, 0, nw, nh };
+        AdjustWindowRectEx(&r2, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU, FALSE, 0);
+        ww = r2.right - r2.left; wh = r2.bottom - r2.top;
+    }
     const int x = work.left + ((work.right - work.left) - ww) / 2;
     const int y = work.top + ((work.bottom - work.top) - wh) / 2;
     SetWindowPos(hwnd, HWND_TOP, x, y, ww, wh, SWP_NOACTIVATE);
@@ -879,6 +914,14 @@ static void EnsureStdIo() {
 }
 
 int WINAPI wWinMain(HINSTANCE, HINSTANCE, LPWSTR, int) {
+    // 高 DPI：声明 Per-Monitor V2 感知。不声明的话进程被系统位图拉伸——
+    // 界面发虚，GetDeviceCaps(LOGPIXELSY) 还总是 96，S() 等于没缩放。
+    {
+        HMODULE u32 = GetModuleHandleW(L"user32.dll");
+        using SetCtxFn = BOOL(WINAPI*)(HANDLE);
+        auto setCtx = u32 ? (SetCtxFn)GetProcAddress(u32, "SetProcessDpiAwarenessContext") : nullptr;
+        if (!setCtx || !setCtx((HANDLE)(intptr_t)-4)) SetProcessDPIAware();   // -4 = PER_MONITOR_AWARE_V2
+    }
     g_ini = ConfigPath();
     g_s = wubi::LoadSettings(g_ini);
     {
@@ -942,11 +985,19 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, LPWSTR, int) {
                 if (eq == std::wstring::npos) continue;
                 std::wstring k = kv.substr(0, eq), v = kv.substr(eq + 1);
                 int iv = _wtoi(v.c_str());
-                if      (k == L"Level1Mode")     { g_s.Level1Mode = iv; any = true; }
-                else if (k == L"SortMode")       { g_s.SortMode = iv; any = true; }
-                else if (k == L"TradChinese")    { g_s.TradChinese = iv; any = true; }
-                else if (k == L"CandCount")      { g_s.CandCount = iv; any = true; }
-                else if (k == L"CandVertical")   { g_s.CandVertical = iv; any = true; }
+                // 和 UI 那条路径一样夹范围：/set CandCount=999 会原样落盘，输入法端只能各自兜底
+                auto inRange = [](int x, int lo, int hi) { return x >= lo && x <= hi; };
+                auto badValue = [&](const wchar_t* expect) -> int {
+                    std::printf("bad value: %ls (need %ls)\n", kv.c_str(), expect);
+                    LocalFree(argv);
+                    return 2;
+                };
+                if      (k == L"Level1Mode")   { if (!inRange(iv, 0, 2)) return badValue(L"0..2"); g_s.Level1Mode = iv; any = true; }
+                else if (k == L"SortMode")     { if (!inRange(iv, 0, 1)) return badValue(L"0..1"); g_s.SortMode = iv; any = true; }
+                else if (k == L"TradChinese")  { if (!inRange(iv, 0, 1)) return badValue(L"0..1"); g_s.TradChinese = iv; any = true; }
+                else if (k == L"CandCount")    { if (!inRange(iv, 1, 9)) return badValue(L"1..9"); g_s.CandCount = iv; any = true; }
+                else if (k == L"CandVertical") { if (!inRange(iv, 0, 1)) return badValue(L"0..1"); g_s.CandVertical = iv; any = true; }
+                else if (k == L"CandFontPt")   { if (!inRange(iv, 8, 24)) return badValue(L"8..24"); g_s.CandFontPt = iv; any = true; }
                 else if (k == L"Theme")          { g_s.Theme = (v == L"cat") ? L"cat" : ((v == L"dog") ? L"dog" : ((v == L"crane") ? L"crane" : L"panda")); any = true; }
                 else if (k == L"HotkeyTrad") {
                     wubi::Hotkey hk;

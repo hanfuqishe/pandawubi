@@ -2006,6 +2006,86 @@ Chromium 的 TSF 会给出几倍屏宽高的包围盒（实测 `3839,2075`），
 [18:05:31.530] shift poll -> english=0 (side=1 both=0 trad=0)      ← 再单击：英→中
 ```
 
+## 二·四十八、代码审计：20 处问题的根因与修法（2026-11-27 夜）
+
+一整轮"通读 + 审计"（6 个方向并行：引擎核心、引擎杂项、TSF 核心、TSF UI、UI/CLI、构建工具），
+逐条对照源码核实后确认 20 处问题，全部修掉。按性质分三类记在这里，便于以后回看为什么这么写。
+
+### 一、功能真的不生效（用户能直接感觉到）
+
+1. **英文补全只剩用户词**：`wubi::EnglishLexicon::Load()` 第一行 `words_.clear()` 之后才开文件，
+   而 `wubi_tsf.cpp` 启动时连调两次（`data\eng_words.txt` 再 `%APPDATA%\PandaWubi\eng_user.txt`），
+   第二次把 4.4 万主词表清空。改为 `Load(path, append = false)`：`append=true` 时不清表、
+   返回值是"本次新增条数"，日志变成 `eng user words: +25` / `eng load: words=44016 -> total 44041`。
+2. **设置窗「一级简码」「候选排序」不生效**：`SetSortMode/SetLevel1Mode` 只有 CLI 调，
+   TSF 的 `ApplySettings` 从不调。补接线，并在日志里记 `dict modes: sort=0 level1=2`。
+3. **单击托盘图标打不开设置**：设了 `NOTIFYICON_VERSION_4` 却仍按 v3 的
+   `LOWORD(lp) == WM_LBUTTONUP` 判定。v4 下是 `NIN_SELECT`，两种都认。
+4. **托盘"打开数据目录"在 `C:\Program Files` 下必失败**：`ShellExecuteW` 传给
+   `explorer.exe` 的路径没加引号。加引号，并按 `(INT_PTR)h > 32` 判断成败。
+5. **安装完 32 位组件没注册也显示成功**：Inno Setup 的两条 `regsvr32` `[Run]` 行默认
+   "失败不报错"。改成 `[Code]` 里 `TryRegister` 逐个 `Exec(... ewWaitUntilTerminated, ResultCode)`，
+   收集失败项，`ssPostInstall` 时用 `mbError` 提示用户手动注册。
+6. **`wubi-cli show` 打印完不退**：少了 `return 0;`，掉进兜底交互循环等 stdin。
+7. **`/set` 不校验范围**：`CandCount=999`、`Level1Mode=7` 直接落盘，下次启动读回垃圾。
+   现在范围检查失败打印 `bad value: … (need …)` 并 `return 2`。
+8. **Win+Shift 误切中/英**：轮询判定里只看了 Ctrl/Alt，而 `OtherKeyPressed` 的跳过列表里
+   有 `VK_LWIN/VK_RWIN` —— Win+Shift+S（截图）、Win+Shift+方向键（跨屏移动）都会被当成
+   "干净的 Shift 单击"。加 `win` 到修饰键判定。
+9. **两处图标不一致**：状态栏 `LoadIcon_` 不找 `%LOCALAPPDATA%\PandaWubi\<主题>.ico`，
+   候选窗却找。统一成：LOCALAPPDATA 主题 ico → DLL 同目录主题 ico → LOCALAPPDATA `panda.ico`
+   → DLL 同目录 `panda.ico` → DLL 内置图标。
+
+### 二、稳定性与性能
+
+10. **`OnCompositionTerminated` 误杀新组合串**：不比对 `pComposition` 就 Release `m_comp`。
+    加 `m_comp == pComposition` 守卫（晚到的终止回调不再影响新建的组合串）。
+11. **两处 EditSession 捕获栈变量**：`ShowCandidateList` 与 `TrimRecentCharsByDocument`
+    按引用捕获栈上的 `RECT`/`std::wstring`，又只判 `FAILED(hr)` —— 但 `TF_S_ASYNC`
+    （`0x00040300`）是 SUCCEEDED，异步执行时写的是已经析构的栈帧。改成
+    `std::make_shared` 持有，会话里写、会话外用。
+12. **每键十几次文件系统往返**：`LogLine` 每次 `CreateFile + GetFileSizeEx + WriteFile + CloseHandle`。
+    改成进程内常驻句柄（`FILE_FLAG_WRITE_THROUGH`，避免崩溃时丢最后几行）、
+    内存里记住大小、16 MB 滚动、写失败就弃句柄下次重开。
+13. **学一个词就全表重排**：`AddUserWord`/`BumpUserWord` 一律置 `sortedDirty_`，
+    下次 `Lookup` 就 `std::sort` 14.7 万条（约 250 万次逐字节比较），
+    正好卡在"上屏后敲第一个键"那一拍。改为：命中已有条目时用 `InsertSortedIndex`
+    做一次 `lower_bound + insert`，只有真正加了新码才整表重排。
+14. **`Dictionary` 跨线程无锁**：被 `static DictHolder g_dict` 进程级共享，多个 TSF 实例
+    并发时 `entries_.push_back`/`sorted_.resize` 会让查询侧引用悬垂。加
+    `mutable std::recursive_mutex mu_`（递归，因为内部方法互相调用），
+    12 个公共方法入口 `lock_guard`。
+15. **Shift 轮询空转**：20ms 定时器只在 Activate/Deactivate 开关，而"切到别的应用"不触发
+    Deactivate，后台实例常年 50 Hz × 246 次 `GetAsyncKeyState`。改为：每次 tick 先判
+    `HostForeground() && m_docFocused`，不活跃就把采样间隔调到 200ms 并清状态
+    （`SetShiftInterval`），活跃时恢复 20ms。
+16. **`LoadBinary` 校验不足**：`(size_t)recCount * sizeof(BinaryRec)` 在 32 位会回绕；
+    也不校验 `wordOff/wordLen/codeLen`。改成 64 位算术的总长校验 + 逐条校验
+    （codeLen 1..4、wordLen > 0、`wordOff + wordLen <= blobSize`、code 字节都是五笔码字符）。
+17. **映射文件句柄泄漏**：`Dictionary` 没有析构。补 `~Dictionary() { UnmapBinary(); }`；
+    `CreateFileW` 的共享模式从只读改成 `FILE_SHARE_READ | WRITE | DELETE`，
+    升级覆盖时不再撞"文件被占用"。
+18. **`BinRange` 上界线性扫**：打 `t` 要扫 10,327 条才找到区间末尾。改成二分
+    （`memcmp(bin_[mid].code, key, prefix.size()) <= 0` → `a = mid + 1`）。
+19. **DLL 9.7 MB，其中 9.1 MB 是四张风景条**：`wubi_tsf.rc` 里 `cat/dog/crane/panda_band.png`
+    是 1536×576 / 1344×1008 / 1536×768 / 768×1367，合计 8.3 MB，而候选窗绘制高度上限
+    是 `bandCapDip_ = 120` DIP。等比缩到最长边 768px（8.13 MB → 2.58 MB），
+    `panda_tsf.dll` 从 9,749,504 降到 3,877,888 字节。
+20. **死代码与残留资源**：`wubi_tsf.cpp` 里 `art_` 加载的是资源 id 2（.rc 里不存在），
+    `Destroy()` 也从不释放。直接删掉。
+
+### 三、界面细节
+
+- 设置窗在高 DPI 下按 96 DPI 排版、被位图拉伸发糊 → `wWinMain` 开头
+  `SetProcessDpiAwarenessContext(PER_MONITOR_AWARE_V2)`（失败退回 `SetProcessDPIAware()`）；
+  `RunDialog` 用 `GetDpiForMonitor` 取主屏 DPI，建窗后再 `MeasureClient + AdjustWindowRectEx
+  + SetWindowPos` 按真实 DPI 重摆一次，`WM_CREATE` 里再用 `GetDpiForWindow` 校正。
+- `EnsureDir` 只判"路径存在"，同名文件会让后续写配置失败 → 同时判 `FILE_ATTRIBUTE_DIRECTORY`。
+- 「外观」页把两个复选框挪到独立一行，避免和"边框色"输入框挤在一起。
+
+验证：`tools/verify.ps1` 全过；`tsf-host -send "trnt [h]hel"` 得 `我hel`，
+日志 `dict modes: sort=0 level1=2`、`shift poll -> english=1 (side=1 both=0 trad=0)`；
+设置窗五页在 168 DPI 下截图（`build/aware-p*.png`）无重叠、无裁切。
 ## 三、TSF 外壳（已实现，真机已验证工作）
 
 ```

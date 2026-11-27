@@ -649,6 +649,7 @@ int wmain(int argc, wchar_t** argv) {
         std::printf("InputMode=%d CandVertical=%d CandCount=%d TradChinese=%d SortMode=%d Level1Mode=%d CandFont=%d CandBgColor=#%06X CandInset=%d DictFile=%ls\n",
                     s.InputMode, s.CandVertical, s.CandCount, s.TradChinese,
                     s.SortMode, s.Level1Mode, s.CandFontPt, (unsigned)(s.CandBgColor & 0xFFFFFF), s.CandInset, s.DictFile.c_str());
+        return 0;   // 以前缺这一句：打印完继续往下走，掉进兜底交互循环等 stdin
     }
     if (cmd == "userdemo") {
         // 词频自学习 + 持久化 自检

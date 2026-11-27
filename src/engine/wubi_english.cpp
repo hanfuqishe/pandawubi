@@ -81,10 +81,13 @@ static const std::unordered_set<std::string>& CommonSet() {
 static bool IsCommon(const std::string& w) {   // 传入的必须是已小写的 key
     return CommonSet().count(w) != 0;
 }
-long long EnglishDict::Load(const std::wstring& path) {
-    words_.clear();
+long long EnglishDict::Load(const std::wstring& path, bool append) {
     FILE* fp = nullptr;
+    // 先开文件再动词表：文件不存在时返回 -1 且保留原来的词表（老代码先 clear 再开，
+    // 一旦第二个词表缺失就把第一份也清空了）。
     if (_wfopen_s(&fp, path.c_str(), L"rb") != 0 || !fp) return -1;
+    if (!append) words_.clear();
+    const size_t before = words_.size();
 
     std::string line;
     char buf[512];
@@ -120,7 +123,8 @@ long long EnglishDict::Load(const std::wstring& path) {
             words_.push_back(std::move(rows[i].word));
         }
     }
-    return (long long)words_.size();
+    // 返回值 = 这次真正新增的词数（append 时不能返回总数，调用方拿它当"新增了几条"）
+    return (long long)(words_.size() - (append ? before : 0));
 }
 
 // 词是否已在表里（不区分大小写）

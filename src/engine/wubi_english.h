@@ -15,8 +15,10 @@ std::wstring ApplyCase(const std::wstring& word, const std::wstring& typed);
 
 class EnglishDict {
 public:
-    // 从纯文本载入（每行一个单词）。返回载入条数，失败返回 -1
-    long long Load(const std::wstring& path);
+    // 从纯文本载入（每行一个单词）。返回载入条数，失败返回 -1。
+    // append=true 保留已有词表、把新词并进去：用户词表必须这么载入，
+    // 否则第二次 Load 会把主词表清空（英补全曾因此只剩用户自己的那几十个词）。
+    long long Load(const std::wstring& path, bool append = false);
     // 按前缀给出候选（不区分大小写，按字母序），limit 为上限
     std::vector<std::string> Suggest(const std::string& prefix, size_t limit) const;
     size_t Count() const { return words_.size(); }

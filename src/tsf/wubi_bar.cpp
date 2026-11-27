@@ -115,8 +115,11 @@ static int S(int v, int dpi);   // 定义在后（DPI 缩放）
 // 主题顺序：必须与 TSF 里 OnBarClick 的表、以及 Settings::Theme 的取值顺序一致
 static const wchar_t* kThemeNames[4] = { L"熊猫（默认）", L"狸花猫", L"中华田园犬", L"丹顶鹤" };
 
-// 产品 Logo：和输入法指示器用同一个 panda.ico。
-// 查找顺序与 TSF 那边保持一致：DLL 同目录 panda.ico -> %LOCALAPPDATA%\PandaWubi\panda.ico -> DLL 自带图标。
+// 产品 Logo：和输入法指示器用同一个图标。
+// 查找顺序与 wubi_tsf.cpp ApplySettings 里给状态窗取图标的顺序**完全一致**：
+//   %LOCALAPPDATA%\PandaWubi\<主题>.ico -> DLL 同目录 <主题>.ico -> 两个 panda.ico -> DLL 自带图标
+// （以前这里不试 LOCALAPPDATA 下的主题图标，主题 ico 只在 LOCALAPPDATA 时
+//   状态窗显示猫/狗/鹤、悬浮栏却还是熊猫。）
 void StatusBar::LoadIcon_() {
     if (icon_) return;
     if (dpi_ <= 0) dpi_ = (int)BarDpi();   // 可能在 Create 之前就被调用（设置主题时）
@@ -127,20 +130,22 @@ void StatusBar::LoadIcon_() {
     const size_t slash = dir.find_last_of(L"\\/");
     if (slash != std::wstring::npos) dir.erase(slash);
 
+    wchar_t base[MAX_PATH] = { 0 };
+    std::wstring local;
+    if (GetEnvironmentVariableW(L"LOCALAPPDATA", base, ARRAYSIZE(base)) > 0) {
+        local = std::wstring(base) + L"\\PandaWubi\\";
+    }
+
     const std::wstring candidates[] = {
+        local.empty() ? std::wstring() : local + iconName_,
         dir + L"\\" + iconName_,
+        local.empty() ? std::wstring() : local + L"panda.ico",
         dir + L"\\panda.ico",      // 主题图标没找到就退回默认熊猫
         std::wstring(),
     };
     for (const auto& path : candidates) {
-        if (path.empty()) break;
+        if (path.empty()) continue;
         HICON h = (HICON)LoadImageW(nullptr, path.c_str(), IMAGE_ICON, want, want, LR_LOADFROMFILE);
-        if (h) { icon_ = h; return; }
-    }
-    wchar_t base[MAX_PATH] = { 0 };
-    if (GetEnvironmentVariableW(L"LOCALAPPDATA", base, ARRAYSIZE(base)) > 0) {
-        const std::wstring p = std::wstring(base) + L"\\PandaWubi\\panda.ico";
-        HICON h = (HICON)LoadImageW(nullptr, p.c_str(), IMAGE_ICON, want, want, LR_LOADFROMFILE);
         if (h) { icon_ = h; return; }
     }
     // 最后退回 DLL 自带图标（与 TSF 指示器的兜底一致）

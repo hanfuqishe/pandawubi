@@ -1,4 +1,4 @@
-﻿// ppwubi-tray —— PP五笔 托盘程序
+// ppwubi-tray —— PP五笔 托盘程序
 // 常驻托盘显示图标；左键/双击打开设置；右键菜单含设置、关于、退出。
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
@@ -230,9 +230,12 @@ static bool RelaunchViaExplorerIfSandboxed() {
     TrayLog("detected low integrity, relaunch via explorer: parent=%ls", parent.c_str());
 
     // explorer.exe "<路径>" 会把请求转交给运行中的 Explorer，由它（medium）启动
-    HINSTANCE h = ShellExecuteW(nullptr, L"open", L"explorer.exe", exe, nullptr, SW_SHOWNORMAL);
+    // 路径必须带引号：装在 C:\Program Files\... 下时 explorer.exe 会把空格当分隔符，
+    // 结果什么也没启动，而这里照样 return true 让本进程退出 → 托盘图标彻底消失。
+    const std::wstring quoted = L"\"" + std::wstring(exe) + L"\"";
+    HINSTANCE h = ShellExecuteW(nullptr, L"open", L"explorer.exe", quoted.c_str(), nullptr, SW_SHOWNORMAL);
     TrayLog("ShellExecute(explorer) ret=%p err=%lu", (void*)h, GetLastError());
-    return true;
+    return (INT_PTR)h > 32;   // >32 才是成功，见 ShellExecute 返回值约定
 }
 
 static void AddTrayIcon() {
@@ -355,8 +358,16 @@ static void LoadStateFromFile() {
 static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     switch (msg) {
     case WM_TRAY:
-        if (LOWORD(lp) == WM_LBUTTONUP || LOWORD(lp) == WM_LBUTTONDBLCLK) LaunchSettings();
-        else if (LOWORD(lp) == WM_RBUTTONUP || LOWORD(lp) == WM_CONTEXTMENU) ShowMenu();
+        // 已用 NIM_SETVERSION 声明 NOTIFYICON_VERSION_4：v4 下左键发的是 NIN_SELECT / NIN_KEYSELECT，
+        // 不再发 WM_LBUTTONUP；老写法会导致"单击托盘图标没反应"。两种都接。
+        if (lp == NIN_SELECT || lp == NIN_KEYSELECT || lp == WM_LBUTTONUP || lp == WM_LBUTTONDBLCLK
+            || LOWORD(lp) == NIN_SELECT || LOWORD(lp) == NIN_KEYSELECT
+            || LOWORD(lp) == WM_LBUTTONUP || LOWORD(lp) == WM_LBUTTONDBLCLK) {
+            LaunchSettings();
+        } else if (lp == WM_RBUTTONUP || lp == WM_CONTEXTMENU
+                   || LOWORD(lp) == WM_RBUTTONUP || LOWORD(lp) == WM_CONTEXTMENU) {
+            ShowMenu();
+        }
         return 0;
     case WM_APP + 10:   // IME 通知中/英切换
         g_english = (wp != 0);

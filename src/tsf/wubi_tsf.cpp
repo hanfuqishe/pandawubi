@@ -204,29 +204,46 @@ static void LogLine(const wchar_t* fmt, ...) {
                st.wHour, st.wMinute, st.wSecond, st.wMilliseconds, n, msg);
 
     wcscpy_s(g_logPath, path);      // 供 attach 行打印（路径长度 < MAX_PATH）
-    HANDLE h = CreateFileW(path, FILE_APPEND_DATA,
+
+    // 句柄常驻 + FILE_FLAG_WRITE_THROUGH：以前每次调用都是
+    // CreateFile + GetFileSizeEx + WriteFile + CloseHandle 四条系统调用，
+    // 而每敲一个键热路径上有 3~6 条日志 → 每键十几次往返。
+    // 现在一次 WriteFile 就落盘（WriteThrough 保证崩溃后日志还在）。
+    static HANDLE hLog = INVALID_HANDLE_VALUE;
+    static long long logSize = 0;
+    if (hLog == INVALID_HANDLE_VALUE) {
+        hLog = CreateFileW(path, FILE_APPEND_DATA,
                            FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr,
-                           OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
-    if (h == INVALID_HANDLE_VALUE) return;
-    LARGE_INTEGER sz = {};
-    GetFileSizeEx(h, &sz);
+                           OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_WRITE_THROUGH, nullptr);
+        if (hLog == INVALID_HANDLE_VALUE) return;
+        LARGE_INTEGER sz = {};
+        GetFileSizeEx(hLog, &sz);
+        logSize = sz.QuadPart;
+    }
     // 超过 16 MB 就滚一份 .old：正常的崩溃诊断只看尾部，文件太大反而不好打开
-    if (sz.QuadPart > (16LL << 20)) {
-        CloseHandle(h);
+    if (logSize > (16LL << 20)) {
+        CloseHandle(hLog);
+        hLog = INVALID_HANDLE_VALUE;
         std::wstring bak = std::wstring(path) + L".old";
         MoveFileExW(path, bak.c_str(), MOVEFILE_REPLACE_EXISTING);
-        h = CreateFileW(path, FILE_APPEND_DATA, FILE_SHARE_READ | FILE_SHARE_WRITE,
-                        nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
-        if (h == INVALID_HANDLE_VALUE) return;
-        sz.QuadPart = 0;
+        hLog = CreateFileW(path, FILE_APPEND_DATA,
+                           FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr,
+                           OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_WRITE_THROUGH, nullptr);
+        if (hLog == INVALID_HANDLE_VALUE) return;
+        logSize = 0;
     }
     DWORD wrote = 0;
-    if (sz.QuadPart == 0) {
+    if (logSize == 0) {
         const WORD bom = 0xFEFF;
-        WriteFile(h, &bom, sizeof(bom), &wrote, nullptr);
+        if (WriteFile(hLog, &bom, sizeof(bom), &wrote, nullptr)) logSize += wrote;
     }
-    WriteFile(h, line, (DWORD)(wcslen(line) * sizeof(wchar_t)), &wrote, nullptr);
-    CloseHandle(h);
+    if (WriteFile(hLog, line, (DWORD)(wcslen(line) * sizeof(wchar_t)), &wrote, nullptr)) {
+        logSize += wrote;
+    } else {
+        // 文件被删/改权限了：丢掉句柄，下次调用重新打开
+        CloseHandle(hLog);
+        hLog = INVALID_HANDLE_VALUE;
+    }
 }
 
 // 用户词文件：<数据目录>\user.tsv（自造词 + 词频自学习结果）
@@ -360,8 +377,15 @@ public:
     void SetShiftSampler(bool on) {
         if (on) Ensure();                 // 开：窗口不存在就建（Deactivate 时不能反着建）
         if (!hwnd_) return;
-        if (on) { if (!shiftSampleOn_) { SetTimer(hwnd_, kShiftTimerId, 20, nullptr); shiftSampleOn_ = true; } }
+        if (on) { if (!shiftSampleOn_) { SetTimer(hwnd_, kShiftTimerId, shiftInterval_, nullptr); shiftSampleOn_ = true; } }
         else    { if (shiftSampleOn_) { KillTimer(hwnd_, kShiftTimerId); shiftSampleOn_ = false; } }
+    }
+    // 采样周期：前台时 20ms（人眼能接受的响应），后台时放宽到 200ms，
+    // 免得上百个宿主进程常年 50Hz 空转。
+    void SetShiftInterval(UINT ms) {
+        if (shiftInterval_ == ms) return;
+        shiftInterval_ = ms;
+        if (shiftSampleOn_ && hwnd_) SetTimer(hwnd_, kShiftTimerId, shiftInterval_, nullptr);
     }
     HWND Hwnd() { Ensure(); return hwnd_; }
     // 状态模式：空闲时就显示在光标附近，只放"中/英·简/繁"这类基本信息
@@ -418,8 +442,6 @@ public:
             starFont_ = CreateFontW(-MulDiv(starPt, (int)dpi, 72), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
                                     DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
                                     CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, face_.c_str());
-    if (!art_) art_ = (HBITMAP)LoadImageW(g_hInst, MAKEINTRESOURCEW(2), IMAGE_BITMAP,
-                                              0, 0, LR_CREATEDIBSECTION);
         }
         RecalcAndResize();
         if (hwnd_) InvalidateRect(hwnd_, nullptr, TRUE);
@@ -469,7 +491,6 @@ private:
     COLORREF textCol_   = RGB(0x20, 0x20, 0x28);  // 普通候选字
 
     COLORREF borderCol_ = RGB(0xA8, 0xCD, 0xA8);  // 边框
-    HBITMAP  art_    = nullptr;               // 右下角熊猫装饰
     std::wstring code_;                       // 顶部显示的组码
     int      headH_  = 0;                     // 顶部框高度
     int      rowH_   = 0;                     // 每行高度
@@ -483,6 +504,7 @@ private:
     bool followOn_ = false;
     std::function<void()> onShiftTick_;
     bool shiftSampleOn_ = false;
+    UINT shiftInterval_  = 20;
     bool menuMode_ = false;
     std::vector<std::wstring> menuItems_;
     std::vector<char> menuChecked_;
@@ -1801,10 +1823,10 @@ STDMETHODIMP CTextService::ActivateEx(ITfThreadMgr* ptim, TfClientId tid, DWORD)
                 dir.erase(slash);
                 const long long n = g_eng.Load(dir + L"\\data\\eng_words.txt");
     // 用户自己"打进去过"的英文词（自动学习），存在数据目录里
-    const long long nu = g_eng.Load(wubi::GetDataDir() + L"\\eng_user.txt");
-    LogLine(L"eng user words: %lld", nu > 0 ? nu : 0);
-                LogLine(L"eng load: words=%lld", n);
-                if (n > 0) engLoaded = true;
+    const long long nu = g_eng.Load(wubi::GetDataDir() + L"\\eng_user.txt", true);
+    LogLine(L"eng user words: +%lld", nu > 0 ? nu : 0);
+                LogLine(L"eng load: words=%lld -> total %zu", n, g_eng.Count());
+                if (g_eng.Count() > 0) engLoaded = true;
             }
         }
     }
@@ -2016,8 +2038,11 @@ STDMETHODIMP CTextService::OnCompositionTerminated(TfEditCookie, ITfComposition*
     // 顶字上屏（四码满了又打第五个键）会"先提交旧的组合串、再开一个新的"。
     // 旧串的终止回调是**晚一步**才到的，那时 m_comp 已经指向新串了 ——
     // 老代码不分青红皂白把 m_comp 释放掉，等于把刚开的那个新组合串掐死，
-    // 于是第五个键看起来"被吞掉了"（候选窗也不出来）。
-    if (m_comp) { m_comp->Release(); m_comp = nullptr; }
+    // 于是第五个键看起来"被吞掉了"（候选窗也不出来）。所以必须比对指针。
+    if (m_comp && m_comp == pComposition) {
+        m_comp->Release();
+        m_comp = nullptr;
+    }
     if (m_keepCodeOnTerminate) {
         // 这是"顶字上屏"结束旧组合串的回调：composer 里已经装好了新码，
         // 不要 Reset、不要把候选窗收掉——等用户打下一键再开新组合串。
@@ -2439,6 +2464,15 @@ void CTextService::ApplySettings() {
     m_candCount   = m_settings.CandCount;
     m_composer.SetLimit((size_t)m_candCount);
 
+    // 一级简码 / 候选排序：以前这两项只存在配置里、从没交给词典（只在 wubi-cli 里调过），
+    // 于是设置窗里"不处理/隐藏/沉底"和"码短优先/纯词频优先"选什么都没用。这里接上。
+    {
+        wubi::Dictionary& d = g_dict.Get();
+        if (d.SortMode() != m_settings.SortMode) d.SetSortMode(m_settings.SortMode);
+        if (d.Level1Mode() != m_settings.Level1Mode) d.SetLevel1Mode(m_settings.Level1Mode);
+        LogLine(L"dict modes: sort=%d level1=%d", d.SortMode(), d.Level1Mode());
+    }
+
     // 主题：panda（默认）/ cat（狸花猫）/ dog（中华田园犬）/ crane（丹顶鹤）
     const bool cat   = (m_settings.Theme == L"cat");
     const bool dog   = (m_settings.Theme == L"dog");
@@ -2783,9 +2817,11 @@ void CTextService::ShowCandidateList(const std::vector<std::wstring>& display) {
 
     // 光标矩形（只读会话内取，避免影响输入）
     CTextService* self = this;
-    RECT caret = { 0, 0, 0, 0 };
-    bool haveCaret = false;
-    CEditSession* s = new CEditSession([self, &caret, &haveCaret](TfEditCookie ec) -> HRESULT {
+    // RequestEditSession 可能返回 TF_S_ASYNC（SUCCEEDED，但回调在本函数返回之后才跑），
+    // 直接捕获栈上的 caret/haveCaret 就是往废栈帧里写。放到 shared_ptr 里让回调自己持有。
+    struct CaretProbe { RECT caret{ 0, 0, 0, 0 }; bool have = false; };
+    auto probe = std::make_shared<CaretProbe>();
+    CEditSession* s = new CEditSession([self, probe](TfEditCookie ec) -> HRESULT {
         if (!self->m_context) return E_FAIL;      // 没在组码时（提示/自定义模式）没有 context
         ITfContextView* view = nullptr;
         if (FAILED(self->m_context->GetActiveView(&view)) || !view) return E_FAIL;
@@ -2794,29 +2830,33 @@ void CTextService::ShowCandidateList(const std::vector<std::wstring>& display) {
             RECT rc = { 0, 0, 0, 0 };
             BOOL clipped = FALSE;
             if (SUCCEEDED(view->GetTextExt(ec, pRange, &rc, &clipped))) {
-                caret = rc;
-                haveCaret = true;
+                probe->caret = rc;
+                probe->have = true;
             }
             pRange->Release();
         }
         view->Release();
-        if (!haveCaret) {
+        if (!probe->have) {
             // 兜底：取本线程焦点窗口的插入符位置（不使用全局钩子/鼠标坐标）
             GUITHREADINFO gti = { sizeof(gti) };
             if (GetGUIThreadInfo(GetCurrentThreadId(), &gti) && gti.hwndCaret) {
                 POINT pt = { gti.rcCaret.left, gti.rcCaret.bottom };
                 if (ClientToScreen(gti.hwndCaret, &pt)) {
-                    caret.left = caret.right = pt.x;
-                    caret.top = caret.bottom = pt.y;
-                    haveCaret = true;
+                    probe->caret.left = probe->caret.right = pt.x;
+                    probe->caret.top = probe->caret.bottom = pt.y;
+                    probe->have = true;
                 }
             }
         }
         return S_OK;
     });
     HRESULT hrSession = E_FAIL;
-    if (m_context) m_context->RequestEditSession(m_tid, s, TF_ES_SYNC | TF_ES_READ, &hrSession);
+    HRESULT hrReq = S_OK;
+    if (m_context) hrReq = m_context->RequestEditSession(m_tid, s, TF_ES_SYNC | TF_ES_READ, &hrSession);
     s->Release();
+    if (FAILED(hrReq)) LogLine(L"show list: RequestEditSession failed 0x%08lX", (unsigned long)hrReq);
+    const RECT caret = probe->caret;
+    const bool haveCaret = probe->have;
 
     if (haveCaret) {
         m_lastCaret = caret;
@@ -3164,8 +3204,9 @@ void CTextService::TrimRecentCharsByDocument(ITfContext* pic) {
     if (!pic || m_recentChars.empty()) return;
 
     const LONG kMax = 64;
-    std::wstring tail;
-    CEditSession* s = new CEditSession([pic, &tail, kMax](TfEditCookie ec) -> HRESULT {
+    // 同 ShowCandidateList：会话可能是 TF_S_ASYNC，tail 不能是栈变量
+    auto tailBuf = std::make_shared<std::wstring>();
+    CEditSession* s = new CEditSession([pic, tailBuf, kMax](TfEditCookie ec) -> HRESULT {
         TF_SELECTION sel = {};
         ULONG n = 0;
         if (FAILED(pic->GetSelection(ec, TF_DEFAULT_SELECTION, 1, &sel, &n)) || n == 0 || !sel.range) return E_FAIL;
@@ -3181,7 +3222,7 @@ void CTextService::TrimRecentCharsByDocument(ITfContext* pic) {
             if (SUCCEEDED(acp->SetExtent(from, caret - from))) {
                 wchar_t buf[128] = { 0 };
                 ULONG got = 0;
-                if (SUCCEEDED(sel.range->GetText(ec, 0, buf, (ULONG)kMax, &got))) tail.assign(buf, got);
+                if (SUCCEEDED(sel.range->GetText(ec, 0, buf, (ULONG)kMax, &got))) tailBuf->assign(buf, got);
             }
         }
         acp->Release();
@@ -3195,6 +3236,7 @@ void CTextService::TrimRecentCharsByDocument(ITfContext* pic) {
         LogLine(L"recent chars: session req=0x%08lX session=0x%08lX", (unsigned long)hrReq, (unsigned long)hrSession);
         return;
     }
+    const std::wstring tail = *tailBuf;
     if (tail.empty()) {
         LogLine(L"recent chars: no usable caret, skip trim (%zu kept)", m_recentChars.size());
         return;
@@ -3281,18 +3323,28 @@ static bool OtherKeyPressed(bool sinceLastScan) {
 }
 
 void CTextService::ShiftSampleTick() {
-    if (!HostForeground()) return;
-    if (!m_docFocused) return;
+    // 后台/没文档焦点时把采样周期放宽到 200ms，并把按住状态清掉
+    // （否则切回来会看到一串假的 UP）。
+    const bool active = HostForeground() && m_docFocused;
+    m_candWnd.SetShiftInterval(active ? 20 : 200);
+    if (!active) {
+        m_pollShift[0] = m_pollShift[1] = false;
+        m_pollBoth = false;
+        return;
+    }
 
     static const int kVk[2] = { VK_LSHIFT, VK_RSHIFT };
     const bool ctrl = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
     const bool alt  = (GetKeyState(VK_MENU) & 0x8000) != 0;
+    // Win 也算修饰键：Win+Shift+S、Win+Shift+方向键 都不是单按 Shift
+    const bool win  = (GetKeyState(VK_LWIN) & 0x8000) != 0 || (GetKeyState(VK_RWIN) & 0x8000) != 0;
+    const bool combo = ctrl || alt || win;
 
     for (int i = 0; i < 2; ++i) {
         const bool down = (GetAsyncKeyState(kVk[i]) & 0x8000) != 0;
         // 已经按住、还没被判定成修饰键用法：这一轮再看一眼有没有别的键（20ms 一次）
         if (down && m_pollShift[i] && !m_pollShiftUsed[i] &&
-            (ctrl || alt || OtherKeyPressed(true))) {
+            (combo || OtherKeyPressed(true))) {
             m_pollShiftUsed[i] = true;
             LogLine(L"shift poll: side=%d used -> other key down", i + 1);
         }
@@ -3300,7 +3352,7 @@ void CTextService::ShiftSampleTick() {
         m_pollShift[i] = down;
         if (down) {
             m_pollShiftTick[i] = GetTickCount();
-            m_pollShiftUsed[i] = ctrl || alt || OtherKeyPressed(false);   // 组合键/已有别的键按着都不算单击
+            m_pollShiftUsed[i] = combo || OtherKeyPressed(false);   // 组合键/已有别的键按着都不算单击
             if (m_pollShift[1 - i]) m_pollBoth = true;
             LogLine(L"shift poll: side=%d DOWN other=%d both=%d",
                     i + 1, (int)m_pollShift[1 - i], (int)m_pollBoth);

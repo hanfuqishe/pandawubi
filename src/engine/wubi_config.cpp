@@ -290,7 +290,12 @@ static const wchar_t* kRegVal = L"DataDir";
 
 static bool EnsureDir(const std::wstring& dir) {
     if (dir.empty()) return false;
-    if (GetFileAttributesW(dir.c_str()) != INVALID_FILE_ATTRIBUTES) return true;
+    // 只判"路径存在"会把同名普通文件当成目录：之后所有配置文件/用户词写入都会失败，
+    // 而调用方不看返回值，用户看到的是"设置改了不生效、用户词不保存"。
+    {
+        const DWORD a = GetFileAttributesW(dir.c_str());
+        if (a != INVALID_FILE_ATTRIBUTES) return (a & FILE_ATTRIBUTE_DIRECTORY) != 0;
+    }
     // 多级创建
     std::wstring cur;
     for (size_t i = 0; i < dir.size(); ++i) {
@@ -300,7 +305,10 @@ static bool EnsureDir(const std::wstring& dir) {
             CreateDirectoryW(cur.c_str(), nullptr);
         }
     }
-    return GetFileAttributesW(dir.c_str()) != INVALID_FILE_ATTRIBUTES;
+    {
+        const DWORD a = GetFileAttributesW(dir.c_str());
+        return a != INVALID_FILE_ATTRIBUTES && (a & FILE_ATTRIBUTE_DIRECTORY) != 0;
+    }
 }
 
 std::wstring DefaultDataDir() {

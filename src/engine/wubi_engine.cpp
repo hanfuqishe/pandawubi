@@ -57,6 +57,7 @@ void Dictionary::BuildCharCodes() const {
 }
 
 std::string Dictionary::FullCodeOfChar(const std::string& utf8Char) const {
+    std::lock_guard<std::recursive_mutex> g(mu_);
     if (!charCodesBuilt_) BuildCharCodes();
     auto it = charCodes_.find(utf8Char);
     return it == charCodes_.end() ? std::string() : it->second;
@@ -113,10 +114,22 @@ void Dictionary::IndexOne(Entry&& e) {
     uint32_t idx = static_cast<uint32_t>(entries_.size());
     buckets_[e.code].push_back(idx);
     entries_.push_back(std::move(e));
-    sortedDirty_ = true;
+    InsertSortedIndex(idx);
+}
+
+// 新词只插一个下标。sorted_ 唯一的作用是把「同码的候选凑在一块」，
+// 同码内部的先后由 BetterCand 决定，所以整表重排毫无意义——而它每学一个词就要付一次
+// （147,697 条 std::sort，比较器还在逐字节比字符串，正好卡在上屏后的第一个键上）。
+void Dictionary::InsertSortedIndex(uint32_t idx) const {
+    if (sortedDirty_ || sorted_.empty()) { sortedDirty_ = true; return; }   // 交给下次 Lookup 整表重建
+    auto cmp = [this](uint32_t a, uint32_t b) {
+        return entries_[a].code < entries_[b].code;
+    };
+    sorted_.insert(std::lower_bound(sorted_.begin(), sorted_.end(), idx, cmp), idx);
 }
 
 long long Dictionary::Load(const std::wstring& path) {
+    std::lock_guard<std::recursive_mutex> g(mu_);
     std::ifstream in(path, std::ios::binary);
     if (!in) return -1;
 
@@ -157,13 +170,13 @@ long long Dictionary::Load(const std::wstring& path) {
 }
 
 void Dictionary::AddUserWord(const std::string& code, const std::string& word, int64_t weight) {
+    std::lock_guard<std::recursive_mutex> g(mu_);
     const std::string key = code + "|" + word;
     auto it = userIndex_.find(key);
     if (it != userIndex_.end() && it->second < entries_.size()) {
         entries_[it->second].weight = weight;
         entries_[it->second].user = true;
-        sortedDirty_ = true;
-        return;
+        return;   // 只改了权重：同码之间的先后由 BetterCand 决定，不必重排索引
     }
     const uint32_t idx = (uint32_t)entries_.size();
     Entry e;
@@ -188,10 +201,12 @@ void Dictionary::BuildSortedIndex() const {
 }
 
 bool Dictionary::HasExact(std::string_view code) const {
+    std::lock_guard<std::recursive_mutex> g(mu_);
     return buckets_.find(std::string(code)) != buckets_.end();
 }
 
 bool Dictionary::HasPrefix(std::string_view prefix) const {
+    std::lock_guard<std::recursive_mutex> g(mu_);
     // 注意：不能用 Lookup() 来判定 —— 它会按"四码才出词"过滤掉词，
     // 于是像 xky（只有 强度 这类词）会误判成"这个码不存在"，
     // 打第 4 码时输入法会把它当空码丢掉重开（用户报告：前 3 码被清空）。
@@ -215,6 +230,7 @@ bool Dictionary::HasPrefix(std::string_view prefix) const {
     return code.size() >= pfx.size() && code.compare(0, pfx.size(), pfx) == 0;
 }
 std::vector<Candidate> Dictionary::LookupExact(std::string_view code) const {
+    std::lock_guard<std::recursive_mutex> g(mu_);
     std::vector<Candidate> hits;
     if (bin_) {
         size_t lo = 0, hi = 0;
@@ -269,6 +285,7 @@ inline bool Better(const Candidate& a, const Candidate& b) {
 }
 
 std::vector<Candidate> Dictionary::Lookup(std::string_view input, size_t maxCandidates) const {
+    std::lock_guard<std::recursive_mutex> g(mu_);
     // 规则：不足四码不出词；但如果"只出单字"一个候选都没有（例如 xky 只匹配到 强度 这类词），
     // 就放开词再查一次 —— 否则用户看着空列表，其实只剩词可选。
     if (input.size() < 4) {
@@ -408,9 +425,17 @@ void Dictionary::UnmapBinary() {
     bin_ = nullptr; binBlob_ = nullptr; binCount_ = 0; viewSize_ = 0;
 }
 
+// 老代码没有析构：映射和一个 4 MB 视图 + 两个内核句柄在对象销毁时直接漏掉。
+// （进程级单例侥幸没事，但 wubi-cli / 设置 / 测试里每 new 一个 Dictionary 就漏一份。）
+Dictionary::~Dictionary() { UnmapBinary(); }
+
 long long Dictionary::LoadBinary(const std::wstring& path) {
+    std::lock_guard<std::recursive_mutex> g(mu_);
     UnmapBinary();
-    HANDLE h = CreateFileW(path.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr,
+    // 共享方式带上 WRITE|DELETE：只要还有宿主进程映射着这个文件，
+    // 安装器/`wubi-cli pack` 覆盖或删除它就会被共享冲突拒绝（升级时被迫关掉所有应用）。
+    HANDLE h = CreateFileW(path.c_str(), GENERIC_READ,
+                           FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr,
                            OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
     if (h == INVALID_HANDLE_VALUE) return -1;
     LARGE_INTEGER sz = {};
@@ -424,9 +449,13 @@ long long Dictionary::LoadBinary(const std::wstring& path) {
     if (!v) { CloseHandle(m); CloseHandle(h); return -1; }
 
     const BinaryHeader* hd = (const BinaryHeader*)v;
-    if (memcmp(hd->magic, "WBD2", 4) != 0 || hd->version != 1 ||
-        (size_t)hd->recCount == 0 ||
-        sizeof(BinaryHeader) + (size_t)hd->recCount * sizeof(BinaryRec) + hd->blobSize > (size_t)sz.QuadPart) {
+    // 64 位算术：32 位下 (size_t)recCount * sizeof(BinaryRec) 会回绕，
+    // 校验通过后 bin_/binBlob_ 指到映射之外，取候选时立刻越界读。
+    const uint64_t need = (uint64_t)sizeof(BinaryHeader)
+                        + (uint64_t)hd->recCount * sizeof(BinaryRec)
+                        + (uint64_t)hd->blobSize;
+    if (memcmp(hd->magic, "WBD2", 4) != 0 || hd->version != 1 || hd->recCount == 0 ||
+        need > (uint64_t)sz.QuadPart) {
         UnmapViewOfFile(v); CloseHandle(m); CloseHandle(h);
         return -1;
     }
@@ -434,10 +463,27 @@ long long Dictionary::LoadBinary(const std::wstring& path) {
     bin_ = (const BinaryRec*)(v + sizeof(BinaryHeader));
     binBlob_ = (const char*)(v + sizeof(BinaryHeader) + (size_t)hd->recCount * sizeof(BinaryRec));
     binCount_ = hd->recCount;
+
+    // 每条记录的偏移也要校验：损坏或被第三方生成的 .bin（wordOff=0xFFFFFFF0）
+    // 会在取候选时对着裸偏移读，直接 AV。147k 次整数比较，不到 1ms。
+    for (size_t i = 0; i < binCount_; ++i) {
+        const BinaryRec& r = bin_[i];
+        if (r.codeLen < 1 || r.codeLen > 4 || r.wordLen == 0 ||
+            (uint64_t)r.wordOff + r.wordLen > hd->blobSize) {
+            UnmapBinary();
+            return -1;
+        }
+        for (int k = 0; k < 4; ++k) {
+            const char c = r.code[k];
+            if (c == 0) continue;
+            if (!IsCodeChar(c)) { UnmapBinary(); return -1; }
+        }
+    }
     return (long long)binCount_;
 }
 
 bool Dictionary::SaveBinary(const std::wstring& path) {
+    std::lock_guard<std::recursive_mutex> g(mu_);
     if (entries_.empty()) return false;
 
     // 按 code 字典序、权重降序排
@@ -493,13 +539,19 @@ bool Dictionary::BinRange(std::string_view prefix, size_t& lo, size_t& hi) const
         if (memcmp(bin_[mid].code, key, 4) < 0) l = mid + 1; else r = mid;
     }
     lo = l;
-    size_t e = lo;
-    while (e < binCount_ && memcmp(bin_[e].code, key, prefix.size()) == 0) ++e;
-    hi = e;
+    // 上界也用二分：老写法从 lo 一路 memcmp 扫到区间末尾，
+    // 打一个 t 就要线性扫 10,327 条，然后主循环再把同一段走一遍。
+    size_t a = lo, b = binCount_;
+    while (a < b) {
+        const size_t mid = a + (b - a) / 2;
+        if (memcmp(bin_[mid].code, key, prefix.size()) <= 0) a = mid + 1; else b = mid;
+    }
+    hi = a;
     return lo < hi;
 }
 // ---------------------------------------------------------------- 用户词
 long long Dictionary::LoadUserWords(const std::wstring& path) {
+    std::lock_guard<std::recursive_mutex> g(mu_);
     std::ifstream in(path, std::ios::binary);
     if (!in) return -1;
     long long n = 0;
@@ -526,6 +578,7 @@ long long Dictionary::LoadUserWords(const std::wstring& path) {
 }
 
 bool Dictionary::SaveUserWords(const std::wstring& path) const {
+    std::lock_guard<std::recursive_mutex> g(mu_);
     std::string out;
     out.reserve(userIndex_.size() * 24);
     out += "# wubi user dictionary: code <TAB> word <TAB> weight\n";
@@ -915,13 +968,13 @@ void Dictionary::CollectUserCandidates(std::string_view code, std::vector<Candid
 }
 
 void Dictionary::BumpUserWord(const std::string& code, const std::string& word, int64_t delta) {
+    std::lock_guard<std::recursive_mutex> g(mu_);
     const std::string key = code + "|" + word;
     auto it = userIndex_.find(key);
     if (it != userIndex_.end() && it->second < entries_.size()) {
         entries_[it->second].weight += delta;
         entries_[it->second].user = true;
-        sortedDirty_ = true;
-        return;
+        return;   // 同上：权重变化不需要重排索引
     }
     Entry e;
     e.code = code;
@@ -932,7 +985,7 @@ void Dictionary::BumpUserWord(const std::string& code, const std::string& word, 
     buckets_[e.code].push_back(idx);
     entries_.push_back(std::move(e));
     userIndex_[key] = idx;
-    sortedDirty_ = true;
+    InsertSortedIndex(idx);
 }
 // ---------------------------------------------------------------- Transliteration
 bool Transliteration::Load(const std::wstring& path) {

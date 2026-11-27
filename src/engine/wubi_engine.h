@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cstdint>
+#include <mutex>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -54,6 +55,11 @@ struct BinaryHeader {
 
 class Dictionary {
 public:
+    Dictionary() = default;
+    ~Dictionary();
+    Dictionary(const Dictionary&) = delete;
+    Dictionary& operator=(const Dictionary&) = delete;
+
     long long Load(const std::wstring& path);          // TSV
     long long LoadBinary(const std::wstring& path);    // mmap 二进制
     bool      SaveBinary(const std::wstring& path);    // 从已载入的 TSV 导出
@@ -73,18 +79,18 @@ public:
     bool      SaveUserWords(const std::wstring& path) const;
     void      BumpUserWord(const std::string& code, const std::string& word, int64_t delta = 1000000);
     // 候选排序策略：0=码短优先（默认） 1=纯词频优先；用户词始终最优先
-    void      SetSortMode(int mode) { sortMode_ = mode; sortedDirty_ = true; }
-    int       SortMode() const { return sortMode_; }
+    void      SetSortMode(int mode) { std::lock_guard<std::recursive_mutex> g(mu_); sortMode_ = mode; }
+    int       SortMode() const { std::lock_guard<std::recursive_mutex> g(mu_); return sortMode_; }
     // 候选分级（0=一级汉字 1=二级汉字 2=词 3=其余）；调试与测试用
     static int TierOf(const std::string& wordUtf8);
     // 输入多键时隐藏一级简码字（它们一键就能打出来，再出现在长码候选里是噪声）
     // 一级简码字在多键输入时的处理：0=不处理 1=隐藏 2=沉到候选末尾（默认）
-    void      SetLevel1Mode(int m) { level1Mode_ = m; }
-    int       Level1Mode() const { return level1Mode_; }
-    size_t    UserWordCount() const { return userIndex_.size(); }
+    void      SetLevel1Mode(int m) { std::lock_guard<std::recursive_mutex> g(mu_); level1Mode_ = m; }
+    int       Level1Mode() const { std::lock_guard<std::recursive_mutex> g(mu_); return level1Mode_; }
+    size_t    UserWordCount() const { std::lock_guard<std::recursive_mutex> g(mu_); return userIndex_.size(); }
 
-    size_t CodeCount() const { return bin_ ? binCount_ : buckets_.size(); }
-    size_t EntryCount() const { return bin_ ? binCount_ : entries_.size(); }
+    size_t CodeCount() const { std::lock_guard<std::recursive_mutex> g(mu_); return bin_ ? binCount_ : buckets_.size(); }
+    size_t EntryCount() const { std::lock_guard<std::recursive_mutex> g(mu_); return bin_ ? binCount_ : entries_.size(); }
 
     // 单字的「全码」（最长码），用于给自定义词组取码。
     // 首次调用时扫一遍词库建表（147k 条，几毫秒），之后走哈希。
@@ -93,7 +99,12 @@ public:
 private:
     void IndexOne(Entry&& e);
     void BuildSortedIndex() const;
+    // 新词只需要插一个下标：整表 147k 条重排太贵（每次学习后的第一键都要付一次）
+    void InsertSortedIndex(uint32_t idx) const;
     void BuildCharCodes() const;
+    // 同一进程里多个 TSF 实例（多线程/多进程内宿主）会并发读写同一份词库：
+    // 查询侧原来直接持有 entries_[i] 与 sorted_ 迭代器，写入侧 push_back 一扩容就悬垂。
+    mutable std::recursive_mutex mu_;   // 递归：内部方法之间会互相调用
     mutable std::unordered_map<std::string, std::string> charCodes_;
     mutable bool charCodesBuilt_ = false;
 
@@ -105,7 +116,7 @@ private:
     int level1Mode_ = 2;
     mutable std::unordered_set<std::string> level1_;
     mutable bool level1Built_ = false;
-    // inputLen = 当前输入的码长：1..3（简码）只出单字；4 码（全码）按 一级字/二级字/词/其余 排序
+    // inputLen = 当前输入的码长：1..3（简码）只出单字；4 码（全码）按 一级字/二级字/词/其余 排序
     bool BetterCand(const Candidate& a, const Candidate& b, size_t inputLen = 4) const;
     // allowWords=false 时只出单字；Lookup 在"过滤后一个候选都没有"时会放开词再查一次
     std::vector<Candidate> LookupImpl(std::string_view input, size_t maxCandidates, bool allowWords) const;

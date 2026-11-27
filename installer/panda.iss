@@ -1,4 +1,4 @@
-; panda.iss —— 熊猫五笔的 Inno Setup 脚本
+﻿; panda.iss —— 熊猫五笔的 Inno Setup 脚本
 ; 由 tools\build-setup.ps1 调用 ISCC 编译：d:\...\ISCC.exe /DMyVersion=1.0.0 installer\panda.iss
 ; 用到的源文件都在 ..\dist 和 ..\data 下（构建脚本会先确保它们是最新的）。
 
@@ -117,8 +117,8 @@ Root: HKCU; Subkey: "Software\Microsoft\CTF\TIP\{{7F3B0C21-9D55-4F0E-B1C2-5A6D8E
 
 [Run]
 ; 64 位和 32 位各注册一次；DllRegisterServer 写的是 HKLM 的 CLSID + CTF TIP
-Filename: "{sys}\regsvr32.exe"; Parameters: "/s ""{app}\panda_tsf.dll"""; StatusMsg: "正在注册 64 位输入法…"; Flags: runhidden waituntilterminated
-Filename: "{syswow64}\regsvr32.exe"; Parameters: "/s ""{app}\panda_tsf32.dll"""; StatusMsg: "正在注册 32 位输入法…"; Flags: runhidden waituntilterminated; Check: IsWin64
+; 注册挪到 [Code] 的 CurStepChanged(ssPostInstall) 里做：Inno 的 [Run] 只看程序能否启动，
+; 不看退出码，regsvr32 被安全软件挡掉时用户看到的仍是"安装完成"，语言列表里却没有输入法。
 ; 首次安装时生成一份默认配置（已有配置就跳过，设置程序只会补缺失项）
 Filename: "{app}\panda-settings.exe"; Parameters: "/set CandCount=9"; StatusMsg: "写入初始配置…"; Flags: runhidden waituntilterminated; Check: not FileExists(ExpandConstant('{userappdata}\PandaWubi\config.ini'))
 ; DllRegisterServer 会把语言配置里的 IconFile 改成 DLL 路径、Description 改成 "Panda五笔"，
@@ -142,4 +142,31 @@ Type: files; Name: "{localappdata}\PandaWubi\cat.ico"
 Type: files; Name: "{localappdata}\PandaWubi\dog.ico"
 Type: files; Name: "{localappdata}\PandaWubi\crane.ico"
 
+[Code]
+var
+  RegErrors: String;
 
+procedure TryRegister(const Exe, Dll, What: String);
+var
+  ResultCode: Integer;
+begin
+  if not Exec(Exe, '/s "' + Dll + '"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+    ResultCode := -1;
+  if ResultCode <> 0 then
+    RegErrors := RegErrors + '  · ' + What + '（退出码 ' + IntToStr(ResultCode) + '）' + #13#10;
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssPostInstall then
+  begin
+    TryRegister(ExpandConstant('{sys}\regsvr32.exe'), ExpandConstant('{app}\panda_tsf.dll'), '64 位输入法注册失败');
+    if IsWin64 then
+      TryRegister(ExpandConstant('{syswow64}\regsvr32.exe'), ExpandConstant('{app}\panda_tsf32.dll'), '32 位输入法注册失败');
+    if RegErrors <> '' then
+      MsgBox('输入法组件没能注册成功，多半是被安全软件/组策略拦了。' + #13#10 + RegErrors + #13#10 +
+             '可以稍后右键"以管理员身份运行"安装程序再装一次，或手动执行：' + #13#10 +
+             '  regsvr32 "' + ExpandConstant('{app}\panda_tsf.dll') + '"',
+             mbError, MB_OK);
+  end;
+end;
