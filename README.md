@@ -9,7 +9,7 @@ Windows 11 上的**自研 TSF 五笔输入法**（五笔86）。以 REA 对 QQ�
 - 免安装也可用：`regsvr32` 两个 DLL 即可
 
 > **下载**：[最新安装包（GitHub Releases）](https://github.com/hanfuqishe/pandawubi/releases/latest)
-> · 直接下载 [PandaWubi-Setup-1.1.2.exe](https://github.com/hanfuqishe/pandawubi/releases/download/v1.1.2/PandaWubi-Setup-1.1.2.exe)（13.9 MB）
+> · 直接下载 [PandaWubi-Setup-1.1.3.exe](https://github.com/hanfuqishe/pandawubi/releases/download/v1.1.3/PandaWubi-Setup-1.1.3.exe)（13.9 MB）
 
 ---
 
@@ -17,7 +17,7 @@ Windows 11 上的**自研 TSF 五笔输入法**（五笔86）。以 REA 对 QQ�
 
 ### 方式一：安装包（推荐）
 
-下载 `PandaWubi-Setup-1.1.2.exe`（约 13 MB，Inno Setup 打包），双击安装：
+下载 `PandaWubi-Setup-1.1.3.exe`（约 13 MB，Inno Setup 打包），双击安装：
 
 | 项 | 内容 |
 |---|---|
@@ -52,7 +52,7 @@ regsvr32.exe /s panda_tsf.dll
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\tools\build-setup.ps1
-# 产物：dist\PandaWubi-Setup-1.1.2.exe
+# 产物：dist\PandaWubi-Setup-1.1.3.exe
 ```
 
 需要 **Inno Setup 6**（`C:\Program Files (x86)\Inno Setup 6\ISCC.exe`）。
