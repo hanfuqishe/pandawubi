@@ -1,4 +1,4 @@
-﻿// wubi-settings —— 替代输入法的设置界面
+// wubi-settings —— 替代输入法的设置界面
 // 无参数：弹出设置窗口
 // /dump        ：把当前设置打印到标准输出
 // /set k=v     ：直接改一项（供脚本/自检使用），可多次
@@ -19,6 +19,8 @@
 #include "../tsf/ipc.h"
 #include <cstdio>
 #include <string>
+#include <vector>
+#include <windowsx.h>
 
 #pragma comment(lib, "comctl32.lib")
 #pragma comment(lib, "shell32.lib")
@@ -65,21 +67,48 @@ enum {
     ID_VERT = 135,
     ID_TXT = 136, ID_BORDER = 139, ID_THEME = 145,
     ID_DATA_DIR = 140, ID_DATA_BROWSE = 141, ID_DATA_DEFAULT = 142, ID_DATA_OPEN = 143,
-    ID_FACE = 144,
+    ID_FACE = 144, ID_PHRASE = 146,
     ID_SAVE = 200, ID_CANCEL = 201
 };
+
+// ---------------------------------------------------------------- 标签页
+// 所有控件在窗口创建时就全部建好，切换标签只做 Show/Hide：
+// 值都还在控件里，所以隐藏页上的设置保存时照样读得到。
+static const int kSideW = 132;
+static const wchar_t* kPageNames[] = { L"输入", L"外观", L"热键", L"词库", L"数据" };
+static const int kPageCount = 5;
+static int  g_page = 0;
+static std::vector<HWND> g_pageCtrls[kPageCount];
+static int  g_buildPage = -1;       // 建控件时当前页；-1 = 不属于任何页（底部按钮）
+static HWND g_sideWnd = nullptr;
+
+static void Track(HWND h) {
+    if (g_buildPage >= 0 && g_buildPage < kPageCount) g_pageCtrls[g_buildPage].push_back(h);
+}
+
+static void ShowPage(HWND hwnd, int page) {
+    (void)hwnd;
+    if (page < 0 || page >= kPageCount) return;
+    g_page = page;
+    for (int i = 0; i < kPageCount; ++i) {
+        for (HWND h : g_pageCtrls[i]) ShowWindow(h, i == page ? SW_SHOW : SW_HIDE);
+    }
+    if (g_sideWnd) InvalidateRect(g_sideWnd, nullptr, TRUE);
+}
 
 // ---------------------------------------------------------------- 控件工厂
 static HWND MakeStatic(HWND p, const wchar_t* t, int x, int y, int w, int hgt) {
     HWND h = CreateWindowExW(0, L"STATIC", t, WS_CHILD | WS_VISIBLE | SS_LEFT,
                              S(x), S(y), S(w), S(hgt), p, nullptr, nullptr, nullptr);
     SendMessageW(h, WM_SETFONT, (WPARAM)g_font, TRUE);
+    Track(h);
     return h;
 }
 static HWND MakeGroup(HWND p, const wchar_t* t, int x, int y, int w, int hgt) {
     HWND h = CreateWindowExW(0, L"BUTTON", t, WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
                              S(x), S(y), S(w), S(hgt), p, nullptr, nullptr, nullptr);
     SendMessageW(h, WM_SETFONT, (WPARAM)g_fontTitle, TRUE);
+    Track(h);
     return h;
 }
 static HWND MakeRadio(HWND p, const wchar_t* t, int x, int y, int w, int id, bool checked, bool groupStart = false) {
@@ -89,6 +118,7 @@ static HWND MakeRadio(HWND p, const wchar_t* t, int x, int y, int w, int id, boo
                              S(x), S(y), S(w), S(22), p, (HMENU)(INT_PTR)id, nullptr, nullptr);
     SendMessageW(h, WM_SETFONT, (WPARAM)g_font, TRUE);
     if (checked) SendMessageW(h, BM_SETCHECK, BST_CHECKED, 0);
+    Track(h);
     return h;
 }
 static HWND MakeCheck(HWND p, const wchar_t* t, int x, int y, int w, int id, bool checked, bool groupStart = false) {
@@ -97,6 +127,7 @@ static HWND MakeCheck(HWND p, const wchar_t* t, int x, int y, int w, int id, boo
                              S(x), S(y), S(w), S(22), p, (HMENU)(INT_PTR)id, nullptr, nullptr);
     SendMessageW(h, WM_SETFONT, (WPARAM)g_font, TRUE);
     if (checked) SendMessageW(h, BM_SETCHECK, BST_CHECKED, 0);
+    Track(h);
     return h;
 }
 static HWND MakeEdit(HWND p, int x, int y, int w, int id, const wchar_t* text, int limit) {
@@ -105,6 +136,7 @@ static HWND MakeEdit(HWND p, int x, int y, int w, int id, const wchar_t* text, i
                              S(x), S(y), S(w), S(24), p, (HMENU)(INT_PTR)id, nullptr, nullptr);
     SendMessageW(h, WM_SETFONT, (WPARAM)g_font, TRUE);
     SendMessageW(h, EM_SETLIMITTEXT, (WPARAM)limit, 0);
+    Track(h);
     return h;
 }
 static HWND MakeButton(HWND p, const wchar_t* t, int x, int y, int w, int id, bool def) {
@@ -112,6 +144,7 @@ static HWND MakeButton(HWND p, const wchar_t* t, int x, int y, int w, int id, bo
                              WS_CHILD | WS_VISIBLE | WS_TABSTOP | (def ? BS_DEFPUSHBUTTON : BS_PUSHBUTTON),
                              S(x), S(y), S(w), S(30), p, (HMENU)(INT_PTR)id, nullptr, nullptr);
     SendMessageW(h, WM_SETFONT, (WPARAM)g_font, TRUE);
+    Track(h);
     return h;
 }
 
@@ -246,180 +279,311 @@ static void ReadUiInto(HWND hwnd) {
     }
 }
 
-static void BuildChildren(HWND hwnd) {
-    // 字体：优先雅黑；标题用同尺寸的粗体，靠"分组框"划分区块，避免一堆左对齐的散装控件
-    const int pt = 9;
-    g_font = CreateFontW(-S(pt * 96 / 72), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
-                         OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
-                         DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei UI");
-    if (!g_font) g_font = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
-    g_fontTitle = CreateFontW(-S(pt * 96 / 72), 0, 0, 0, FW_SEMIBOLD, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
-                              OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
-                              DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei UI");
-    if (!g_fontTitle) g_fontTitle = g_font;
+// ---------------------------------------------------------------- 侧栏（Logo + 标签）
+static HBRUSH g_sideBg = nullptr, g_sideSel = nullptr, g_sideHover = nullptr, g_accent = nullptr;
+static HFONT  g_fontSideTitle = nullptr, g_fontTab = nullptr, g_fontTiny = nullptr;
+static HICON  g_logo = nullptr;
+static int    g_hoverTab = -1;
 
-    const int padX = 16, groupW = 488, inX = padX + 16;
-    int y = 12;
+static int TabTopPx()    { return S(120); }
+static int TabHeightPx() { return S(34); }
+static int TabIndexAt(int y) {
+    const int t = y - TabTopPx();
+    if (t < 0) return -1;
+    const int i = t / TabHeightPx();
+    return (i >= 0 && i < kPageCount) ? i : -1;
+}
 
-    // 一级简码
-    MakeGroup(hwnd, L" 一级简码（输入多个键时如何处理）", padX, y, groupW, 96);
-    MakeRadio(hwnd, L"不处理：长码候选里照常出现",              inX, y + 24, 360, ID_L1_0, g_s.Level1Mode == 0, true);
-    MakeRadio(hwnd, L"隐藏：彻底不出现在候选里",                inX, y + 46, 360, ID_L1_1, g_s.Level1Mode == 1);
-    MakeRadio(hwnd, L"沉底：放到最后，仍可选中（默认）",        inX, y + 68, 360, ID_L1_2, g_s.Level1Mode == 2);
-    y += 96 + 8;
+// 侧栏单独一个子窗口：自己画、自己收鼠标，主窗口那堆控件重绘时不会把它擦花
+static LRESULT CALLBACK SideProc(HWND h, UINT msg, WPARAM wp, LPARAM lp) {
+    switch (msg) {
+    case WM_ERASEBKGND:
+        return 1;
+    case WM_PAINT: {
+        PAINTSTRUCT ps;
+        HDC dc = BeginPaint(h, &ps);
+        RECT rc;
+        GetClientRect(h, &rc);
+        FillRect(dc, &rc, g_sideBg);
+        SetBkMode(dc, TRANSPARENT);
 
-    // 排序与输入（合成一组，省高度；175% DPI 下窗口才放得下）
-    MakeGroup(hwnd, L" 排序与输入", padX, y, groupW, 100);
-    MakeRadio(hwnd, L"候选排序：码短优先（默认，与 QQ五笔 接近）", inX, y + 24, 380, ID_SM_0, g_s.SortMode == 0, true);
-    MakeRadio(hwnd, L"候选排序：纯词频优先",                        inX, y + 46, 380, ID_SM_1, g_s.SortMode == 1);
-    {
-        const std::wstring label = L"输出繁体（" + g_hotkeyText + L" 可临时切换）";
-        MakeCheck(hwnd, label.c_str(), inX, y + 72, 380, ID_TRAD, g_s.TradChinese != 0);
-    }
-    y += 100 + 8;
+        if (g_logo) {
+            const int sz = S(56);
+            DrawIconEx(dc, (rc.right - sz) / 2, S(16), g_logo, sz, sz, 0, nullptr, DI_NORMAL);
+        }
+        HFONT old = (HFONT)SelectObject(dc, g_fontSideTitle);
+        SetTextColor(dc, RGB(0xF2, 0xF4, 0xF8));
+        RECT t1 = { 0, S(78), rc.right, S(100) };
+        DrawTextW(dc, L"熊猫五笔", -1, &t1, DT_CENTER | DT_SINGLELINE | DT_VCENTER);
+        SelectObject(dc, g_fontTiny);
+        SetTextColor(dc, RGB(0x93, 0x9D, 0xAB));
+        RECT t2 = { 0, S(98), rc.right, S(114) };
+        DrawTextW(dc, L"Panda Wubi", -1, &t2, DT_CENTER | DT_SINGLELINE | DT_VCENTER);
 
-    // 热键：简/繁切换（默认 Ctrl+J，可改成任意 Ctrl/Alt/Win 组合）
-    MakeGroup(hwnd, L" 热键", padX, y, groupW, 58);
-    MakeStatic(hwnd, L"简繁切换", inX, y + 28, 64, 20);
-    MakeHotkeyButton(hwnd, inX + 64, y + 21, 150, ID_HK_TRAD, g_hotkeyText);
-    MakeStatic(hwnd, L"点一下后按下组合键（Esc 取消）", inX + 224, y + 28, 200, 20);
-    y += 58 + 8;
-
-    // 候选窗外观（两列排版）
-    MakeGroup(hwnd, L" 主题与外观", padX, y, groupW, 172);
-    const int cB = inX + 236;          // 第二列起点
-    // 行1：候选个数 / 字号
-    MakeStatic(hwnd, L"候选个数", inX, y + 24, 64, 20);
-    {
-        wchar_t nb[8];
-        wsprintfW(nb, L"%d", g_s.CandCount);
-        MakeEdit(hwnd, inX + 64, y + 20, 52, ID_CAND, nb, 1);
-    }
-    MakeStatic(hwnd, L"字号", cB, y + 24, 40, 20);
-    {
-        wchar_t fb[8];
-        wsprintfW(fb, L"%d", g_s.CandFontPt);
-        MakeEdit(hwnd, cB + 40, y + 20, 48, ID_FONT, fb, 2);
-    }
-    MakeStatic(hwnd, L"pt（8–24）", cB + 94, y + 24, 90, 20);
-
-    // 行2：字体（可输入，也可从下拉里选系统字体）
-    MakeStatic(hwnd, L"字体", inX, y + 54, 64, 20);
-    {
-        HWND cb = CreateWindowExW(WS_EX_CLIENTEDGE, L"COMBOBOX", g_s.CandFontFace.c_str(),
-                                  WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWN | CBS_AUTOHSCROLL,
-                                  S(inX + 64), S(y + 50), S(164), S(240), hwnd,
-                                  (HMENU)(INT_PTR)ID_FACE, nullptr, nullptr);
-        SendMessageW(cb, WM_SETFONT, (WPARAM)g_font, TRUE);
-        // 枚举系统字体
-        HDC dc = GetDC(hwnd);
-        LOGFONTW lf = {};
-        lf.lfCharSet = DEFAULT_CHARSET;
-        EnumFontFamiliesExW(dc, &lf, [](const LOGFONTW* lpelf, const TEXTMETRICW*, DWORD, LPARAM p) -> int {
-            HWND combo = (HWND)p;
-            if (lpelf->lfFaceName[0] != L'@') {   // 跳过竖排字体
-                if (SendMessageW(combo, CB_FINDSTRINGEXACT, (WPARAM)-1, (LPARAM)lpelf->lfFaceName) == CB_ERR) {
-                    SendMessageW(combo, CB_ADDSTRING, 0, (LPARAM)lpelf->lfFaceName);
-                }
+        for (int i = 0; i < kPageCount; ++i) {
+            RECT ir = { 0, TabTopPx() + i * TabHeightPx(), rc.right, TabTopPx() + (i + 1) * TabHeightPx() };
+            if (i == g_page)          FillRect(dc, &ir, g_sideSel);
+            else if (i == g_hoverTab) FillRect(dc, &ir, g_sideHover);
+            if (i == g_page) {
+                RECT ar = { 0, ir.top + S(8), S(3), ir.bottom - S(8) };
+                FillRect(dc, &ar, g_accent);
             }
-            return 1;
-        }, (LPARAM)cb, 0);
-        ReleaseDC(hwnd, dc);
-        SendMessageW(cb, CB_SETCURSEL, (WPARAM)SendMessageW(cb, CB_FINDSTRINGEXACT, (WPARAM)-1, (LPARAM)g_s.CandFontFace.c_str()), 0);
+            SelectObject(dc, g_fontTab);
+            SetTextColor(dc, i == g_page ? RGB(0xF2, 0xF4, 0xF8) : RGB(0xA6, 0xB0, 0xBE));
+            RECT tx = { S(26), ir.top, rc.right - S(6), ir.bottom };
+            DrawTextW(dc, kPageNames[i], -1, &tx, DT_LEFT | DT_SINGLELINE | DT_VCENTER);
+        }
+        SelectObject(dc, old);
+        EndPaint(h, &ps);
+        return 0;
     }
-
-    // 主题：影响悬浮栏 Logo、候选窗右下角装饰图、输入指示器图标
-    MakeStatic(hwnd, L"主题", cB, y + 54, 40, 20);
-    {
-        HWND cb = CreateWindowExW(WS_EX_CLIENTEDGE, L"COMBOBOX", L"",
-                                  WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWNLIST,
-                                  S(cB + 40), S(y + 50), S(150), S(160), hwnd,
-                                  (HMENU)(INT_PTR)ID_THEME, nullptr, nullptr);
-        SendMessageW(cb, WM_SETFONT, (WPARAM)g_font, TRUE);
-        SendMessageW(cb, CB_ADDSTRING, 0, (LPARAM)L"熊猫（默认）");
-        SendMessageW(cb, CB_ADDSTRING, 0, (LPARAM)L"狸花猫");
-        SendMessageW(cb, CB_ADDSTRING, 0, (LPARAM)L"中华田园犬");
-        SendMessageW(cb, CB_ADDSTRING, 0, (LPARAM)L"丹顶鹤");
-        SendMessageW(cb, CB_SETCURSEL,
-                     (g_s.Theme == L"crane") ? 3 :
-                     (g_s.Theme == L"dog")   ? 2 :
-                     (g_s.Theme == L"cat")   ? 1 : 0, 0);
+    case WM_MOUSEMOVE: {
+        const int i = TabIndexAt(GET_Y_LPARAM(lp));
+        if (i != g_hoverTab) {
+            g_hoverTab = i;
+            InvalidateRect(h, nullptr, TRUE);
+            TRACKMOUSEEVENT tme = { sizeof(tme), TME_LEAVE, h, 0 };
+            TrackMouseEvent(&tme);
+        }
+        SetCursor(LoadCursorW(nullptr, i >= 0 ? IDC_HAND : IDC_ARROW));
+        return 0;
     }
+    case WM_MOUSELEAVE:
+        g_hoverTab = -1;
+        InvalidateRect(h, nullptr, TRUE);
+        return 0;
+    case WM_LBUTTONDOWN: {
+        const int i = TabIndexAt(GET_Y_LPARAM(lp));
+        if (i >= 0 && i != g_page) PostMessageW(GetParent(h), WM_APP + 1, (WPARAM)i, 0);
+        return 0;
+    }
+    }
+    return DefWindowProcW(h, msg, wp, lp);
+}
 
-    // 颜色
-    auto makeColor = [&](int x, int yy, const wchar_t* label, int id, int color, int limit) {
-        MakeStatic(hwnd, label, x, yy + 4, 64, 20);
-        wchar_t cb[16];
-        swprintf_s(cb, L"#%06X", (unsigned)(color & 0xFFFFFF));
-        HWND e = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", cb,
-                                 WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL,
-                                 S(x + 64), S(yy), S(76), S(24), hwnd, (HMENU)(INT_PTR)id, nullptr, nullptr);
-        SendMessageW(e, WM_SETFONT, (WPARAM)g_font, TRUE);
-        SendMessageW(e, EM_SETLIMITTEXT, (WPARAM)limit, 0);
+static void BuildChildren(HWND hwnd) {
+    // 正文字体用雅黑；分组框标题用同尺寸的半粗体，靠"分组框"划分区块，避免一堆左对齐的散装控件
+    const int pt = 9;
+    auto mk = [](int points, int weight) {
+        return CreateFontW(-S(points * 96 / 72), 0, 0, 0, weight, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
+                           OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
+                           DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei UI");
     };
-    makeColor(inX, y + 108, L"背景色",   ID_BG,     g_s.CandBgColor,     7);
-    makeColor(cB,  y + 108, L"文字色",   ID_TXT,    g_s.CandTextColor,   7);
-    makeColor(inX, y + 138, L"边框色",   ID_BORDER, g_s.CandBorderColor, 7);
-    MakeCheck(hwnd, L"内框凹陷", cB, y + 138, 100, ID_INSET, g_s.CandInset != 0, true);
-    MakeCheck(hwnd, L"候选竖排", cB + 104, y + 138, 100, ID_VERT, g_s.CandVertical != 0);
-    y += 172 + 8;
-    // 词库
-    MakeGroup(hwnd, L" 词库（data 目录）", padX, y, groupW, 58);
+    g_font      = mk(pt, FW_NORMAL);
+    if (!g_font) g_font = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
+    g_fontTitle = mk(pt, FW_SEMIBOLD);
+    if (!g_fontTitle) g_fontTitle = g_font;
+    g_fontSideTitle = mk(12, FW_SEMIBOLD);
+    g_fontTab       = mk(10, FW_NORMAL);
+    g_fontTiny      = mk(8, FW_NORMAL);
+
+    g_sideBg    = CreateSolidBrush(RGB(0x2B, 0x30, 0x39));
+    g_sideSel   = CreateSolidBrush(RGB(0x3A, 0x42, 0x50));
+    g_sideHover = CreateSolidBrush(RGB(0x33, 0x3A, 0x45));
+    g_accent    = CreateSolidBrush(RGB(0x6B, 0xBF, 0x59));
+
+    // 侧栏 Logo 用主题图标（dist\panda.ico / cat.ico / dog.ico / crane.ico）
     {
-        HWND cb = CreateWindowExW(WS_EX_CLIENTEDGE, L"COMBOBOX", L"",
-                                  WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWNLIST,
-                                  S(inX), S(y + 24), S(300), S(220), hwnd, (HMENU)(INT_PTR)ID_DICT, nullptr, nullptr);
-        SendMessageW(cb, WM_SETFONT, (WPARAM)g_font, TRUE);
-        // 枚举 exe 同目录 data\*.tsv / *.bin
         wchar_t self[MAX_PATH] = { 0 };
         GetModuleFileNameW(nullptr, self, ARRAYSIZE(self));
         std::wstring dir(self);
         const size_t slash = dir.find_last_of(L"\\/");
-        if (slash != std::wstring::npos) dir.erase(slash);
-        const std::wstring pattern = dir + L"\\data\\*";
-        WIN32_FIND_DATAW fd;
-        HANDLE hfind = FindFirstFileW(pattern.c_str(), &fd);
-        int selIdx = -1, idx = 0;
-        if (hfind != INVALID_HANDLE_VALUE) {
-            do {
-                const std::wstring name = fd.cFileName;
-                if (name.size() > 4 &&
-                    (name.compare(name.size() - 4, 4, L".tsv") == 0 ||
-                     name.compare(name.size() - 4, 4, L".bin") == 0)) {
-                    SendMessageW(cb, CB_ADDSTRING, 0, (LPARAM)name.c_str());
-                    if (name == g_s.DictFile) selIdx = idx;
-                    ++idx;
-                }
-            } while (FindNextFileW(hfind, &fd));
-            FindClose(hfind);
+        if (slash != std::wstring::npos) {
+            dir.erase(slash);
+            const std::wstring icoFile = (g_s.Theme == L"crane") ? L"crane.ico"
+                                   : (g_s.Theme == L"dog")   ? L"dog.ico"
+                                   : (g_s.Theme == L"cat")   ? L"cat.ico" : L"panda.ico";
+            g_logo = (HICON)LoadImageW(nullptr, (dir + L"\\" + icoFile).c_str(), IMAGE_ICON,
+                                       S(56), S(56), LR_LOADFROMFILE);
         }
+    }
+
+    RECT crc = { 0, 0, S(556), S(300) };
+    GetClientRect(hwnd, &crc);
+    g_sideWnd = CreateWindowExW(0, L"PandaSettingsSidebar", L"", WS_CHILD | WS_VISIBLE,
+                                0, 0, S(kSideW), crc.bottom, hwnd, nullptr, nullptr, nullptr);
+    if (g_sideWnd) SetWindowPos(g_sideWnd, HWND_TOP, 0, 0, S(kSideW), crc.bottom, SWP_NOACTIVATE);
+
+    const int contentX = kSideW + 16;   // 148
+    const int groupW   = 392;
+    const int inX      = contentX + 14; // 162
+    const int top      = 16;
+
+    // ------------------------------------------------ 页 0：输入
+    g_buildPage = 0;
+    {
+        MakeGroup(hwnd, L" 一级简码（输入多个键时如何处理）", contentX, top, groupW, 96);
+        MakeRadio(hwnd, L"不处理：长码候选里照常出现",         inX, top + 24, 340, ID_L1_0, g_s.Level1Mode == 0, true);
+        MakeRadio(hwnd, L"隐藏：彻底不出现在候选里",           inX, top + 46, 340, ID_L1_1, g_s.Level1Mode == 1);
+        MakeRadio(hwnd, L"沉底：放到最后，仍可选中（默认）",   inX, top + 68, 340, ID_L1_2, g_s.Level1Mode == 2);
+
+        const int y2 = top + 96 + 8;
+        MakeGroup(hwnd, L" 候选排序", contentX, y2, groupW, 100);
+        MakeRadio(hwnd, L"码短优先（默认，与 QQ五笔 接近）", inX, y2 + 24, 340, ID_SM_0, g_s.SortMode == 0, true);
+        MakeRadio(hwnd, L"纯词频优先",                       inX, y2 + 46, 340, ID_SM_1, g_s.SortMode == 1);
+        MakeCheck(hwnd, (L"输出繁体（" + g_hotkeyText + L" 可临时切换）").c_str(),
+                  inX, y2 + 70, 340, ID_TRAD, g_s.TradChinese != 0, true);
+    }
+
+    // ------------------------------------------------ 页 1：外观
+    g_buildPage = 1;
+    {
+        MakeGroup(hwnd, L" 候选窗外观", contentX, top, groupW, 184);
+        MakeStatic(hwnd, L"候选个数", inX, top + 28, 64, 20);
         {
-            wchar_t cur[128];
-            wcscpy_s(cur, g_s.DictFile.c_str());
-            if (selIdx < 0) { SendMessageW(cb, CB_ADDSTRING, 0, (LPARAM)cur); selIdx = idx; }
+            wchar_t nb[8];
+            wsprintfW(nb, L"%d", g_s.CandCount);
+            MakeEdit(hwnd, inX + 64, top + 24, 52, ID_CAND, nb, 1);
+        }
+        MakeStatic(hwnd, L"字号", inX + 148, top + 28, 44, 20);
+        {
+            wchar_t fb[8];
+            wsprintfW(fb, L"%d", g_s.CandFontPt);
+            MakeEdit(hwnd, inX + 192, top + 24, 48, ID_FONT, fb, 2);
+        }
+        MakeStatic(hwnd, L"pt（8–24）", inX + 246, top + 28, 100, 20);
+
+        // 字体（可输入，也可从下拉里选系统字体）
+        MakeStatic(hwnd, L"字体", inX, top + 60, 44, 20);
+        {
+            HWND cb = CreateWindowExW(WS_EX_CLIENTEDGE, L"COMBOBOX", g_s.CandFontFace.c_str(),
+                                      WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWN | CBS_AUTOHSCROLL,
+                                      S(inX + 44), S(top + 56), S(150), S(240), hwnd,
+                                      (HMENU)(INT_PTR)ID_FACE, nullptr, nullptr);
+            SendMessageW(cb, WM_SETFONT, (WPARAM)g_font, TRUE);
+            Track(cb);
+            HDC dc = GetDC(hwnd);
+            LOGFONTW lf = {};
+            lf.lfCharSet = DEFAULT_CHARSET;
+            EnumFontFamiliesExW(dc, &lf, [](const LOGFONTW* lpelf, const TEXTMETRICW*, DWORD, LPARAM p) -> int {
+                HWND combo = (HWND)p;
+                if (lpelf->lfFaceName[0] != L'@') {   // 跳过竖排字体
+                    if (SendMessageW(combo, CB_FINDSTRINGEXACT, (WPARAM)-1, (LPARAM)lpelf->lfFaceName) == CB_ERR) {
+                        SendMessageW(combo, CB_ADDSTRING, 0, (LPARAM)lpelf->lfFaceName);
+                    }
+                }
+                return 1;
+            }, (LPARAM)cb, 0);
+            ReleaseDC(hwnd, dc);
+            SendMessageW(cb, CB_SETCURSEL,
+                         (WPARAM)SendMessageW(cb, CB_FINDSTRINGEXACT, (WPARAM)-1, (LPARAM)g_s.CandFontFace.c_str()), 0);
+        }
+        // 主题：影响悬浮栏 Logo、候选窗右下角装饰图、输入指示器图标
+        MakeStatic(hwnd, L"主题", inX + 202, top + 60, 44, 20);
+        {
+            HWND cb = CreateWindowExW(WS_EX_CLIENTEDGE, L"COMBOBOX", L"",
+                                      WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWNLIST,
+                                      S(inX + 246), S(top + 56), S(116), S(160), hwnd,
+                                      (HMENU)(INT_PTR)ID_THEME, nullptr, nullptr);
+            SendMessageW(cb, WM_SETFONT, (WPARAM)g_font, TRUE);
+            Track(cb);
+            SendMessageW(cb, CB_ADDSTRING, 0, (LPARAM)L"熊猫（默认）");
+            SendMessageW(cb, CB_ADDSTRING, 0, (LPARAM)L"狸花猫");
+            SendMessageW(cb, CB_ADDSTRING, 0, (LPARAM)L"中华田园犬");
+            SendMessageW(cb, CB_ADDSTRING, 0, (LPARAM)L"丹顶鹤");
+            SendMessageW(cb, CB_SETCURSEL,
+                         (WPARAM)((g_s.Theme == L"crane") ? 3 : (g_s.Theme == L"dog") ? 2
+                                : (g_s.Theme == L"cat") ? 1 : 0), 0);
+        }
+
+        auto makeColor = [&](int x, int yy, const wchar_t* label, int id, int color, int limit) {
+            MakeStatic(hwnd, label, x, yy + 4, 64, 20);
+            wchar_t cb[16];
+            swprintf_s(cb, L"#%06X", (unsigned)(color & 0xFFFFFF));
+            HWND e = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", cb,
+                                     WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL,
+                                     S(x + 64), S(yy), S(76), S(24), hwnd, (HMENU)(INT_PTR)id, nullptr, nullptr);
+            SendMessageW(e, WM_SETFONT, (WPARAM)g_font, TRUE);
+            SendMessageW(e, EM_SETLIMITTEXT, (WPARAM)limit, 0);
+            Track(e);
+        };
+        makeColor(inX,       top + 98, L"背景色", ID_BG,     g_s.CandBgColor,     7);
+        makeColor(inX + 164, top + 98, L"文字色", ID_TXT,    g_s.CandTextColor,   7);
+        makeColor(inX,       top + 128, L"边框色", ID_BORDER, g_s.CandBorderColor, 7);
+        MakeCheck(hwnd, L"内框凹陷", inX + 164, top + 126, 96,  ID_INSET, g_s.CandInset != 0, true);
+        MakeCheck(hwnd, L"候选竖排", inX + 262, top + 126, 100, ID_VERT,  g_s.CandVertical != 0);
+    }
+
+    // ------------------------------------------------ 页 2：热键
+    g_buildPage = 2;
+    {
+        MakeGroup(hwnd, L" 简繁切换热键", contentX, top, groupW, 96);
+        MakeStatic(hwnd, L"简繁切换", inX, top + 28, 64, 20);
+        MakeHotkeyButton(hwnd, inX + 64, top + 24, 140, ID_HK_TRAD, g_hotkeyText);
+        MakeStatic(hwnd, L"点一下按钮，再按下想要的组合键（Esc 取消）。", inX, top + 68, 340, 20);
+        MakeStatic(hwnd, L"左右 Shift 都切中/英；这个热键只管简/繁（须带 Ctrl / Alt / Win）。",
+                   inX, top + 108, 340, S(22));
+    }
+
+    // ------------------------------------------------ 页 3：词库
+    g_buildPage = 3;
+    {
+        MakeGroup(hwnd, L" 词库（data 目录）", contentX, top, groupW, 72);
+        {
+            HWND cb = CreateWindowExW(WS_EX_CLIENTEDGE, L"COMBOBOX", L"",
+                                      WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWNLIST,
+                                      S(inX), S(top + 28), S(300), S(220), hwnd,
+                                      (HMENU)(INT_PTR)ID_DICT, nullptr, nullptr);
+            SendMessageW(cb, WM_SETFONT, (WPARAM)g_font, TRUE);
+            Track(cb);
+            wchar_t self[MAX_PATH] = { 0 };
+            GetModuleFileNameW(nullptr, self, ARRAYSIZE(self));
+            std::wstring dir(self);
+            const size_t slash = dir.find_last_of(L"\\/");
+            if (slash != std::wstring::npos) dir.erase(slash);
+            const std::wstring pattern = dir + L"\\data\\*";
+            WIN32_FIND_DATAW fd;
+            HANDLE hfind = FindFirstFileW(pattern.c_str(), &fd);
+            int selIdx = -1, idx = 0;
+            if (hfind != INVALID_HANDLE_VALUE) {
+                do {
+                    const std::wstring name = fd.cFileName;
+                    if (name.size() > 4 &&
+                        (name.compare(name.size() - 4, 4, L".tsv") == 0 ||
+                         name.compare(name.size() - 4, 4, L".bin") == 0)) {
+                        SendMessageW(cb, CB_ADDSTRING, 0, (LPARAM)name.c_str());
+                        if (name == g_s.DictFile) selIdx = idx;
+                        ++idx;
+                    }
+                } while (FindNextFileW(hfind, &fd));
+                FindClose(hfind);
+            }
+            if (selIdx < 0) {
+                SendMessageW(cb, CB_ADDSTRING, 0, (LPARAM)g_s.DictFile.c_str());
+                selIdx = idx;
+            }
             SendMessageW(cb, CB_SETCURSEL, (WPARAM)selIdx, 0);
         }
+        MakeStatic(hwnd, L"列出 data 目录里的 *.tsv / *.bin，选一个即用。", inX, top + 88, 340, 20);
+        MakeButton(hwnd, L"自定义词 / 短语…", inX, top + 116, 150, ID_PHRASE, false);
+        MakeStatic(hwnd, L"自定义词和短语存在数据目录的 user.tsv 里。", inX, top + 154, 340, 20);
     }
-    y += 58 + 8;
 
-    // 数据目录：配置(config.ini) + 自定义词/短语(user.tsv) 都放这里，可指向网盘同步夹
-    MakeGroup(hwnd, L" 数据目录（配置与自定义词/短语都放这里）", padX, y, groupW, 100);
+    // ------------------------------------------------ 页 4：数据
+    g_buildPage = 4;
     {
-        HWND ed = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", wubi::GetDataDir().c_str(),
-                                  WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL | ES_READONLY,
-                                  S(inX), S(y + 24), S(224), S(24), hwnd,
-                                  (HMENU)(INT_PTR)ID_DATA_DIR, nullptr, nullptr);
-        SendMessageW(ed, WM_SETFONT, (WPARAM)g_font, TRUE);
-        MakeButton(hwnd, L"浏览…", inX + 232, y + 21, 56, ID_DATA_BROWSE, false);
-        MakeButton(hwnd, L"默认",  inX + 294, y + 21, 48, ID_DATA_DEFAULT, false);
-        MakeButton(hwnd, L"打开",  inX + 348, y + 21, 48, ID_DATA_OPEN, false);
+        MakeGroup(hwnd, L" 数据目录（配置与自定义词/短语都放这里）", contentX, top, groupW, 164);
+        {
+            HWND ed = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", wubi::GetDataDir().c_str(),
+                                      WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL | ES_READONLY,
+                                      S(inX), S(top + 28), S(340), S(24), hwnd,
+                                      (HMENU)(INT_PTR)ID_DATA_DIR, nullptr, nullptr);
+            SendMessageW(ed, WM_SETFONT, (WPARAM)g_font, TRUE);
+            Track(ed);
+        }
+        MakeButton(hwnd, L"浏览…", inX,       top + 62, 76, ID_DATA_BROWSE,  false);
+        MakeButton(hwnd, L"默认",  inX + 82,  top + 62, 60, ID_DATA_DEFAULT, false);
+        MakeButton(hwnd, L"打开",  inX + 148, top + 62, 60, ID_DATA_OPEN,    false);
         MakeStatic(hwnd, L"指向 OneDrive / 坚果云等同步目录，换机器后指回来即可恢复设置和自定义词。",
-                   inX, y + 54, 380, S(32));
+                   inX, top + 104, 340, S(40));
     }
-    y += 100 + 12;
-    // 底部按钮（右下角对齐）
-    MakeButton(hwnd, L"保存", padX + groupW - 196, y, 90, ID_SAVE, true);
-    MakeButton(hwnd, L"取消", padX + groupW - 96,  y, 90, ID_CANCEL, false);
+
+    // ------------------------------------------------ 底部按钮（不随页面切换）
+    g_buildPage = -1;
+    MakeButton(hwnd, L"保存", contentX + groupW - 196, 256, 90, ID_SAVE, true);
+    MakeButton(hwnd, L"取消", contentX + groupW - 96,  256, 90, ID_CANCEL, false);
+
+    ShowPage(hwnd, 0);
 }
 
 static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
@@ -427,13 +591,28 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     case WM_CREATE:
         BuildChildren(hwnd);
         return 0;
+    case WM_SIZE:                      // 侧栏跟着窗口高度走（全高的一条）
+        if (g_sideWnd) {
+            RECT rc;
+            GetClientRect(hwnd, &rc);
+            SetWindowPos(g_sideWnd, HWND_TOP, 0, 0, S(kSideW), rc.bottom, SWP_NOACTIVATE);
+        }
+        return 0;
+    case WM_APP + 1:                   // 侧栏点了某个标签
+        ShowPage(hwnd, (int)wp);
+        SetFocus(hwnd);
+        return 0;
+    case WM_KEYDOWN:
+        if (wp == VK_ESCAPE) { DestroyWindow(hwnd); return 0; }
+        break;
     case WM_ERASEBKGND: {              // 自己也刷背景：避免某些抓图/重绘路径留黑底
         RECT rc;
         GetClientRect(hwnd, &rc);
         FillRect((HDC)wp, &rc, g_bg);
         return 1;
     }
-    case WM_CTLCOLORSTATIC: {          // 让分组框里的文字背景跟窗口一致，不留白块
+    case WM_CTLCOLORSTATIC:            // 让分组框里的文字背景跟窗口一致，不留白块
+    case WM_CTLCOLORBTN: {
         HDC dc = (HDC)wp;
         SetBkMode(dc, TRANSPARENT);
         SetTextColor(dc, GetSysColor(COLOR_BTNTEXT));
@@ -470,6 +649,19 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         if (LOWORD(wp) == ID_DATA_OPEN) {
             const std::wstring dir = wubi::GetDataDir();
             ShellExecuteW(hwnd, L"open", dir.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+            return 0;
+        }
+        if (LOWORD(wp) == ID_PHRASE) {
+            // 自定义词 / 短语窗口是独立进程（panda-phrase.exe），和输入法里 Ctrl+Shift+= 打开的是同一个
+            wchar_t self[MAX_PATH] = { 0 };
+            GetModuleFileNameW(nullptr, self, ARRAYSIZE(self));
+            std::wstring dir(self);
+            const size_t slash = dir.find_last_of(L"\\/");
+            if (slash != std::wstring::npos) dir.erase(slash);
+            const std::wstring exe = dir + L"\\panda-phrase.exe";
+            if (ShellExecuteW(hwnd, L"open", exe.c_str(), nullptr, nullptr, SW_SHOWNORMAL) <= (HINSTANCE)32) {
+                MessageBoxW(hwnd, (L"没找到 " + exe).c_str(), kTitle, MB_OK | MB_ICONWARNING);
+            }
             return 0;
         }
         if (LOWORD(wp) == ID_SAVE) {
@@ -520,10 +712,10 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 }
 
 // 窗口客户区尺寸随 DPI 缩放；控件坐标在 BuildChildren 里也按 S() 缩放
+// 分页之后高度只按"最高的一页"算：侧栏 Logo + 5 个标签，右侧内容 + 底部按钮
 static void MeasureClient(int& w, int& h) {
-    w = S(520);
-    // 与 BuildChildren 里的累加保持一致（含最后新增的"热键"分组）
-    h = S(12 + 96 + 8 + 100 + 8 + 58 + 8 + 172 + 8 + 58 + 8 + 100 + 12 + 30 + 20);
+    w = S(556);
+    h = S(300);
 }
 
 static int RunDialog() {
@@ -546,6 +738,13 @@ static int RunDialog() {
     wc.hbrBackground = g_bg;
     RegisterClassExW(&wc);
 
+    WNDCLASSEXW side = { sizeof(side) };
+    side.lpfnWndProc = SideProc;
+    side.hInstance = GetModuleHandleW(nullptr);
+    side.hCursor = LoadCursorW(nullptr, (LPCWSTR)IDC_ARROW);
+    side.lpszClassName = L"PandaSettingsSidebar";
+    RegisterClassExW(&side);
+
     int cw = 0, ch = 0;
     MeasureClient(cw, ch);
     RECT rc = { 0, 0, cw, ch };
@@ -554,7 +753,7 @@ static int RunDialog() {
 
     // 先建在屏幕外、不显示，摆好位置再 ShowWindow：避免"先闪一个位于默认位置的空窗"
     HWND hwnd = CreateWindowExW(0, L"WubiSettingsWnd", kTitle,
-                                WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU,
+                                WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_CLIPCHILDREN,
                                 -32000, -32000, ww, wh,
                                 nullptr, nullptr, wc.hInstance, nullptr);
     if (!hwnd) return 1;
@@ -570,7 +769,7 @@ static int RunDialog() {
             const std::wstring icoFile = (g_s.Theme == L"crane") ? L"crane.ico"
                                    : (g_s.Theme == L"dog") ? L"dog.ico"
                                    : (g_s.Theme == L"cat") ? L"cat.ico" : L"panda.ico";
-            const std::wstring icoPath = dir + L"\\\\" + icoFile;
+            const std::wstring icoPath = dir + L"\\" + icoFile;
             HICON hi = (HICON)LoadImageW(nullptr, icoPath.c_str(), IMAGE_ICON, 0, 0,
                                         LR_LOADFROMFILE | LR_DEFAULTSIZE);
             if (!hi) hi = (HICON)LoadImageW(nullptr, icoPath.c_str(), IMAGE_ICON, 32, 32, LR_LOADFROMFILE);
@@ -593,10 +792,23 @@ static int RunDialog() {
 
     MSG msg;
     while (GetMessageW(&msg, nullptr, 0, 0) > 0) {
-        if (!IsDialogMessageW(hwnd, &msg)) { TranslateMessage(&msg); DispatchMessageW(&msg); }
+        // Esc 关窗：要在 IsDialogMessageW 之前判，否则会被它当"取消"吞掉
+        // （热键录制中除外——那会儿 Esc 是"取消录制"，由按钮自己吃）
+        if (msg.message == WM_KEYDOWN && msg.wParam == VK_ESCAPE && !g_hkCapturing) break;
+        if (IsDialogMessageW(hwnd, &msg)) continue;
+        TranslateMessage(&msg);
+        DispatchMessageW(&msg);
     }
     if (g_font) DeleteObject(g_font);
     if (g_fontTitle && g_fontTitle != g_font) DeleteObject(g_fontTitle);
+    if (g_fontSideTitle) DeleteObject(g_fontSideTitle);
+    if (g_fontTab) DeleteObject(g_fontTab);
+    if (g_fontTiny) DeleteObject(g_fontTiny);
+    if (g_sideBg) DeleteObject(g_sideBg);
+    if (g_sideSel) DeleteObject(g_sideSel);
+    if (g_sideHover) DeleteObject(g_sideHover);
+    if (g_accent) DeleteObject(g_accent);
+    if (g_logo) DestroyIcon(g_logo);
     return 0;
 }
 
