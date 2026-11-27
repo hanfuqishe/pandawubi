@@ -283,6 +283,30 @@ if (Test-Path $settingsExe) {
 } else {
     "  SKIP  hotkey 设置  build\panda-settings.exe 不存在"
 }
+"— Shift 采样：英文模式下 Shift+字母不切中/英 —"
+$hostExe = Join-Path $ws 'build\tsf-host.exe'
+if (Test-Path $hostExe) {
+    # [h] 单击左 Shift（切英文）→ [u] 按住 Shift 中间补一个 a（不该切）→ [h] 单击（切回中文）
+    $proc = Start-Process -FilePath $hostExe -ArgumentList '-send','[h][u]a[h]','-hold','400' -PassThru
+    $deadline = (Get-Date).AddSeconds(15)
+    while ((Get-Date) -lt $deadline -and -not $proc.HasExited) { Start-Sleep -Milliseconds 200 }
+    $logPath = Join-Path $env:LOCALAPPDATA ("PandaWubi\panda_tsf_{0}.log" -f $proc.Id)
+    if (Test-Path $logPath) {
+        $txt = Get-Content $logPath -Encoding UTF8 -ErrorAction SilentlyContinue
+        $polls = @($txt | Where-Object { $_ -match 'shift poll -> english=(\d)' })
+        if ($polls.Count -lt 2) {
+            "  SKIP  shift 采样  （日志里没有两次切换，宿主窗口可能没拿到前台）"
+        } else {
+            $en = @($polls | ForEach-Object { if ($_ -match 'english=(\d)') { $Matches[1] } })
+            $usedHit = ($txt -match 'used -> other key down').Count -gt 0
+            Check 'shift 单击切中/英' ($en[0] -eq '1') '[h] 单击左 Shift → 英文'
+            Check 'Shift+字母不切模式' ($usedHit -and $polls.Count -eq 2 -and $en[0] -eq '1' -and $en[1] -eq '0') '[u]（Shift+a）被识别为修饰键用法，模式不变（只切换两次）'
+            Check '再次单击切回中文' ($en[$en.Count - 1] -eq '0') '第二次单击 → 中文'
+        }
+    } else {
+        "  SKIP  shift 采样  （没有日志文件）"
+    }
+}
 $out = & $cli $dict learnsim 16 2>&1 | Out-String
 Check 'learnsim 节流落盘' ($out -match 'RESULT=PASS' -and $out -match '文件=有') '16 次提交后首位翻转且落盘'
 "— 候选排序可调 / 双端对比工具 —"

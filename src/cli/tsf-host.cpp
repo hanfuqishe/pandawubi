@@ -30,7 +30,7 @@ static size_t g_pos = 0;
 static int g_stage = 0;
 
 // 一个按键步骤：虚拟键 + 需要按住的控制键
-struct Step { WORD vk; bool ctrl; bool shift; wchar_t ch; int holdMs; };
+struct Step { WORD vk; bool ctrl; bool shift; wchar_t ch; int holdMs; wchar_t mid; };
 static std::vector<Step> g_steps;
 
 // 控制台进程创建窗口后常常拿不到前台：用 AttachThreadInput 强制一次
@@ -54,6 +54,7 @@ static void ForceForeground(HWND h) {
 }
 static int g_holdMs = 0;   // -hold <ms>：脚本跑完后保持窗口存活，便于观察空闲状态条
 static WORD g_holdVk = 0;  // "按住"步骤的键：到点由 (timer 3) 松开
+static wchar_t g_holdMid = 0;  // [u] 这类"按住期间补一个键"的中间键：由 (timer 5) 发出
 static bool g_postMode = false;  // 用 ITfKeystrokeMgr 正规投递（无需前台）
 static ITfKeystrokeMgr* g_ksm = nullptr;
 static TfClientId g_tid = 0;
@@ -127,8 +128,10 @@ static void SendStep(const Step& st) {
         // 真实"单击"：按住一段再松。不能在主线程 Sleep —— 那样会把 20ms 一次的
         // 轮询采样(timer)全堵住，采样器只会看到"已经松开"，看不到按下。
         g_holdVk = st.vk;
+        g_holdMid = st.mid;
         keybd_event((BYTE)st.vk, 0, 0, 0);
         SetTimer(g_main, 3, (UINT)st.holdMs, nullptr);
+        if (st.mid) SetTimer(g_main, 5, (UINT)(st.holdMs / 2), nullptr);   // 按住期间补发中间键
         return;
     }
     if (st.ctrl)  keybd_event(VK_CONTROL, 0, 0, 0);
@@ -145,6 +148,7 @@ static void SendStep(const Step& st) {
 //   [L] ←  [D] Del  [E] 回车  [B] 退格  [X] Esc
 //   [H] 单击左 Shift（切中/英）  [J] 单击右 Shift（也切中/英，左右等价）
 //   [T] 简/繁热键（默认 Ctrl+J；[t] 同样，但按住 150ms）
+//   [u] 按住左 Shift 150ms、中间补一个 a 再松（验证英文模式下 Shift+字母不切中/英）
 static void ParseScript(const std::wstring& s) {
     g_steps.clear();
     for (size_t i = 0; i < s.size();) {
@@ -168,13 +172,15 @@ static void ParseScript(const std::wstring& s) {
                 case L'J': vk = VK_RSHIFT; break;   // 右 Shift（现在也切中/英）
                 case L'h': vk = VK_LSHIFT; break;   // 小写 = 按住 150ms 再松（轮询采样才看得见）
                 case L'j': vk = VK_RSHIFT; break;
+                case L'u': vk = VK_LSHIFT; break;   // 按住左 Shift，中间补一个 a 再松（验证 Shift+字母不切模式）
                 case L'F': vk = VK_F2; break;
                 case L'Q': vk = VK_OEM_7; sh = true; break;   // Shift+' = 双引号
                 default: break;
                 }
                 if (vk) { g_steps.push_back({ vk, ctrl, sh, L' ',
                                               (s[i + 1] == L'h' || s[i + 1] == L'j' ||
-                                               s[i + 1] == L't') ? 150 : 0 });
+                                               s[i + 1] == L't' || s[i + 1] == L'u') ? 150 : 0,
+                                              (s[i + 1] == L'u') ? L'a' : L'\0' });
                           i = close + 1; continue; }
             }
         }
@@ -226,6 +232,9 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             KillTimer(hwnd, 3);
             keybd_event((BYTE)g_holdVk, 0, KEYEVENTF_KEYUP, 0);
             std::printf("  released vk=0x%02X (held)\n", g_holdVk);
+        } else if (wp == 5) {
+            KillTimer(hwnd, 5);                    // 按住期间的中间键（[u]：Shift+a）
+            if (g_holdMid) { SendOneRaw(VkOf(g_holdMid), g_holdMid); std::printf("  sent mid '%c' (while held)\n", (char)g_holdMid); }
         } else if (wp == 4) {
             KillTimer(hwnd, 4);
             PostQuitMessage(0);

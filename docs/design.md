@@ -1971,6 +1971,41 @@ Chromium 的 TSF 会给出几倍屏宽高的包围盒（实测 `3839,2075`），
 [12:08:28.194] shift poll -> english=0 (side=2 both=0 trad=0)   ← 右 Shift：英→中（不再切繁简）
 ```
 
+### 补：英文模式下 Shift+字母不再误切中/英（2026-11-27 傍晚）
+
+用户报：“英文模式下按 Shift + 其他键（譬如输入大写字母）还是会切换中英文模式。不应该这样。”
+
+根因：判断“这次 Shift 是单击还是当修饰键用”，原来只看**经过输入法的键**（`OnKeyDown` 里的
+`m_shiftUsed`，以及轮询里 `m_pollShiftUsed` 的 Ctrl/Alt 判定）。但英文模式下
+`WantsKey` 在 `if (m_english) return false;` 处就退出了（在 Shift 声明之前），字母键根本不声明，
+宿主自己把 Shift+A 变成大写 A —— 输入法一条事件都收不到，`used` 永远是 0，
+于是 Shift 一松就被判成“干净的单击”，把中/英翻掉。
+
+修法（`src/tsf/wubi_tsf.cpp`）：
+
+- 新增 `static bool OtherKeyPressed(bool sinceLastScan)`：扫 `GetAsyncKeyState` 0x01–0xFE，
+  跳过 Shift/Ctrl/Alt/Win 与锁定键。`sinceLastScan` 时连 **0x0001 位**（“自上次查询后按过”）
+  一起看 —— 合成按键或极快的敲击可能整个落在两次 20ms 采样之间，只查 0x8000 会漏。
+- `ShiftSampleTick`：按住期间每轮（20ms）都查一次，命中就置 `m_pollShiftUsed[i]` 并记
+  `shift poll: side=%d used -> other key down`；按下 Shift 的那一轮只查实时状态
+  （`sinceLastScan=false`），顺便把所有 0x0001 位读掉，避免把按下 Shift 之前敲的键算进来。
+- 事件通路不变（`m_shiftUsed` 仍由 `OnKeyDown` 记账），轮询负责英文模式这种“看不见字母”的场合。
+
+测试宿主新增记号 `[u]`：按住左 Shift 150ms，其间（timer 5，75ms 处）补发一个 `a` 再松开；
+`tools/verify.ps1` 加三条断言（单击切英文 / Shift+a 不切 / 再单击切回中文），
+日志里出现 `used -> other key down` 且 `shift poll ->` 只出现两次即为通过。
+
+真机日志（tsf-host，2026-11-27 18:05，构建 18:04:44）：
+
+```
+[18:05:29.873] shift poll: side=1 DOWN other=0 both=0
+[18:05:30.033] shift poll -> english=1 (side=1 both=0 trad=0)      ← [h] 单击：中→英
+[18:05:30.378] shift poll: side=1 DOWN other=0 both=0
+[18:05:30.464] shift poll: side=1 used -> other key down           ← [u]：Shift+a，判为修饰键用法
+[18:05:30.535] shift poll: side=1 UP held=156ms used=1 …（没有切换）
+[18:05:31.530] shift poll -> english=0 (side=1 both=0 trad=0)      ← 再单击：英→中
+```
+
 ## 三、TSF 外壳（已实现，真机已验证工作）
 
 ```

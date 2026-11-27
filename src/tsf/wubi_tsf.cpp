@@ -3250,6 +3250,36 @@ void CTextService::BeginCustomWord(ITfContext* pic) {
 // 兜底办法：20ms 采一次两侧 Shift 的键盘状态；只在前台是本进程、且文档有焦点时采，
 // 后台实例不会把别人的 Shift 当成自己的。宿主自己报过 KeyUp 的（记事本/浏览器等）
 // 以事件通路为准，采样只负责"静默宿主"。
+// Shift 按住期间，键盘上是否还按着别的键（鼠标键也算）—— 判断"这次 Shift 是当修饰键用的"。
+// 事件通路（OnKeyDown 里 m_shiftUsed）只对**经过我们**的键有效；英文模式下字母键根本不声明
+// （WantsKey 里 `if (m_english) return false;` 在 Shift 声明之前），宿主自己就把 Shift+A 变成大写 A，
+// 我们一条事件都收不到 —— 于是"单击判定"会把 Shift+A 误判成单击、把中/英翻掉。
+// 所以这里直接扫键盘状态：Shift 按着的时候只要别处还有键，就算修饰键用法。
+// sinceLastScan = true 时连 GetAsyncKeyState 的 0x0001 位一起看（"自上次调用以来按过"），
+// 因为合成按键/极快的敲击可能整个落在两次 20ms 采样之间；代价是那位会累积到下次扫描，
+// 所以**按下 Shift 的那一次采样只看实时状态**，之后每次采样都会顺手把位清掉。
+static bool OtherKeyPressed(bool sinceLastScan) {
+    for (int vk = 0x01; vk <= 0xFE; ++vk) {
+        switch (vk) {
+        case VK_SHIFT: case VK_LSHIFT: case VK_RSHIFT:
+        case VK_CONTROL: case VK_LCONTROL: case VK_RCONTROL:
+        case VK_MENU: case VK_LMENU: case VK_RMENU:
+        case VK_LWIN: case VK_RWIN:
+            continue;                                  // 修饰键本身不算
+        default:
+            break;
+        }
+        const SHORT st = GetAsyncKeyState(vk);
+        if (st & 0x8000) return true;                  // 现在按着
+        // 0x0001 = 上次查询后按过。锁定键的该位表示"已锁定"，不是按键，排除掉。
+        if (sinceLastScan && (st & 0x0001) &&
+            vk != VK_CAPITAL && vk != VK_NUMLOCK && vk != VK_SCROLL) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void CTextService::ShiftSampleTick() {
     if (!HostForeground()) return;
     if (!m_docFocused) return;
@@ -3260,11 +3290,17 @@ void CTextService::ShiftSampleTick() {
 
     for (int i = 0; i < 2; ++i) {
         const bool down = (GetAsyncKeyState(kVk[i]) & 0x8000) != 0;
+        // 已经按住、还没被判定成修饰键用法：这一轮再看一眼有没有别的键（20ms 一次）
+        if (down && m_pollShift[i] && !m_pollShiftUsed[i] &&
+            (ctrl || alt || OtherKeyPressed(true))) {
+            m_pollShiftUsed[i] = true;
+            LogLine(L"shift poll: side=%d used -> other key down", i + 1);
+        }
         if (down == m_pollShift[i]) continue;
         m_pollShift[i] = down;
         if (down) {
             m_pollShiftTick[i] = GetTickCount();
-            m_pollShiftUsed[i] = ctrl || alt;      // Ctrl/Alt 组合不算单击
+            m_pollShiftUsed[i] = ctrl || alt || OtherKeyPressed(false);   // 组合键/已有别的键按着都不算单击
             if (m_pollShift[1 - i]) m_pollBoth = true;
             LogLine(L"shift poll: side=%d DOWN other=%d both=%d",
                     i + 1, (int)m_pollShift[1 - i], (int)m_pollBoth);
