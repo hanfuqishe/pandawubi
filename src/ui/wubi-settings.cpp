@@ -33,7 +33,13 @@ static std::wstring    g_ini;
 static int    g_dpi = 96;
 static HFONT  g_font = nullptr;
 static HFONT  g_fontTitle = nullptr;
-static HBRUSH g_bg = nullptr;
+static HFONT  g_fontHead = nullptr;       // 页标题（13pt 半粗）
+static HFONT  g_fontSection = nullptr;    // 小节标题（10pt 半粗）
+static HBRUSH g_bg = nullptr;             // 内容区背景（白）
+static COLORREF g_textColor = RGB(0x1F, 0x23, 0x28);
+static COLORREF g_hintColor = RGB(0x6E, 0x77, 0x85);
+static const int kHintIdBase = 300;       // 灰色说明文字的控件 ID 起点
+static int g_hintSeq = 0;
 
 // 热键录制状态：点"热键"按钮后进入录制，按下的组合键直接写进 g_hotkeyText；
 // Esc / 点别处取消。文本用 "Ctrl+J" 这种写法，和 config.ini 里的 HotkeyTrad 一致。
@@ -87,13 +93,13 @@ static void Track(HWND h) {
 }
 
 static void ShowPage(HWND hwnd, int page) {
-    (void)hwnd;
     if (page < 0 || page >= kPageCount) return;
     g_page = page;
     for (int i = 0; i < kPageCount; ++i) {
         for (HWND h : g_pageCtrls[i]) ShowWindow(h, i == page ? SW_SHOW : SW_HIDE);
     }
     if (g_sideWnd) InvalidateRect(g_sideWnd, nullptr, TRUE);
+    if (hwnd) InvalidateRect(hwnd, nullptr, TRUE);   // 页标题要重画
 }
 
 // ---------------------------------------------------------------- 控件工厂
@@ -104,12 +110,21 @@ static HWND MakeStatic(HWND p, const wchar_t* t, int x, int y, int w, int hgt) {
     Track(h);
     return h;
 }
-static HWND MakeGroup(HWND p, const wchar_t* t, int x, int y, int w, int hgt) {
-    HWND h = CreateWindowExW(0, L"BUTTON", t, WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
-                             S(x), S(y), S(w), S(hgt), p, nullptr, nullptr, nullptr);
-    SendMessageW(h, WM_SETFONT, (WPARAM)g_fontTitle, TRUE);
+// 小节标题（半粗、深色）
+static HWND MakeSection(HWND p, const wchar_t* t, int x, int y) {
+    HWND h = CreateWindowExW(0, L"STATIC", t, WS_CHILD | WS_VISIBLE | SS_LEFT,
+                             S(x), S(y), S(240), S(22), p, nullptr, nullptr, nullptr);
+    SendMessageW(h, WM_SETFONT, (WPARAM)g_fontSection, TRUE);
     Track(h);
     return h;
+}
+// 灰色说明文字：单独占一个 ID 段，WM_CTLCOLORSTATIC 里据此换色
+static void MakeHint(HWND p, const wchar_t* t, int x, int y, int w, int hgt) {
+    HWND h = CreateWindowExW(0, L"STATIC", t, WS_CHILD | WS_VISIBLE | SS_LEFT,
+                             S(x), S(y), S(w), S(hgt), p,
+                             (HMENU)(INT_PTR)(kHintIdBase + (g_hintSeq++)), nullptr, nullptr);
+    SendMessageW(h, WM_SETFONT, (WPARAM)g_font, TRUE);
+    Track(h);
 }
 static HWND MakeRadio(HWND p, const wchar_t* t, int x, int y, int w, int id, bool checked, bool groupStart = false) {
     HWND h = CreateWindowExW(0, L"BUTTON", t,
@@ -362,20 +377,23 @@ static LRESULT CALLBACK SideProc(HWND h, UINT msg, WPARAM wp, LPARAM lp) {
 }
 
 static void BuildChildren(HWND hwnd) {
-    // 正文字体用雅黑；分组框标题用同尺寸的半粗体，靠"分组框"划分区块，避免一堆左对齐的散装控件
-    const int pt = 9;
+    // 字体：正文 9pt、小节标题 10pt 半粗、页标题 13pt 半粗（页标题在 WM_PAINT 里画）
     auto mk = [](int points, int weight) {
         return CreateFontW(-S(points * 96 / 72), 0, 0, 0, weight, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
                            OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
                            DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei UI");
     };
-    g_font      = mk(pt, FW_NORMAL);
+    g_font        = mk(9,  FW_NORMAL);
     if (!g_font) g_font = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
-    g_fontTitle = mk(pt, FW_SEMIBOLD);
+    g_fontTitle   = mk(9,  FW_SEMIBOLD);
     if (!g_fontTitle) g_fontTitle = g_font;
+    g_fontHead    = mk(13, FW_SEMIBOLD);
+    if (!g_fontHead) g_fontHead = g_fontTitle;
+    g_fontSection = mk(10, FW_SEMIBOLD);
+    if (!g_fontSection) g_fontSection = g_fontTitle;
     g_fontSideTitle = mk(12, FW_SEMIBOLD);
     g_fontTab       = mk(10, FW_NORMAL);
-    g_fontTiny      = mk(8, FW_NORMAL);
+    g_fontTiny      = mk(8,  FW_NORMAL);
 
     g_sideBg    = CreateSolidBrush(RGB(0x2B, 0x30, 0x39));
     g_sideSel   = CreateSolidBrush(RGB(0x3A, 0x42, 0x50));
@@ -398,57 +416,59 @@ static void BuildChildren(HWND hwnd) {
         }
     }
 
-    RECT crc = { 0, 0, S(556), S(300) };
+    RECT crc = { 0, 0, S(560), S(320) };
     GetClientRect(hwnd, &crc);
     g_sideWnd = CreateWindowExW(0, L"PandaSettingsSidebar", L"", WS_CHILD | WS_VISIBLE,
                                 0, 0, S(kSideW), crc.bottom, hwnd, nullptr, nullptr, nullptr);
     if (g_sideWnd) SetWindowPos(g_sideWnd, HWND_TOP, 0, 0, S(kSideW), crc.bottom, SWP_NOACTIVATE);
 
-    const int contentX = kSideW + 16;   // 148
-    const int groupW   = 392;
-    const int inX      = contentX + 14; // 162
-    const int top      = 16;
+    // 统一栅格：左边距 168、标签列 68 宽、控件列从 244 起、右边距到 540
+    const int X      = 168;
+    const int FX     = 244;
+    const int RIGHT  = 540;
+    const int rowH   = 24;
+    g_hintSeq = 0;
 
     // ------------------------------------------------ 页 0：输入
     g_buildPage = 0;
     {
-        MakeGroup(hwnd, L" 一级简码（输入多个键时如何处理）", contentX, top, groupW, 96);
-        MakeRadio(hwnd, L"不处理：长码候选里照常出现",         inX, top + 24, 340, ID_L1_0, g_s.Level1Mode == 0, true);
-        MakeRadio(hwnd, L"隐藏：彻底不出现在候选里",           inX, top + 46, 340, ID_L1_1, g_s.Level1Mode == 1);
-        MakeRadio(hwnd, L"沉底：放到最后，仍可选中（默认）",   inX, top + 68, 340, ID_L1_2, g_s.Level1Mode == 2);
+        MakeSection(hwnd, L"一级简码", X, 54);
+        MakeHint(hwnd, L"输入多个键时如何处理", 300, 58, 200, 18);
 
-        const int y2 = top + 96 + 8;
-        MakeGroup(hwnd, L" 候选排序", contentX, y2, groupW, 100);
-        MakeRadio(hwnd, L"码短优先（默认，与 QQ五笔 接近）", inX, y2 + 24, 340, ID_SM_0, g_s.SortMode == 0, true);
-        MakeRadio(hwnd, L"纯词频优先",                       inX, y2 + 46, 340, ID_SM_1, g_s.SortMode == 1);
+        MakeRadio(hwnd, L"不处理：长码候选里照常出现",       X, 82, 360, ID_L1_0, g_s.Level1Mode == 0, true);
+        MakeRadio(hwnd, L"隐藏：彻底不出现在候选里",         X, 106, 360, ID_L1_1, g_s.Level1Mode == 1);
+        MakeRadio(hwnd, L"沉底：放到最后，仍可选中（默认）", X, 130, 360, ID_L1_2, g_s.Level1Mode == 2);
+
+        MakeSection(hwnd, L"候选排序", X, 166);
+        MakeRadio(hwnd, L"码短优先（默认，与 QQ五笔 接近）", X, 192, 360, ID_SM_0, g_s.SortMode == 0, true);
+        MakeRadio(hwnd, L"纯词频优先",                       X, 216, 360, ID_SM_1, g_s.SortMode == 1);
         MakeCheck(hwnd, (L"输出繁体（" + g_hotkeyText + L" 可临时切换）").c_str(),
-                  inX, y2 + 70, 340, ID_TRAD, g_s.TradChinese != 0, true);
+                  X, 244, 360, ID_TRAD, g_s.TradChinese != 0, true);
     }
 
     // ------------------------------------------------ 页 1：外观
     g_buildPage = 1;
     {
-        MakeGroup(hwnd, L" 候选窗外观", contentX, top, groupW, 184);
-        MakeStatic(hwnd, L"候选个数", inX, top + 28, 64, 20);
+        MakeStatic(hwnd, L"候选个数", X, 56, 68, 20);
         {
             wchar_t nb[8];
             wsprintfW(nb, L"%d", g_s.CandCount);
-            MakeEdit(hwnd, inX + 64, top + 24, 52, ID_CAND, nb, 1);
+            MakeEdit(hwnd, FX, 54, 46, ID_CAND, nb, 1);
         }
-        MakeStatic(hwnd, L"字号", inX + 148, top + 28, 44, 20);
+        MakeStatic(hwnd, L"字号", 310, 56, 44, 20);
         {
             wchar_t fb[8];
             wsprintfW(fb, L"%d", g_s.CandFontPt);
-            MakeEdit(hwnd, inX + 192, top + 24, 48, ID_FONT, fb, 2);
+            MakeEdit(hwnd, 356, 54, 44, ID_FONT, fb, 2);
         }
-        MakeStatic(hwnd, L"pt（8–24）", inX + 246, top + 28, 100, 20);
+        MakeHint(hwnd, L"pt（8–24）", 410, 56, 120, 18);
 
         // 字体（可输入，也可从下拉里选系统字体）
-        MakeStatic(hwnd, L"字体", inX, top + 60, 44, 20);
+        MakeStatic(hwnd, L"字体", X, 90, 68, 20);
         {
             HWND cb = CreateWindowExW(WS_EX_CLIENTEDGE, L"COMBOBOX", g_s.CandFontFace.c_str(),
                                       WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWN | CBS_AUTOHSCROLL,
-                                      S(inX + 44), S(top + 56), S(150), S(240), hwnd,
+                                      S(FX), S(86), S(200), S(240), hwnd,
                                       (HMENU)(INT_PTR)ID_FACE, nullptr, nullptr);
             SendMessageW(cb, WM_SETFONT, (WPARAM)g_font, TRUE);
             Track(cb);
@@ -468,12 +488,13 @@ static void BuildChildren(HWND hwnd) {
             SendMessageW(cb, CB_SETCURSEL,
                          (WPARAM)SendMessageW(cb, CB_FINDSTRINGEXACT, (WPARAM)-1, (LPARAM)g_s.CandFontFace.c_str()), 0);
         }
+
         // 主题：影响悬浮栏 Logo、候选窗右下角装饰图、输入指示器图标
-        MakeStatic(hwnd, L"主题", inX + 202, top + 60, 44, 20);
+        MakeStatic(hwnd, L"主题", X, 124, 68, 20);
         {
             HWND cb = CreateWindowExW(WS_EX_CLIENTEDGE, L"COMBOBOX", L"",
                                       WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWNLIST,
-                                      S(inX + 246), S(top + 56), S(116), S(160), hwnd,
+                                      S(FX), S(120), S(140), S(160), hwnd,
                                       (HMENU)(INT_PTR)ID_THEME, nullptr, nullptr);
             SendMessageW(cb, WM_SETFONT, (WPARAM)g_font, TRUE);
             Track(cb);
@@ -487,42 +508,42 @@ static void BuildChildren(HWND hwnd) {
         }
 
         auto makeColor = [&](int x, int yy, const wchar_t* label, int id, int color, int limit) {
-            MakeStatic(hwnd, label, x, yy + 4, 64, 20);
+            MakeStatic(hwnd, label, x, yy + 4, 68, 20);
             wchar_t cb[16];
             swprintf_s(cb, L"#%06X", (unsigned)(color & 0xFFFFFF));
             HWND e = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", cb,
                                      WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL,
-                                     S(x + 64), S(yy), S(76), S(24), hwnd, (HMENU)(INT_PTR)id, nullptr, nullptr);
+                                     S(x + 72), S(yy), S(76), S(rowH), hwnd, (HMENU)(INT_PTR)id, nullptr, nullptr);
             SendMessageW(e, WM_SETFONT, (WPARAM)g_font, TRUE);
             SendMessageW(e, EM_SETLIMITTEXT, (WPARAM)limit, 0);
             Track(e);
         };
-        makeColor(inX,       top + 98, L"背景色", ID_BG,     g_s.CandBgColor,     7);
-        makeColor(inX + 164, top + 98, L"文字色", ID_TXT,    g_s.CandTextColor,   7);
-        makeColor(inX,       top + 128, L"边框色", ID_BORDER, g_s.CandBorderColor, 7);
-        MakeCheck(hwnd, L"内框凹陷", inX + 164, top + 126, 96,  ID_INSET, g_s.CandInset != 0, true);
-        MakeCheck(hwnd, L"候选竖排", inX + 262, top + 126, 100, ID_VERT,  g_s.CandVertical != 0);
+        makeColor(X,   158, L"背景色", ID_BG,     g_s.CandBgColor,     7);
+        makeColor(340, 158, L"文字色", ID_TXT,    g_s.CandTextColor,   7);
+        makeColor(X,   192, L"边框色", ID_BORDER, g_s.CandBorderColor, 7);
+        MakeCheck(hwnd, L"内框凹陷", 330, 190, 110, ID_INSET, g_s.CandInset != 0, true);
+        MakeCheck(hwnd, L"候选竖排", 444, 190,  96, ID_VERT,  g_s.CandVertical != 0);
     }
 
     // ------------------------------------------------ 页 2：热键
     g_buildPage = 2;
     {
-        MakeGroup(hwnd, L" 简繁切换热键", contentX, top, groupW, 96);
-        MakeStatic(hwnd, L"简繁切换", inX, top + 28, 64, 20);
-        MakeHotkeyButton(hwnd, inX + 64, top + 24, 140, ID_HK_TRAD, g_hotkeyText);
-        MakeStatic(hwnd, L"点一下按钮，再按下想要的组合键（Esc 取消）。", inX, top + 68, 340, 20);
-        MakeStatic(hwnd, L"左右 Shift 都切中/英；这个热键只管简/繁（须带 Ctrl / Alt / Win）。",
-                   inX, top + 108, 340, S(22));
+        MakeStatic(hwnd, L"简繁切换", X, 56, 68, 20);
+        MakeHotkeyButton(hwnd, FX, 52, 150, ID_HK_TRAD, g_hotkeyText);
+        MakeHint(hwnd, L"点一下，再按组合键", 404, 58, 140, 18);
+
+        MakeHint(hwnd, L"Esc 取消录制；组合键必须带 Ctrl / Alt / Win 之一。", X, 96, 372, 18);
+        MakeHint(hwnd, L"左右 Shift 都切中/英；这个热键只管简/繁。", X, 126, 372, 18);
     }
 
     // ------------------------------------------------ 页 3：词库
     g_buildPage = 3;
     {
-        MakeGroup(hwnd, L" 词库（data 目录）", contentX, top, groupW, 72);
+        MakeStatic(hwnd, L"词库文件", X, 56, 68, 20);
         {
             HWND cb = CreateWindowExW(WS_EX_CLIENTEDGE, L"COMBOBOX", L"",
                                       WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWNLIST,
-                                      S(inX), S(top + 28), S(300), S(220), hwnd,
+                                      S(FX), S(52), S(296), S(220), hwnd,
                                       (HMENU)(INT_PTR)ID_DICT, nullptr, nullptr);
             SendMessageW(cb, WM_SETFONT, (WPARAM)g_font, TRUE);
             Track(cb);
@@ -554,34 +575,35 @@ static void BuildChildren(HWND hwnd) {
             }
             SendMessageW(cb, CB_SETCURSEL, (WPARAM)selIdx, 0);
         }
-        MakeStatic(hwnd, L"列出 data 目录里的 *.tsv / *.bin，选一个即用。", inX, top + 88, 340, 20);
-        MakeButton(hwnd, L"自定义词 / 短语…", inX, top + 116, 150, ID_PHRASE, false);
-        MakeStatic(hwnd, L"自定义词和短语存在数据目录的 user.tsv 里。", inX, top + 154, 340, 20);
+        MakeHint(hwnd, L"列出 data 目录里的 *.tsv / *.bin，选一个即用。", X, 92, 372, 18);
+
+        MakeButton(hwnd, L"自定义词 / 短语…", X, 126, 150, ID_PHRASE, false);
+        MakeHint(hwnd, L"自定义词和短语存在数据目录的 user.tsv 里。", X, 168, 372, 18);
     }
 
     // ------------------------------------------------ 页 4：数据
     g_buildPage = 4;
     {
-        MakeGroup(hwnd, L" 数据目录（配置与自定义词/短语都放这里）", contentX, top, groupW, 164);
+        MakeStatic(hwnd, L"数据目录", X, 56, 68, 20);
         {
             HWND ed = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", wubi::GetDataDir().c_str(),
                                       WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL | ES_READONLY,
-                                      S(inX), S(top + 28), S(340), S(24), hwnd,
+                                      S(FX), S(52), S(296), S(rowH), hwnd,
                                       (HMENU)(INT_PTR)ID_DATA_DIR, nullptr, nullptr);
             SendMessageW(ed, WM_SETFONT, (WPARAM)g_font, TRUE);
             Track(ed);
         }
-        MakeButton(hwnd, L"浏览…", inX,       top + 62, 76, ID_DATA_BROWSE,  false);
-        MakeButton(hwnd, L"默认",  inX + 82,  top + 62, 60, ID_DATA_DEFAULT, false);
-        MakeButton(hwnd, L"打开",  inX + 148, top + 62, 60, ID_DATA_OPEN,    false);
-        MakeStatic(hwnd, L"指向 OneDrive / 坚果云等同步目录，换机器后指回来即可恢复设置和自定义词。",
-                   inX, top + 104, 340, S(40));
+        MakeButton(hwnd, L"浏览…", FX,       96, 76, ID_DATA_BROWSE,  false);
+        MakeButton(hwnd, L"默认",  FX + 84,  96, 60, ID_DATA_DEFAULT, false);
+        MakeButton(hwnd, L"打开",  FX + 152, 96, 60, ID_DATA_OPEN,    false);
+        MakeHint(hwnd, L"指向 OneDrive / 坚果云等同步目录，换机器后指回来即可恢复设置和自定义词。",
+                 X, 140, 372, 40);
     }
 
     // ------------------------------------------------ 底部按钮（不随页面切换）
     g_buildPage = -1;
-    MakeButton(hwnd, L"保存", contentX + groupW - 196, 256, 90, ID_SAVE, true);
-    MakeButton(hwnd, L"取消", contentX + groupW - 96,  256, 90, ID_CANCEL, false);
+    MakeButton(hwnd, L"保存", RIGHT - 196, 282, 90, ID_SAVE, true);
+    MakeButton(hwnd, L"取消", RIGHT - 96,  282, 90, ID_CANCEL, false);
 
     ShowPage(hwnd, 0);
 }
@@ -605,17 +627,45 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     case WM_KEYDOWN:
         if (wp == VK_ESCAPE) { DestroyWindow(hwnd); return 0; }
         break;
+    case WM_PAINT: {                   // 页标题 + 标题下的细线 + 侧栏右缘的分隔线
+        PAINTSTRUCT ps;
+        HDC dc = BeginPaint(hwnd, &ps);
+        RECT rc;
+        GetClientRect(hwnd, &rc);
+        FillRect(dc, &rc, g_bg);
+        SetBkMode(dc, TRANSPARENT);
+
+        HGDIOBJ oldFont = SelectObject(dc, g_fontHead);
+        SetTextColor(dc, g_textColor);
+        RECT tr = { S(168), S(10), rc.right - S(16), S(40) };
+        DrawTextW(dc, kPageNames[g_page], -1, &tr, DT_LEFT | DT_SINGLELINE | DT_VCENTER);
+        SelectObject(dc, oldFont);
+
+        HPEN pen = CreatePen(PS_SOLID, 1, RGB(0xE3, 0xE7, 0xEC));
+        HGDIOBJ oldPen = SelectObject(dc, pen);
+        MoveToEx(dc, S(168), S(46), nullptr);
+        LineTo(dc, rc.right - S(20), S(46));
+        MoveToEx(dc, S(kSideW), 0, nullptr);
+        LineTo(dc, S(kSideW), rc.bottom);
+        SelectObject(dc, oldPen);
+        DeleteObject(pen);
+
+        EndPaint(hwnd, &ps);
+        return 0;
+    }
     case WM_ERASEBKGND: {              // 自己也刷背景：避免某些抓图/重绘路径留黑底
         RECT rc;
         GetClientRect(hwnd, &rc);
         FillRect((HDC)wp, &rc, g_bg);
         return 1;
     }
-    case WM_CTLCOLORSTATIC:            // 让分组框里的文字背景跟窗口一致，不留白块
+    case WM_CTLCOLORSTATIC:            // 标签/单选/复选框的文字背景跟内容区一致，不留灰块
     case WM_CTLCOLORBTN: {
         HDC dc = (HDC)wp;
         SetBkMode(dc, TRANSPARENT);
-        SetTextColor(dc, GetSysColor(COLOR_BTNTEXT));
+        const int id = lp ? GetDlgCtrlID((HWND)lp) : 0;
+        const bool hint = (id >= kHintIdBase && id < kHintIdBase + 200);
+        SetTextColor(dc, hint ? g_hintColor : g_textColor);
         return (LRESULT)g_bg;
     }
     case WM_COMMAND:
@@ -714,8 +764,8 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 // 窗口客户区尺寸随 DPI 缩放；控件坐标在 BuildChildren 里也按 S() 缩放
 // 分页之后高度只按"最高的一页"算：侧栏 Logo + 5 个标签，右侧内容 + 底部按钮
 static void MeasureClient(int& w, int& h) {
-    w = S(556);
-    h = S(300);
+    w = S(560);
+    h = S(320);
 }
 
 static int RunDialog() {
@@ -728,7 +778,7 @@ static int RunDialog() {
         if (dc) ReleaseDC(nullptr, dc);
         if (g_dpi <= 0) g_dpi = 96;
     }
-    g_bg = GetSysColorBrush(COLOR_BTNFACE);
+    g_bg = CreateSolidBrush(RGB(0xFF, 0xFF, 0xFF));
 
     WNDCLASSEXW wc = { sizeof(wc) };
     wc.lpfnWndProc = WndProc;
@@ -801,6 +851,9 @@ static int RunDialog() {
     }
     if (g_font) DeleteObject(g_font);
     if (g_fontTitle && g_fontTitle != g_font) DeleteObject(g_fontTitle);
+    if (g_fontHead && g_fontHead != g_fontTitle && g_fontHead != g_font) DeleteObject(g_fontHead);
+    if (g_fontSection && g_fontSection != g_fontTitle && g_fontSection != g_font) DeleteObject(g_fontSection);
+    if (g_bg) DeleteObject(g_bg);
     if (g_fontSideTitle) DeleteObject(g_fontSideTitle);
     if (g_fontTab) DeleteObject(g_fontTab);
     if (g_fontTiny) DeleteObject(g_fontTiny);
