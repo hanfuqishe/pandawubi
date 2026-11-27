@@ -69,7 +69,7 @@ powershell -File tools\build-simp2trad.ps1 -Source "C:\path\to\STCharacters.txt"
 ```
 
 可用 [OpenCC](https://github.com/BYVoid/OpenCC) 的 `STCharacters.txt`。
-缺这个文件时简繁输出退化为原样输出（仅 `Ctrl+Shift+T` 无效果），不影响其它功能。
+缺这个文件时简繁输出退化为原样输出（仅 `Ctrl+J` 无效果），不影响其它功能。
 
 ## 授权提醒
 

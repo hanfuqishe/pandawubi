@@ -1328,10 +1328,9 @@ public:
         LogLine(L"OnKeyUp vk=0x%02X shiftDown=%d shiftUsed=%d comp=%p code=%hs",
                 (unsigned)wParam, (int)m_shiftDown, (int)m_shiftUsed, (void*)m_comp,
                 m_composer.Code().c_str());
-        // 单击 Shift（按下期间没按别的键）：
-        //   左 Shift → 中/英切换（组码中按：先把编码原样上屏，再切英文）；
-        //   右 Shift → 简/繁切换（组码中按：候选框里的字立刻跟着换）；
-        //   两个 Shift 一起按 → 两个动作都执行。
+        // 单击 Shift（按下期间没按别的键）→ 切中/英；左右两侧等价（用户要求），
+        // 两个 Shift 一起按也只切一次，别来回翻。
+        // 简/繁不再挂在 Shift 上：改成设置里可配的热键，默认 Ctrl+J（见 m_hotTrad / OnKeyDown）。
         const UINT vk = (UINT)wParam;
         if (vk == VK_SHIFT || vk == VK_LSHIFT || vk == VK_RSHIFT) {
             // 抬起时 GetKeyState 可能已经复位，所以以按下时记录的 side 为准
@@ -1344,19 +1343,10 @@ public:
                     (unsigned)vk, side, (int)m_shiftBoth, (int)otherDown);
             m_hostShiftUpTick = GetTickCount();   // 告诉轮询采样：这一轮事件通路已经处理
             if (m_shiftDown && !m_shiftUsed) {
-                const bool both = m_shiftBoth || otherDown;
                 m_lastShiftActionTick = GetTickCount();
-                if (both) {
-                    ToggleTrad(pic);
-                    ToggleEnglish(pic);
-                    // 不再用 FlashStatus：它会挂 700ms 定时器把窗口藏掉（状态条由 Toggle* 里的 ShowIdleStatus 刷新）
-                    LogLine(L"both shift: english=%d trad=%d", (int)m_english, (int)m_tradEnabled);
-                } else if (side == 2) {
-                    ToggleTrad(pic);
-                    // 同上：简/繁的状态显示交给 ShowIdleStatus
-                } else {
-                    ToggleEnglish(pic);
-                }
+                ToggleEnglish(pic);
+                LogLine(L"shift tap -> english=%d (both=%d trad=%d)",
+                        (int)m_english, (int)(m_shiftBoth || otherDown), (int)m_tradEnabled);
                 m_shiftBoth = false;
             }
             m_shiftDown = false;
@@ -1465,11 +1455,11 @@ private:
     ULONGLONG m_userWordsStamp = 0;
     ULONGLONG m_userWordsChecked = 0;
 
-    void ToggleTrad(ITfContext* pic);      // 简/繁切换（Ctrl+Shift+T 与单击右 Shift 共用）
-    void ToggleEnglish(ITfContext* pic);   // 中/英切换（单击左 Shift）
+    void ToggleTrad(ITfContext* pic);      // 简/繁切换（热键：默认 Ctrl+J，设置里可改）
+    void ToggleEnglish(ITfContext* pic);   // 中/英切换（单击 Shift，左右等价）
     void ShowIdleStatus(ITfContext* pic);  // 空闲时把"中/英·简/繁"贴在光标附近（合并后的悬浮窗）
     void ShowStatusMenu(POINT pt);         // 合并窗口的右键菜单（原来悬浮栏那套）
-    // 中英文切换（单击左 Shift）与状态提示
+    // 中英文切换（单击 Shift，左右等价）与状态提示
     bool m_english   = false;
     bool m_docFocused = false;   // 当前是否有"文档焦点"（TSF 的 OnSetFocus 非空）
     // 顶字上屏（四码满了再打第五个键）时，旧的组合串会在稍后才回调 OnCompositionTerminated；
@@ -1480,8 +1470,10 @@ private:
     bool m_menuOpen = false;   // 右键菜单正开着（期间不要因为丢焦点把状态窗收起）
     DWORD m_statusClickTick = 0;   // 最近一次点/右键状态窗的时刻（点完别被"丢焦点"顺手收起）
     std::wstring m_iconPath;   // 当前主题图标路径（合并窗状态条左侧那个）
-    int  m_shiftSide = 1;      // 1 = 左 Shift，2 = 右 Shift（按下时记录）
-    bool m_shiftBoth = false;  // 本次单击期间两个 Shift 都按下了
+    int  m_shiftSide = 1;      // 1 = 左 Shift，2 = 右 Shift（按下时记录，仅用于日志）
+    bool m_shiftBoth = false;  // 本次单击期间两个 Shift 都按下了（都切中/英，只切一次）
+    // 简/繁切换热键（设置里的 HotkeyTrad，默认 Ctrl+J）：每次重载配置都会重新解析
+    wubi::Hotkey m_hotTrad;
     // —— Shift 轮询采样（微信这类宿主不把 Shift 交给 TSF，事件通路完全静默）——
     bool  m_pollShift[2]     = { false, false };   // [0]=左 [1]=右，上一次采样到的按下状态
     bool  m_pollShiftUsed[2] = { false, false };   // 这一轮按下期间是否打过别的键
@@ -1563,6 +1555,19 @@ static bool HostForeground() {
     DWORD pid = 0;
     GetWindowThreadProcessId(fg, &pid);
     return pid == GetCurrentProcessId();
+}
+
+// 热键是否"此刻正被按下"：vk 是这次事件的键，其余修饰键从键盘状态取。
+// 修饰键要求**完全一致**：Ctrl+J 不会在 Ctrl+Shift+J 时误触发。
+// WantsKey（声明）与 OnKeyDown（执行）共用这一个判定，两边口径不会跑偏。
+static bool HotkeyPressed(const wubi::Hotkey& hk, UINT vk) {
+    if (!hk.vk || vk != hk.vk) return false;
+    const bool ctrl  = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
+    const bool alt   = (GetKeyState(VK_MENU) & 0x8000) != 0;
+    const bool shift = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
+    const bool win   = ((GetKeyState(VK_LWIN) & 0x8000) != 0) ||
+                       ((GetKeyState(VK_RWIN) & 0x8000) != 0);
+    return ctrl == hk.ctrl && alt == hk.alt && shift == hk.shift && win == hk.win;
 }
 
 // 空闲状态：把"中/英 + 简/繁"贴在光标下方（合并后的悬浮窗；原来是一条独立的悬浮栏）
@@ -1649,7 +1654,7 @@ void CTextService::OnBarClick(int idx) {
     case 0: m_english = !m_english; SetInputModeCompartments(!m_english); break;   // 中/英
     case 1: m_tradEnabled = !m_tradEnabled; m_settings.TradChinese = m_tradEnabled ? 1 : 0;
             wubi::SaveSettings(GetConfigPath(), m_settings);
-            // 组字中/反查中从栏上切换简繁：候选框里的字也要立刻换（和 Ctrl+Shift+T 一致）
+            // 组字中/反查中从栏上切换简繁：候选框里的字也要立刻换（和简/繁热键一致）
             if (m_pyLookup) PyLookupRefresh(nullptr, false);
             else if (!m_composer.Code().empty()) RefreshCandidates(nullptr);
             break;                                                                // 简/繁
@@ -1657,10 +1662,11 @@ void CTextService::OnBarClick(int idx) {
     case 3: {
         // 关于
         wchar_t msg[512];
+        const std::wstring hk = wubi::FormatHotkey(m_hotTrad);
         swprintf_s(msg,
-            L"熊猫五笔 v" PANDA_WUBI_VERSION L"\n\n构建: %hs %hs\n词库: %ls\n词条: %lld\n\n中/英: 单击左 Shift 或点状态栏\n简繁: 单击右 Shift（或 Ctrl+Shift+T）",
+            L"熊猫五笔 v" PANDA_WUBI_VERSION L"\n\n构建: %hs %hs\n词库: %ls\n词条: %lld\n\n中/英: 单击 Shift（左右均可）或点状态栏\n简繁: %ls（设置 → 热键 里可改）",
             __DATE__, __TIME__,
-            m_settings.DictFile.c_str(), (long long)g_dict.Get().EntryCount());
+            m_settings.DictFile.c_str(), (long long)g_dict.Get().EntryCount(), hk.c_str());
         MessageBoxW(nullptr, msg, L"关于 Panda五笔", MB_OK | MB_ICONINFORMATION);
         break;
     }
@@ -2418,6 +2424,18 @@ void CTextService::ApplySettings() {
                        m_settings.CandFontFace, txRef, bdRef);
 
     m_tradEnabled = m_settings.TradChinese != 0;
+    // 简/繁热键：解析不出来（手改坏配置）就退回 Ctrl+J —— 宁可回到默认，也不能没有切换手段
+    {
+        wubi::Hotkey hk;
+        if (wubi::ParseHotkey(m_settings.HotkeyTrad, hk)) {
+            m_hotTrad = hk;
+        } else {
+            wubi::ParseHotkey(L"Ctrl+J", hk);
+            m_hotTrad = hk;
+            LogLine(L"hotkey: bad value '%ls', fall back to Ctrl+J", m_settings.HotkeyTrad.c_str());
+        }
+        LogLine(L"hotkey trad = %ls", wubi::FormatHotkey(m_hotTrad).c_str());
+    }
     m_candCount   = m_settings.CandCount;
     m_composer.SetLimit((size_t)m_candCount);
 
@@ -3228,7 +3246,7 @@ void CTextService::BeginCustomWord(ITfContext* pic) {
 // ---------------------------------------------------------------- Shift 轮询采样
 // 背景：微信（Weixin.exe）只把字母/标点转给 TSF，Shift 的 OnTestKeyDown / OnKeyDown /
 // OnKeyUp 一条都没有（13:09 与 16:18 两个构建的日志里都没有 vk=0x10，连 KeyUp 都没有），
-// 所以"单击 Shift 切中/英、简/繁"在微信里永远不触发。
+// 所以"单击 Shift 切中/英"在微信里永远不触发。
 // 兜底办法：20ms 采一次两侧 Shift 的键盘状态；只在前台是本进程、且文档有焦点时采，
 // 后台实例不会把别人的 Shift 当成自己的。宿主自己报过 KeyUp 的（记事本/浏览器等）
 // 以事件通路为准，采样只负责"静默宿主"。
@@ -3265,24 +3283,17 @@ void CTextService::ShiftSampleTick() {
         m_pollShiftUsed[0] = m_pollShiftUsed[1] = false;
         if (hostUp || used || justActed) continue; // 事件通路已经处理过 / 不是单击
         m_lastShiftActionTick = GetTickCount();
-        if (both) {
-            ToggleTrad(m_context);
-            ToggleEnglish(m_context);
-            LogLine(L"shift poll -> both (english=%d trad=%d)", (int)m_english, (int)m_tradEnabled);
-        } else if (i == 1) {
-            ToggleTrad(m_context);
-            LogLine(L"shift poll -> trad=%d", (int)m_tradEnabled);
-        } else {
-            ToggleEnglish(m_context);
-            LogLine(L"shift poll -> english=%d", (int)m_english);
-        }
+        // 左右 Shift 都切中/英（用户要求），一起按也只切一次；简/繁走可配置热键（默认 Ctrl+J）
+        ToggleEnglish(m_context);
+        LogLine(L"shift poll -> english=%d (side=%d both=%d trad=%d)",
+                (int)m_english, i + 1, (int)both, (int)m_tradEnabled);
         m_shiftDown = false;
         m_shiftUsed = false;
         m_shiftBoth = false;
     }
 }
 
-// 中/英切换：单击左 Shift（组码中按 → 先把编码原样上屏，再切英文）
+// 中/英切换：单击 Shift（左右等价；组码中按 → 先把编码原样上屏，再切英文）
 void CTextService::ToggleEnglish(ITfContext* pic) {
     const bool composing = (m_comp != nullptr) && (m_context != nullptr) &&
                            !m_composer.Code().empty();
@@ -3316,7 +3327,7 @@ void CTextService::ToggleEnglish(ITfContext* pic) {
     if (!composing) ShowIdleStatus(pic);
 }
 
-// 简/繁切换：Ctrl+Shift+T 与"单击右 Shift"共用
+// 简/繁切换：设置里可配的热键（默认 Ctrl+J），状态栏/右键菜单也能点
 void CTextService::ToggleTrad(ITfContext* pic) {
     LoadDataOnce();
     m_tradEnabled = !m_tradEnabled;
@@ -3662,6 +3673,9 @@ static bool IsPrintableVk(UINT vk) {
 
 // 与 OnKeyDown 同一口径：只在"这个键一定会被吃掉"时才向宿主声明。
 bool CTextService::WantsKey(UINT vk, LPARAM lp) {
+    // 简/繁热键（默认 Ctrl+J）：**任何模式**下都要先声明。VS Code / 浏览器这类宿主
+    // 自己就绑了 Ctrl+J，不声明的话 KeyDown 根本转不到输入法，设置里改的热键等于没用。
+    if (HotkeyPressed(m_hotTrad, vk)) return true;
     // 原样记录模式：所有键都由输入法处理（回车整段输出、退格删、Esc 取消）
     if (m_rawMode) {
         return vk != VK_SHIFT && vk != VK_CONTROL && vk != VK_MENU &&
@@ -3688,12 +3702,13 @@ bool CTextService::WantsKey(UINT vk, LPARAM lp) {
     if (alt) return false;
     if (ctrl) {
         // Ctrl 组合默认交给应用，但自己的热键要先声明，否则宿主根本不会把 KeyDown 转到输入法：
-        //   Ctrl+= 自定义词组 · Ctrl+Shift+= 自定义短语 · Ctrl+Shift+T 简繁
+        //   Ctrl+= 自定义词组 · Ctrl+Shift+= 自定义短语 · 简/繁热键（默认 Ctrl+J，可配置）
         // 注意：这些热键要在**英文模式判断之前**声明 —— 英文模式只表示"字母键不打字"，
         // 不等于输入法的快捷键失效（之前放在后面，英文模式下一按 Ctrl+= 就进不了加词，是个 bug）。
         if (vk == VK_OEM_PLUS) return true;
+        if (HotkeyPressed(m_hotTrad, vk)) return true;   // 已由函数开头的判定覆盖，双保险
         const bool shift = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
-        if (shift && (vk == 'T' || vk == 'P')) return true;
+        if (shift && vk == 'P') return true;
         return false;
     }
     // 大写锁定开着：用户在敲命令/全大写，输入法整体让路（Ctrl 热键在上面已单独声明过）
@@ -3752,13 +3767,13 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
     if (m_statusShown) { m_candWnd.Hide(); m_statusShown = false; }
 
     // Shift 单击检测：按下期间若按了别的键，就不算单击。
-    // 同时记下按的是哪一侧：左 Shift = 中/英，右 Shift = 简/繁。
+    // 左右 Shift 现在**都只切中/英**（用户要求）；简/繁交给可配置热键（默认 Ctrl+J）。
     if (vk == VK_SHIFT || vk == VK_LSHIFT || vk == VK_RSHIFT) {
         m_shiftDown = true;
         m_shiftUsed = false;
         m_shiftSide = (vk == VK_LSHIFT) ? 1 : (vk == VK_RSHIFT) ? 2
                     : (((GetKeyState(VK_RSHIFT) & 0x8000) != 0) ? 2 : 1);
-        // 两个 Shift 同时按着：松开时两个动作都执行（先简繁、再中英）
+        // 两个 Shift 同时按着：松开时也只切一次中/英（以前是"先简繁再中英"）
         m_shiftBoth = ((vk == VK_LSHIFT) || ((GetKeyState(VK_LSHIFT) & 0x8000) != 0)) &&
                       ((vk == VK_RSHIFT) || ((GetKeyState(VK_RSHIFT) & 0x8000) != 0));
         // 采样：微信这类宿主会走到这里（TestKeyDown 返回 1 之后），但**从不发 KeyUp**，
@@ -3779,13 +3794,13 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wParam, LPARAM lPar
     LogLine(L"OnKeyDown vk=0x%02X scan=0x%02X ctrl=%d alt=%d comp=%p code=%hs",
             vk, (unsigned)((lParam >> 16) & 0xFF), (int)ctrl, (int)alt, (void*)m_comp, m_composer.Code().c_str());
 
-    // Ctrl+Shift+T 切换简繁（组码中也生效）；单击右 Shift 走同一个函数
-    if (ctrl && shift && vk == 'T') {
+    // 简/繁切换：设置里配的热键（默认 Ctrl+J，组码中也生效）
+    if (HotkeyPressed(m_hotTrad, vk)) {
         ToggleTrad(pic);
         *pfEaten = TRUE;
+        LogLine(L"hotkey trad fired: vk=0x%02X (%ls)", vk, wubi::FormatHotkey(m_hotTrad).c_str());
         return S_OK;
     }
-    // 旧的实现留在下面这行里（已抽成 ToggleTrad，见下方函数体）
 
     // Ctrl+= 进入自定义词组；Ctrl+Shift+= 打开"自定义短语"窗口（独立进程，编码+短语两个输入框）。
     // 用 VK_OEM_PLUS 判断，所以美式键盘上 Ctrl+= 与 Ctrl+Shift+= 都能触发，靠 Shift 区分。

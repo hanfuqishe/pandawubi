@@ -43,10 +43,9 @@ TSF 的输入法目录是机器级的：`ITfInputProcessorProfiles` 读写
 | `3` | 选第 3 个候选 |
 | `Esc` | 取消当前组码 |
 | `Backspace` | 删一个码 |
-| 单击左 `Shift` | 中/英切换（英文态全键直通） |
-| 单击右 `Shift` | 切换简繁输出 |
-| `Ctrl+Shift+T` | 切换简繁输出（与单击右 Shift 等价） |
-| 两个 `Shift` 一起按 | 中/英 + 简/繁同时切换（提示显示如「英繁」） |
+| 单击 `Shift`（左或右） | 中/英切换（英文态全键直通），两侧行为完全一样 |
+| `Ctrl+J` | 简/繁切换（默认热键；设置 → 热键 可改成别的组合） |
+| 两个 `Shift` 一起按 | 只切一次中/英（不会来回翻） |
 | `,` `.` `?` `"` | 输出 `，` `。` `？` `“`（再按变 `”`） |
 
 中文标点固定开启（已去掉切换开关），接管 `, . ; : ? ! ( ) [ ] < > " '' ^ _ -` 等键；
@@ -152,9 +151,11 @@ TSF 的输入法目录是机器级的：`ITfInputProcessorProfiles` 读写
 # 日志里应出现：
 #   testkey: vk=0x10 … wants=1
 #   shift poll: side=1 DOWN …  /  UP held=157ms
-#   shift poll -> english=1
-#   shift poll: side=2 …  /  shift poll -> trad=1
+#   shift poll -> english=1 (side=1 both=0 trad=0)
+#   shift poll: side=2 …  /  shift poll -> english=0 (side=2 both=0 trad=0)
 ```
+
+左右两侧现在**都只切中/英**（简/繁改走可配置热键，默认 `Ctrl+J`）。
 
 真机采样（只发 Shift，不按任何字母；会把微信拉到前台）：
 
@@ -163,7 +164,7 @@ powershell -ExecutionPolicy Bypass -File .\tools\wechat-shift-sample.ps1
 ```
 
 脚本依次按左、右、两个一起各 150ms，然后把新增的 `testkey` / `shift poll` /
-`switch english` / `toggle trad` 打出来。微信进程必须**重启**过才会加载新 DLL。
+`english` / `hotkey` 命中行打出来。微信进程必须**重启**过才会加载新 DLL。
 
 ## 状态栏（固定角落，不再跟光标）
 
@@ -181,16 +182,16 @@ powershell -ExecutionPolicy Bypass -File .\tools\wechat-shift-sample.ps1
 
 ## 快捷键切换后悬浮栏要同步
 
-`Ctrl+Shift+T`（简/繁）、`Ctrl+Shift+P`（标点）以前只改内部状态并落盘，**没有刷新悬浮栏**，
+`Ctrl+J`（简/繁，默认热键）、`Ctrl+Shift+P`（标点）以前只改内部状态并落盘，**没有刷新悬浮栏**，
 所以栏上还是「简」而实际输出已经是繁体。现在这两条分支末尾都调 `BarSync()`，
 栏上的「简/繁」立刻跟着变（和鼠标点栏上的那一格走的是同一条同步逻辑）。
 
-测试宿主新增两个 token：`[T]` = Ctrl+Shift+T、`[P]` = Ctrl+Shift+P，可直接验证。
+测试宿主新增两个 token：`[T]` = Ctrl+J（简/繁）、`[P]` = Ctrl+Shift+P，可直接验证。
 
 ## 大写锁定（CapsLock）
 
 CapsLock 开着时输入法**整体直通**：字母原样进应用（`ab` → `AB`），不组码、不接管标点。
-`Ctrl+=` / `Ctrl+Shift+=` / `Ctrl+Shift+T` 这类热键仍然有效。
+`Ctrl+=` / `Ctrl+Shift+=` / `Ctrl+J` 这类热键仍然有效。
 
 ## 分号便捷输入的四种走向
 
@@ -337,9 +338,18 @@ CapsLock 开着时输入法**整体直通**：字母原样进应用（`ab` → `
 
 - **编译成 GUI 子系统**（`/SUBSYSTEM:WINDOWS`）。以前是控制台程序，被输入法拉起时会先闪一个黑色控制台窗口；
   现在不会了。`/dump`、`/set` 仍可用：stdout 被重定向时直接用继承的句柄，从终端手动运行时才接父进程控制台。
-- 版面按 DPI 缩放、用分组框分段（一级简码 / 候选排序 / 输入选项 / 候选窗外观 / 词库），
+- 版面按 DPI 缩放、用分组框分段（一级简码 / 排序与输入 / **热键** / 主题与外观 / 词库），
   统一 微软雅黑 9pt，底部按钮右对齐，窗口居中后一次性显示（先建在屏幕外、摆好位置再 `ShowWindow`，避免闪一下空窗）。
+- **热键**一组里只有「简繁切换」一项（默认 `Ctrl+J`）：点一下按钮进入录制，直接按组合键即可，
+  按钮上实时显示 `Ctrl+…` 一类的进度；`Esc` 取消，没有 `Ctrl`/`Alt`/`Win` 的组合会被拒（提示「要带 Ctrl / Alt / Win」）。
+  左右 `Shift` 不参与——它们固定用于中/英切换。
 - 保存后弹提示：新设置对之后启动的程序生效。
+- 命令行也能改（脚本/自检用，读写 `WUBI_INI` 指定的那份配置）：
+
+  ```powershell
+  .\dist\panda-settings.exe /dump                        # 含 HotkeyTrad=Ctrl+J
+  .\dist\panda-settings.exe /set HotkeyTrad=Ctrl+Alt+T   # 非法写法 exit 2 + "bad hotkey:"
+  ```
 
 ## 安装包（Inno Setup）
 
@@ -364,16 +374,16 @@ powershell -ExecutionPolicy Bypass -File .\tools\build-setup.ps1 -SkipBuild # �
 > 旧的单文件 `src\ui\panda-setup.cpp`（自己写的资源内嵌安装器）保留作后备，不再走构建脚本。
 ## 快捷键切换后悬浮栏要同步
 
-`Ctrl+Shift+T`（简/繁）、`Ctrl+Shift+P`（标点）以前只改内部状态并落盘，**没有刷新悬浮栏**，
+`Ctrl+J`（简/繁，默认热键）、`Ctrl+Shift+P`（标点）以前只改内部状态并落盘，**没有刷新悬浮栏**，
 所以栏上还是「简」而实际输出已经是繁体。现在这两条分支末尾都调 `BarSync()`，
 栏上的「简/繁」立刻跟着变（和鼠标点栏上的那一格走的是同一条同步逻辑）。
 
-测试宿主新增两个 token：`[T]` = Ctrl+Shift+T、`[P]` = Ctrl+Shift+P，可直接验证。
+测试宿主新增两个 token：`[T]` = Ctrl+J（简/繁）、`[P]` = Ctrl+Shift+P，可直接验证。
 
 ## 大写锁定（CapsLock）
 
 CapsLock 开着时输入法**整体直通**：字母原样进应用（`ab` → `AB`），不组码、不接管标点。
-`Ctrl+=` / `Ctrl+Shift+=` / `Ctrl+Shift+T` 这类热键仍然有效。
+`Ctrl+=` / `Ctrl+Shift+=` / `Ctrl+J` 这类热键仍然有效。
 
 ## 分号便捷输入的四种走向
 

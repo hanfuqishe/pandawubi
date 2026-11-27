@@ -1935,6 +1935,42 @@ Chromium 的 TSF 会给出几倍屏宽高的包围盒（实测 `3839,2075`），
 .\build\tsf-host.exe -send "trnt [B]"    # exit=1，edit text = 空（那个字被退格删掉了）
 ```
 
+## 二·四十七、左右 Shift 都切中/英；简/繁改为可配置热键（默认 Ctrl+J）
+
+用户要求（原话）：“改回来：左右Shift都用于切换中英模式，在设置里面加个热键设置功能，
+默认使用Ctrl - J切换简繁体。”
+
+改动：
+
+- **Shift 不再分左右**：`OnKeyUp` 的单击判定和 `ShiftSampleTick` 的轮询采样都只调一次
+  `ToggleEnglish()`；两个 Shift 一起按也只切一次（`m_shiftBoth` / `m_pollBoth`）。
+  右 Shift 不再碰简/繁。
+- **简/繁热键可配**：`Settings::HotkeyTrad`（`[Config] HotkeyTrad`，默认 `Ctrl+J`），
+  用 `ParseHotkey` / `FormatHotkey`（`wubi_config.cpp`）解析与规范化，
+  键名表覆盖 `A–Z`、`0–9`、`F1–F24`、`Space/Enter/Tab/Esc/…` 与方向键；
+  规则是**必须带 `Ctrl`/`Alt`/`Win` 之一**（只有 `Shift` 的组合会跟打字冲突，判非法）。
+- `HotkeyPressed(hk, vk)` 要求**修饰键完全一致**：配了 `Ctrl+J` 时，
+  `Ctrl+Shift+J` 不会误触发。
+- `WantsKey` 开头无条件声明热键（`return TRUE`）。原因：VS Code、浏览器自己绑了 `Ctrl+J`
+  （往下跳转），不先声明的话 `OnKeyDown` 根本收不到，输入法就没机会吃键。
+- `ApplySettings` 解析失败退回 `Ctrl+J` 并记 `hotkey: bad value`；成功记 `hotkey trad = %ls`。
+  关于框文案改成 `简繁: %ls（设置 → 热键 里可改）`，跟着配置走。
+- 设置窗口新增「热键」分组：`panda-settings.exe` 里一个按钮，点一下进入录制
+  （子类过程 `HotkeyBtnProc`：`WM_GETDLGCODE` 要 `DLGC_WANTALLKEYS`、
+  `WM_KEYDOWN`/`WM_SYSKEYDOWN` 录键、按修饰键时先显示 `Ctrl+…`、`Esc` 取消、
+  无 `Ctrl/Alt/Win` 提示、`Format→Parse` 回读校验、`WM_KILLFOCUS` 结束）。
+- 测试宿主：`[T]`/`[t]` 从 `Ctrl+Shift+T` 改成 `Ctrl+J`；`[J]`/`[j]`（右 Shift）现在也切中/英。
+- `tools/verify.ps1` 增加三条断言：`HotkeyTrad` 能被 `/set` 写入并回读、
+  裸 `Shift+K` 被判非法（exit 2）、默认值是 `Ctrl+J`。
+
+真机验证（tsf-host，2026-11-27 12:08）：
+
+```
+[12:08:22.568] hotkey trad = Ctrl+J / toggle trad -> 0 saved=1 / hotkey trad fired: vk=0x4A (Ctrl+J)
+[12:08:25.691] shift poll -> english=1 (side=1 both=0 trad=0)   ← 左 Shift：中→英
+[12:08:28.194] shift poll -> english=0 (side=2 both=0 trad=0)   ← 右 Shift：英→中（不再切繁简）
+```
+
 ## 三、TSF 外壳（已实现，真机已验证工作）
 
 ```

@@ -69,11 +69,9 @@ powershell -ExecutionPolicy Bypass -File .\tools\build-setup.ps1
 | `-` / `=` | 上一页 / 下一页 |
 | `Backspace` | 删一个码；无码时取消 |
 | `Esc` | 取消本次组码 |
-| 单击**左** `Shift` | 中/英切换（英文态全键直通） |
-| 单击**右** `Shift` | 简/繁切换（组字中也会同步刷新候选） |
+| 单击 `Shift`（左/右都行） | 中/英切换（英文态全键直通） |
 | `Shift` + 字母 | 英文单词补全（内置 4.4 万词表） |
-| 两个 `Shift` 一起按 | 中/英 与 简/繁 **同时**切换 |
-| `Ctrl+Shift+T` | 简/繁切换（与单击右 Shift 等价） |
+| `Ctrl+J` | 简/繁切换（默认热键，可在 设置 → 热键 里改） |
 | `Ctrl+=` | 自定义词组（← 取最近上屏的字，回车保存） |
 | `Ctrl+Shift+=` | 打开自定义短语窗口（编码 + 短语） |
 | `Z` + 字母 | **拼音反查**：打出拼音找汉字并显示五笔全码 |
@@ -224,8 +222,9 @@ cands: code=wqvb n=3 comp=...
 | 语言栏图标显示「简体」 | 指示器图标路径被删/移动，重装或把 4 个 `.ico` 放回 `%LOCALAPPDATA%\PandaWubi` |
 | 打不出字 | 看日志里 `dict load` 是否失败；源码版需要先生成 `data\qqwubi86.dict.tsv` |
 | 微信里单击 `Shift` 不切换 | 微信只转发字母/标点、连 `KeyUp` 都不给（日志里没有任何 `vk=0x10` 的 `OnKeyUp`），单击判定靠 20ms 轮询兜底。仍无效时先确认微信进程是在本次构建之后启动的（看日志 `build:` 时间） |
-| 鼠标点一下，悬浮窗没跟过去 | 状态窗每 250ms 用 TSF 的光标位置（`GetSelection` + `GetTextExt`）重新贴合，Qt/Chromium 宿主没有 Win32 插入符也能跟。看日志 `idle status: … tsf=1`；`tsf=0` 表示这一拍没取到光标（用旧位置兜底） |
+| 状态栏跑到屏幕外面 | 拖动栏最左边的图标把它挪回来；位置存在 `config.ini` 的 `[Bar] X/Y`，删掉这两项就回默认的右下角 |
 | 上屏后第一次退格没反应 | 退格/删除**不声索**，删字交给应用；日志里 `backspace: undo learning (pass-through)` 说明只是记了账。组码中的退格仍由输入法删编码 |
+| 简/繁热键没反应 | 默认 `Ctrl+J`，可在 设置 → 热键 里改名（必须带 `Ctrl`/`Alt`/`Win`）；日志 `hotkey trad fired:` 说明收到了、`hotkey: bad value` 说明配置里的写法不合法（会退回 `Ctrl+J`） |
 
 ## 数据位置
 

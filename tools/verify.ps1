@@ -262,7 +262,27 @@ $out = & $cli $dict order 0 2 2>&1 | Out-String
 $cfgTest = Join-Path $ws 'build\toggle-test.ini'
 Copy-Item (Join-Path $ws 'dist\config.ini') $cfgTest -Force
 $out = & $cli $dict toggle trad $cfgTest 2>&1 | Out-String
-Check 'toggle trad 持久化' ($out -match 'reload-match=PASS') 'Ctrl+Shift+T 写回配置并可回读'
+Check 'toggle trad 持久化' ($out -match 'reload-match=PASS') '简繁热键（默认 Ctrl+J）写回配置并可回读'
+$settingsExe = Join-Path $ws 'build\panda-settings.exe'
+if (Test-Path $settingsExe) {
+    $oldIni = $env:WUBI_INI
+    $env:WUBI_INI = $cfgTest          # 让设置程序读写这份临时配置，别碰真配置
+    try {
+        $null = & $settingsExe /set HotkeyTrad=Ctrl+Alt+T 2>&1 | Out-String
+        $dump = & $settingsExe /dump 2>&1 | Out-String
+        Check 'hotkey 设置写入' ($dump -match 'HotkeyTrad=Ctrl\+Alt\+T') '默认 Ctrl+J 可改成任意 Ctrl/Alt/Win 组合'
+        $out = & $settingsExe /set HotkeyTrad=Shift+K 2>&1 | Out-String
+        $code = $LASTEXITCODE
+        Check 'hotkey 拒绝裸 Shift' ($code -eq 2 -and $out -match 'bad hotkey') '只有修饰键的组合被拒（exit 2）'
+        $null = & $settingsExe /set HotkeyTrad=Ctrl+J 2>&1 | Out-String
+        $dump = & $settingsExe /dump 2>&1 | Out-String
+        Check 'hotkey 默认 Ctrl+J' ($dump -match 'HotkeyTrad=Ctrl\+J') '出厂默认简繁热键为 Ctrl+J'
+    } finally {
+        $env:WUBI_INI = $oldIni
+    }
+} else {
+    "  SKIP  hotkey 设置  build\panda-settings.exe 不存在"
+}
 $out = & $cli $dict learnsim 16 2>&1 | Out-String
 Check 'learnsim 节流落盘' ($out -match 'RESULT=PASS' -and $out -match '文件=有') '16 次提交后首位翻转且落盘'
 "— 候选排序可调 / 双端对比工具 —"

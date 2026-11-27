@@ -8,8 +8,112 @@
 #endif
 #include <windows.h>
 #include <cstdio>
+#include <vector>
 
 namespace wubi {
+
+// ---------------------------------------------------------------- 热键解析
+// 键名表：写起来要"人话"，所以英文全名 + 符号别名都收；不区分大小写。
+struct KeyName { const wchar_t* name; unsigned vk; };
+static const KeyName kKeyNames[] = {
+    { L"A", 'A' }, { L"B", 'B' }, { L"C", 'C' }, { L"D", 'D' }, { L"E", 'E' },
+    { L"F", 'F' }, { L"G", 'G' }, { L"H", 'H' }, { L"I", 'I' }, { L"J", 'J' },
+    { L"K", 'K' }, { L"L", 'L' }, { L"M", 'M' }, { L"N", 'N' }, { L"O", 'O' },
+    { L"P", 'P' }, { L"Q", 'Q' }, { L"R", 'R' }, { L"S", 'S' }, { L"T", 'T' },
+    { L"U", 'U' }, { L"V", 'V' }, { L"W", 'W' }, { L"X", 'X' }, { L"Y", 'Y' },
+    { L"Z", 'Z' },
+    { L"0", '0' }, { L"1", '1' }, { L"2", '2' }, { L"3", '3' }, { L"4", '4' },
+    { L"5", '5' }, { L"6", '6' }, { L"7", '7' }, { L"8", '8' }, { L"9", '9' },
+    { L"F1", VK_F1 },   { L"F2", VK_F2 },   { L"F3", VK_F3 },   { L"F4", VK_F4 },
+    { L"F5", VK_F5 },   { L"F6", VK_F6 },   { L"F7", VK_F7 },   { L"F8", VK_F8 },
+    { L"F9", VK_F9 },   { L"F10", VK_F10 }, { L"F11", VK_F11 }, { L"F12", VK_F12 },
+    { L"F13", VK_F13 }, { L"F14", VK_F14 }, { L"F15", VK_F15 }, { L"F16", VK_F16 },
+    { L"F17", VK_F17 }, { L"F18", VK_F18 }, { L"F19", VK_F19 }, { L"F20", VK_F20 },
+    { L"F21", VK_F21 }, { L"F22", VK_F22 }, { L"F23", VK_F23 }, { L"F24", VK_F24 },
+    { L"SPACE", VK_SPACE }, { L"ENTER", VK_RETURN }, { L"RETURN", VK_RETURN },
+    { L"TAB", VK_TAB }, { L"ESC", VK_ESCAPE }, { L"ESCAPE", VK_ESCAPE },
+    { L"BACKSPACE", VK_BACK }, { L"BKSP", VK_BACK },
+    { L"DELETE", VK_DELETE }, { L"DEL", VK_DELETE }, { L"INSERT", VK_INSERT }, { L"INS", VK_INSERT },
+    { L"HOME", VK_HOME }, { L"END", VK_END },
+    { L"PGUP", VK_PRIOR }, { L"PAGEUP", VK_PRIOR },
+    { L"PGDN", VK_NEXT }, { L"PAGEDOWN", VK_NEXT },
+    { L"UP", VK_UP }, { L"DOWN", VK_DOWN }, { L"LEFT", VK_LEFT }, { L"RIGHT", VK_RIGHT },
+    { L"COMMA", VK_OEM_COMMA }, { L"PERIOD", VK_OEM_PERIOD }, { L"SEMICOLON", VK_OEM_1 },
+    { L"SLASH", VK_OEM_2 }, { L"BACKQUOTE", VK_OEM_3 }, { L"BRACKETLEFT", VK_OEM_4 },
+    { L"BACKSLASH", VK_OEM_5 }, { L"BRACKETRIGHT", VK_OEM_6 }, { L"QUOTE", VK_OEM_7 },
+    { L"MINUS", VK_OEM_MINUS }, { L"EQUAL", VK_OEM_PLUS },
+    { L",", VK_OEM_COMMA }, { L".", VK_OEM_PERIOD }, { L";", VK_OEM_1 }, { L"/", VK_OEM_2 },
+    { L"`", VK_OEM_3 }, { L"[", VK_OEM_4 }, { L"\\", VK_OEM_5 }, { L"]", VK_OEM_6 },
+    { L"'", VK_OEM_7 }, { L"-", VK_OEM_MINUS }, { L"=", VK_OEM_PLUS },
+};
+
+static std::wstring Upper(std::wstring s) {
+    for (auto& c : s) if (c >= L'a' && c <= L'z') c = (wchar_t)(c - L'a' + L'A');
+    return s;
+}
+static std::wstring Trim(const std::wstring& s) {
+    size_t b = s.find_first_not_of(L" \t\r\n");
+    if (b == std::wstring::npos) return std::wstring();
+    size_t e = s.find_last_not_of(L" \t\r\n");
+    return s.substr(b, e - b + 1);
+}
+static bool LookupKey(const std::wstring& name, unsigned& vk) {
+    const std::wstring up = Upper(name);
+    for (const auto& k : kKeyNames) {
+        if (up == k.name) { vk = k.vk; return true; }
+    }
+    return false;
+}
+static const wchar_t* KeyNameOf(unsigned vk) {
+    for (const auto& k : kKeyNames) {
+        // 反查取第一个"像名字"的写法（字母/数字开头），跳过符号别名，保证 Format 出来是 Ctrl+J 这种
+        const wchar_t c0 = k.name[0];
+        if (k.vk == vk && ((c0 >= L'A' && c0 <= L'Z') || (c0 >= L'0' && c0 <= L'9'))) return k.name;
+    }
+    return nullptr;
+}
+
+bool ParseHotkey(const std::wstring& text, Hotkey& out) {
+    out = Hotkey();
+    std::wstring s = Trim(text);
+    if (s.empty()) return false;
+    // 按 '+' 切开；键名本身可以是 '+' 吗？不支持（没有这种常用键），所以切出来空段即视为非法
+    std::vector<std::wstring> parts;
+    size_t start = 0;
+    for (;;) {
+        const size_t pos = s.find(L'+', start);
+        if (pos == std::wstring::npos) { parts.push_back(s.substr(start)); break; }
+        parts.push_back(s.substr(start, pos - start));
+        start = pos + 1;
+    }
+    if (parts.size() < 2) return false;         // 至少要"修饰键 + 键"
+    for (size_t i = 0; i + 1 < parts.size(); ++i) {
+        const std::wstring t = Upper(Trim(parts[i]));
+        if (t == L"CTRL" || t == L"CONTROL") out.ctrl = true;
+        else if (t == L"ALT")                out.alt = true;
+        else if (t == L"SHIFT")              out.shift = true;
+        else if (t == L"WIN" || t == L"WINDOWS") out.win = true;
+        else return false;                       // 中间出现非修饰键：写法不对
+    }
+    unsigned vk = 0;
+    if (!LookupKey(Trim(parts.back()), vk)) return false;
+    if (!out.ctrl && !out.alt && !out.win) return false;   // 只有 Shift：会跟正常打字抢键
+    out.vk = vk;
+    return true;
+}
+
+std::wstring FormatHotkey(const Hotkey& hk) {
+    if (!hk.vk) return std::wstring();
+    const wchar_t* key = KeyNameOf(hk.vk);
+    if (!key) return std::wstring();
+    std::wstring s;
+    if (hk.ctrl)  s += L"Ctrl+";
+    if (hk.alt)   s += L"Alt+";
+    if (hk.shift) s += L"Shift+";
+    if (hk.win)   s += L"Win+";
+    s += key;
+    return s;
+}
 
 static int GetInt(const std::wstring& path, const wchar_t* key, int def) {
     return (int)GetPrivateProfileIntW(L"Config", key, def, path.c_str());
@@ -48,6 +152,13 @@ static void ApplyAppSection(const std::wstring& iniPath, const std::wstring& sec
         GetPrivateProfileStringW(p, L"DictFile", s.DictFile.c_str(), db, ARRAYSIZE(db), iniPath.c_str());
         if (db[0]) s.DictFile = db;
     }
+    {
+        // 单个应用也能覆盖热键（比如某个宿主自己的 Ctrl+J 有用，可以在 [app:x.exe] 里换一个）
+        wchar_t hk[64] = { 0 };
+        GetPrivateProfileStringW(p, L"HotkeyTrad", s.HotkeyTrad.c_str(), hk, ARRAYSIZE(hk), iniPath.c_str());
+        Hotkey parsed;
+        if (hk[0] && ParseHotkey(hk, parsed)) s.HotkeyTrad = Trim(hk);
+    }
     if (s.CandCount < 1) s.CandCount = 1;
     if (s.CandCount > 9) s.CandCount = 9;
 }
@@ -81,6 +192,15 @@ Settings LoadSettings(const std::wstring& iniPath, const std::wstring& appExe) {
         wchar_t db[128] = { 0 };
         GetPrivateProfileStringW(L"Config", L"DictFile", s.DictFile.c_str(), db, ARRAYSIZE(db), iniPath.c_str());
         if (db[0]) s.DictFile = db;
+    }
+    {
+        // 简/繁热键：写成字符串（默认 Ctrl+J）。解析不出来（手改坏了）就退回默认值，
+        // 不要让一个坏值把"简繁切换"整个废掉。
+        wchar_t hk[64] = { 0 };
+        GetPrivateProfileStringW(L"Config", L"HotkeyTrad", s.HotkeyTrad.c_str(), hk, ARRAYSIZE(hk), iniPath.c_str());
+        Hotkey parsed;
+        if (hk[0] && ParseHotkey(hk, parsed)) s.HotkeyTrad = Trim(hk);
+        else                                  s.HotkeyTrad = L"Ctrl+J";
     }
     if (s.CandCount < 1) s.CandCount = 1;
     if (s.CandCount > 9) s.CandCount = 9;
@@ -124,6 +244,12 @@ bool SaveSettings(const std::wstring& iniPath, const Settings& s) {
                          : (s.Theme == L"crane") ? L"crane" : L"panda";
     WritePrivateProfileStringW(L"Config", L"Theme", theme, iniPath.c_str());
     WritePrivateProfileStringW(L"Config", L"DictFile", s.DictFile.c_str(), iniPath.c_str());
+    {
+        // 热键按"解析得出来"的规范写法落盘；坏值不写，免得下次启动又被退回默认还看不出原因
+        Hotkey hk;
+        const std::wstring text = ParseHotkey(s.HotkeyTrad, hk) ? FormatHotkey(hk) : L"Ctrl+J";
+        WritePrivateProfileStringW(L"Config", L"HotkeyTrad", text.c_str(), iniPath.c_str());
+    }
     {
         wchar_t cb[32];
         swprintf_s(cb, L"#%06X", (unsigned)(s.CandBgColor & 0xFFFFFF));

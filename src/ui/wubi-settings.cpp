@@ -1,4 +1,4 @@
-// wubi-settings —— 替代输入法的设置界面
+﻿// wubi-settings —— 替代输入法的设置界面
 // 无参数：弹出设置窗口
 // /dump        ：把当前设置打印到标准输出
 // /set k=v     ：直接改一项（供脚本/自检使用），可多次
@@ -33,6 +33,11 @@ static HFONT  g_font = nullptr;
 static HFONT  g_fontTitle = nullptr;
 static HBRUSH g_bg = nullptr;
 
+// 热键录制状态：点"热键"按钮后进入录制，按下的组合键直接写进 g_hotkeyText；
+// Esc / 点别处取消。文本用 "Ctrl+J" 这种写法，和 config.ini 里的 HotkeyTrad 一致。
+static std::wstring g_hotkeyText;
+static bool         g_hkCapturing = false;
+
 static int S(int v) { return MulDiv(v, g_dpi, 96); }
 
 // 保存之后通知正在运行的输入法：把配置重读一遍（不用重启任何应用）
@@ -55,6 +60,7 @@ enum {
     ID_L1_0 = 100, ID_L1_1, ID_L1_2,
     ID_SM_0 = 110, ID_SM_1,
     ID_TRAD = 121,
+    ID_HK_TRAD = 122,
     ID_CAND = 130, ID_FONT = 131, ID_BG = 132, ID_INSET = 133, ID_DICT = 134,
     ID_VERT = 135,
     ID_TXT = 136, ID_BORDER = 139, ID_THEME = 145,
@@ -109,6 +115,79 @@ static HWND MakeButton(HWND p, const wchar_t* t, int x, int y, int w, int id, bo
     return h;
 }
 
+static void EndCapture(HWND h) {
+    g_hkCapturing = false;
+    SetWindowTextW(h, g_hotkeyText.c_str());
+    SetFocus(h);   // 焦点留在按钮上，方便再按一次重录
+}
+
+// 热键按钮的子类化：录制期间把按键吃下来，翻译成 "Ctrl+J" 这种文本。
+// 为什么要子类化：按键消息只会发给有焦点的控件，主窗口过程收不到。
+static LRESULT CALLBACK HotkeyBtnProc(HWND h, UINT msg, WPARAM wp, LPARAM lp,
+                                      UINT_PTR, DWORD_PTR) {
+    switch (msg) {
+    case WM_GETDLGCODE:
+        // 录制期间让 Tab/Enter/Esc 也送到这里，别被 IsDialogMessage 拿去翻焦点/点默认按钮
+        if (g_hkCapturing) return DLGC_WANTALLKEYS;
+        break;
+    case WM_KEYDOWN:
+    case WM_SYSKEYDOWN: {
+        if (!g_hkCapturing) break;
+        const UINT vk = (UINT)wp;
+        if (vk == VK_ESCAPE) { EndCapture(h); return 0; }
+        const bool ctrl  = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
+        const bool alt   = (GetKeyState(VK_MENU) & 0x8000) != 0;
+        const bool shift = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
+        const bool win   = ((GetKeyState(VK_LWIN) & 0x8000) != 0) ||
+                           ((GetKeyState(VK_RWIN) & 0x8000) != 0);
+        auto mods = [&]() {
+            std::wstring s;
+            if (ctrl)  s += L"Ctrl+";
+            if (alt)   s += L"Alt+";
+            if (shift) s += L"Shift+";
+            if (win)   s += L"Win+";
+            return s;
+        };
+        if (vk == VK_CONTROL || vk == VK_MENU || vk == VK_SHIFT ||
+            vk == VK_LWIN || vk == VK_RWIN) {
+            SetWindowTextW(h, (mods() + L"…").c_str());   // 还在按修饰键：先显示进度
+            return 0;
+        }
+        wubi::Hotkey hk;
+        hk.ctrl = ctrl; hk.alt = alt; hk.shift = shift; hk.win = win; hk.vk = vk;
+        if (!hk.ctrl && !hk.alt && !hk.win) {
+            SetWindowTextW(h, L"要带 Ctrl / Alt / Win");
+            return 0;
+        }
+        // 规范化 + 校验：Format 再 Parse 得回来的才是输入法认得的键
+        wubi::Hotkey check;
+        const std::wstring text = wubi::FormatHotkey(hk);
+        if (text.empty() || !wubi::ParseHotkey(text, check)) {
+            SetWindowTextW(h, L"这个键不支持，换一个");
+            return 0;
+        }
+        g_hotkeyText = text;
+        g_hkCapturing = false;
+        SetWindowTextW(h, g_hotkeyText.c_str());
+        return 0;
+    }
+    case WM_KEYUP:
+    case WM_SYSKEYUP:
+        if (g_hkCapturing) return 0;       // 录制期间按键抬起不外传（免得触发按钮/菜单）
+        break;
+    case WM_KILLFOCUS:
+        if (g_hkCapturing) EndCapture(h);
+        break;
+    }
+    return DefSubclassProc(h, msg, wp, lp);
+}
+
+static HWND MakeHotkeyButton(HWND p, int x, int y, int w, int id, const std::wstring& text) {
+    HWND h = MakeButton(p, text.c_str(), x, y, w, id, false);
+    SetWindowSubclass(h, HotkeyBtnProc, 1, 0);
+    return h;
+}
+
 static void ReadUiInto(HWND hwnd) {
     g_s.Level1Mode = SendMessageW(GetDlgItem(hwnd, ID_L1_0), BM_GETCHECK, 0, 0) == BST_CHECKED ? 0
                    : SendMessageW(GetDlgItem(hwnd, ID_L1_1), BM_GETCHECK, 0, 0) == BST_CHECKED ? 1 : 2;
@@ -150,6 +229,13 @@ static void ReadUiInto(HWND hwnd) {
     }
     g_s.CandInset = SendMessageW(GetDlgItem(hwnd, ID_INSET), BM_GETCHECK, 0, 0) == BST_CHECKED ? 1 : 0;
     {
+        // 热键文本来自录制按钮；万一状态不对（比如录制到一半直接点保存），退回原值
+        wubi::Hotkey hk;
+        if (!g_hotkeyText.empty() && wubi::ParseHotkey(g_hotkeyText, hk)) {
+            g_s.HotkeyTrad = wubi::FormatHotkey(hk);
+        }
+    }
+    {
         HWND cb = GetDlgItem(hwnd, ID_DICT);
         const int sel = (int)SendMessageW(cb, CB_GETCURSEL, 0, 0);
         if (sel >= 0) {
@@ -172,7 +258,7 @@ static void BuildChildren(HWND hwnd) {
                               DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei UI");
     if (!g_fontTitle) g_fontTitle = g_font;
 
-    const int padX = 16, groupW = 428, inX = padX + 16;
+    const int padX = 16, groupW = 488, inX = padX + 16;
     int y = 12;
 
     // 一级简码
@@ -186,12 +272,22 @@ static void BuildChildren(HWND hwnd) {
     MakeGroup(hwnd, L" 排序与输入", padX, y, groupW, 100);
     MakeRadio(hwnd, L"候选排序：码短优先（默认，与 QQ五笔 接近）", inX, y + 24, 380, ID_SM_0, g_s.SortMode == 0, true);
     MakeRadio(hwnd, L"候选排序：纯词频优先",                        inX, y + 46, 380, ID_SM_1, g_s.SortMode == 1);
-    MakeCheck(hwnd, L"输出繁体（Ctrl+Shift+T 可临时切换）",         inX, y + 72, 380, ID_TRAD, g_s.TradChinese != 0);
+    {
+        const std::wstring label = L"输出繁体（" + g_hotkeyText + L" 可临时切换）";
+        MakeCheck(hwnd, label.c_str(), inX, y + 72, 380, ID_TRAD, g_s.TradChinese != 0);
+    }
     y += 100 + 8;
+
+    // 热键：简/繁切换（默认 Ctrl+J，可改成任意 Ctrl/Alt/Win 组合）
+    MakeGroup(hwnd, L" 热键", padX, y, groupW, 58);
+    MakeStatic(hwnd, L"简繁切换", inX, y + 28, 64, 20);
+    MakeHotkeyButton(hwnd, inX + 64, y + 21, 150, ID_HK_TRAD, g_hotkeyText);
+    MakeStatic(hwnd, L"点一下后按下组合键（Esc 取消）", inX + 224, y + 28, 200, 20);
+    y += 58 + 8;
 
     // 候选窗外观（两列排版）
     MakeGroup(hwnd, L" 主题与外观", padX, y, groupW, 172);
-    const int cB = inX + 176;          // 第二列起点
+    const int cB = inX + 236;          // 第二列起点
     // 行1：候选个数 / 字号
     MakeStatic(hwnd, L"候选个数", inX, y + 24, 64, 20);
     {
@@ -212,7 +308,7 @@ static void BuildChildren(HWND hwnd) {
     {
         HWND cb = CreateWindowExW(WS_EX_CLIENTEDGE, L"COMBOBOX", g_s.CandFontFace.c_str(),
                                   WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWN | CBS_AUTOHSCROLL,
-                                  S(inX + 64), S(y + 50), S(250), S(240), hwnd,
+                                  S(inX + 64), S(y + 50), S(164), S(240), hwnd,
                                   (HMENU)(INT_PTR)ID_FACE, nullptr, nullptr);
         SendMessageW(cb, WM_SETFONT, (WPARAM)g_font, TRUE);
         // 枚举系统字体
@@ -344,6 +440,13 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         return (LRESULT)g_bg;
     }
     case WM_COMMAND:
+        if (LOWORD(wp) == ID_HK_TRAD) {
+            // 进入热键录制：焦点给按钮，按键由 HotkeyBtnProc 收
+            g_hkCapturing = true;
+            SetWindowTextW(GetDlgItem(hwnd, ID_HK_TRAD), L"请按组合键…");
+            SetFocus(GetDlgItem(hwnd, ID_HK_TRAD));
+            return 0;
+        }
         if (LOWORD(wp) == ID_DATA_BROWSE) {
             // 选目录（SHBrowseForFolder：不需要 COM 初始化，够用）
             BROWSEINFOW bi = {};
@@ -418,9 +521,9 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 
 // 窗口客户区尺寸随 DPI 缩放；控件坐标在 BuildChildren 里也按 S() 缩放
 static void MeasureClient(int& w, int& h) {
-    w = S(460);
-    // 与 BuildChildren 里的累加保持一致
-    h = S(12 + 96 + 8 + 124 + 8 + 172 + 8 + 58 + 8 + 100 + 12 + 30 + 12);
+    w = S(520);
+    // 与 BuildChildren 里的累加保持一致（含最后新增的"热键"分组）
+    h = S(12 + 96 + 8 + 100 + 8 + 58 + 8 + 172 + 8 + 58 + 8 + 100 + 12 + 30 + 20);
 }
 
 static int RunDialog() {
@@ -513,6 +616,17 @@ static void EnsureStdIo() {
 int WINAPI wWinMain(HINSTANCE, HINSTANCE, LPWSTR, int) {
     g_ini = ConfigPath();
     g_s = wubi::LoadSettings(g_ini);
+    {
+        // 热键文本以"规范化后"的形式进界面（config 里手写成 ctrl+j 也会显示成 Ctrl+J）
+        wubi::Hotkey hk;
+        if (wubi::ParseHotkey(g_s.HotkeyTrad, hk)) {
+            g_hotkeyText = wubi::FormatHotkey(hk);
+            g_s.HotkeyTrad = g_hotkeyText;
+        } else {
+            g_hotkeyText = L"Ctrl+J";
+            g_s.HotkeyTrad = g_hotkeyText;
+        }
+    }
 
     int argc = 0;
     LPWSTR* argv = CommandLineToArgvW(GetCommandLineW(), &argc);
@@ -531,6 +645,7 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, LPWSTR, int) {
                         g_s.Theme.c_str(), g_s.CandFontFace.c_str(), g_s.CandFontPt,
                         g_s.CandBgColor & 0xFFFFFF, g_s.CandTextColor & 0xFFFFFF,
                         g_s.CandBorderColor & 0xFFFFFF, g_s.CandInset);
+            std::printf("HotkeyTrad=%ls\n", g_s.HotkeyTrad.c_str());
             LocalFree(argv);
             return 0;
         }
@@ -568,6 +683,12 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, LPWSTR, int) {
                 else if (k == L"CandCount")      { g_s.CandCount = iv; any = true; }
                 else if (k == L"CandVertical")   { g_s.CandVertical = iv; any = true; }
                 else if (k == L"Theme")          { g_s.Theme = (v == L"cat") ? L"cat" : ((v == L"dog") ? L"dog" : ((v == L"crane") ? L"crane" : L"panda")); any = true; }
+                else if (k == L"HotkeyTrad") {
+                    wubi::Hotkey hk;
+                    if (!wubi::ParseHotkey(v, hk)) { std::printf("bad hotkey: %ls\n", v.c_str()); LocalFree(argv); return 2; }
+                    g_s.HotkeyTrad = wubi::FormatHotkey(hk);
+                    any = true;
+                }
             }
             if (!any) { std::printf("no known key\n"); LocalFree(argv); return 2; }
 

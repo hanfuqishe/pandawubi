@@ -85,7 +85,7 @@ $readme = @"
   3) 悬浮栏上的齿轮可以打开设置窗口。
 
 常用
-  Ctrl+Shift+T   简繁切换       Ctrl+Shift+P   中文标点开关
+  Ctrl+J         简繁切换       Ctrl+Shift+P   中文标点开关
   Ctrl+=         加自定义词       Ctrl+Shift+=   自定义短语
   Z              最近上屏的 4 个词 + 版本号
   ;              便捷输入

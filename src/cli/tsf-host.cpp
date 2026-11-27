@@ -142,7 +142,9 @@ static void SendStep(const Step& st) {
 //   a..z        字母键（A..Z = 按住 Shift）
 //   ' ' 空格 · ',' '.' ';' '\'' '/' '-' '=' '@' '_' 标点 · '!' Esc
 //   [C] Ctrl+=（自定义词组）   [S] Ctrl+Shift+=（自定义短语）
-//   [L] ←  [D] Del  [E] 回车  [B] 退格  [X] Esc  [H] 单击左 Shift（切中英）  [J] 单击右 Shift（切简繁）
+//   [L] ←  [D] Del  [E] 回车  [B] 退格  [X] Esc
+//   [H] 单击左 Shift（切中/英）  [J] 单击右 Shift（也切中/英，左右等价）
+//   [T] 简/繁热键（默认 Ctrl+J；[t] 同样，但按住 150ms）
 static void ParseScript(const std::wstring& s) {
     g_steps.clear();
     for (size_t i = 0; i < s.size();) {
@@ -154,7 +156,8 @@ static void ParseScript(const std::wstring& s) {
                 switch (s[i + 1]) {
                 case L'C': vk = VK_OEM_PLUS; ctrl = true; break;
                 case L'S': vk = VK_OEM_PLUS; ctrl = true; sh = true; break;
-            case L'T': vk = 'T'; ctrl = true; sh = true; break;   // Ctrl+Shift+T 切简繁
+                case L'T': vk = 'J'; ctrl = true; break;   // Ctrl+J 切简繁（默认热键）
+                case L't': vk = 'J'; ctrl = true; break;
                 case L'L': vk = VK_LEFT; break;
                 case L'R': vk = VK_RIGHT; break;
                 case L'D': vk = VK_DELETE; break;
@@ -162,7 +165,7 @@ static void ParseScript(const std::wstring& s) {
                 case L'B': vk = VK_BACK; break;
                 case L'X': vk = VK_ESCAPE; break;
                 case L'H': vk = VK_LSHIFT; break;
-                case L'J': vk = VK_RSHIFT; break;   // 右 Shift（切简繁）   // 用 LSHIFT：注入 VK_SHIFT 有时不会作为按键送到 TSF
+                case L'J': vk = VK_RSHIFT; break;   // 右 Shift（现在也切中/英）
                 case L'h': vk = VK_LSHIFT; break;   // 小写 = 按住 150ms 再松（轮询采样才看得见）
                 case L'j': vk = VK_RSHIFT; break;
                 case L'F': vk = VK_F2; break;
@@ -170,7 +173,8 @@ static void ParseScript(const std::wstring& s) {
                 default: break;
                 }
                 if (vk) { g_steps.push_back({ vk, ctrl, sh, L' ',
-                                              (s[i + 1] == L'h' || s[i + 1] == L'j') ? 150 : 0 });
+                                              (s[i + 1] == L'h' || s[i + 1] == L'j' ||
+                                               s[i + 1] == L't') ? 150 : 0 });
                           i = close + 1; continue; }
             }
         }

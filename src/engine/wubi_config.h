@@ -5,6 +5,24 @@
 
 namespace wubi {
 
+// 简/繁切换热键：字符串 "Ctrl+J" 这种写法（设置窗口里录下来的）解析成"修饰键 + 虚拟键码"。
+// vk == 0 表示没解析出来（调用方应退回默认值）。
+struct Hotkey {
+    bool ctrl  = false;
+    bool alt   = false;
+    bool shift = false;
+    bool win   = false;
+    unsigned vk = 0;
+};
+
+// "Ctrl+J" / "Ctrl+Shift+T" / "Alt+F1" -> Hotkey。
+// 规则：必须带 Ctrl / Alt / Win 之一（只有 Shift 的"热键"会跟打字抢键，一律判非法）；
+// 键名认 A–Z、0–9、F1–F24，以及 Space/Enter/Tab/Esc/Backspace/Delete/Home/End/PgUp/PgDn/方向键/
+// 常用符号（Comma、Period、Semicolon、Slash、Backslash、Minus、Equal、BracketLeft…）。
+bool ParseHotkey(const std::wstring& text, Hotkey& out);
+// 反向：修饰键按 Ctrl+Alt+Shift+Win 的顺序，键名用 ParseHotkey 认得的写法（解析不出返回空串）
+std::wstring FormatHotkey(const Hotkey& hk);
+
 struct Settings {
     int  InputMode      = 0;   // 0=五笔 1=拼音（预留）
     int  CandVertical   = 0;   // 候选窗竖排
@@ -22,6 +40,9 @@ struct Settings {
     int  CandBorderColor  = 0xA8CDA8;  // 边框
     std::wstring DictFile = L"qqwubi86.dict.tsv";   // 词库文件名（data 目录下）
     std::wstring Theme = L"panda";  // 主题：panda（默认，熊猫）/ cat（狸花猫）/ dog（中华田园犬）/ crane（丹顶鹤）
+    // 简/繁切换热键（默认 Ctrl+J）。在设置窗口的"热键"里录，写成 "Ctrl+J" 这种字符串；
+    // 输入法每次重载配置都会重新解析，改完立刻生效。
+    std::wstring HotkeyTrad = L"Ctrl+J";
 };
 
 // 读：缺失的键保留默认值
